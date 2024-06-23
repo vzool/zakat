@@ -1,0 +1,18 @@
+[project]
+name = "zakat"
+version = "0.1.1720"
+authors = [
+  { name="Abdelaziz Elrashed Elshaikh Mohamed", email="aeemh.sdn@gmail.com" },
+]
+description = "This module provides the ZakatTracker class for tracking and calculating Zakat."
+readme = "README.md"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+Homepage = "https://github.com/vzool/zakat"
+Issues = "https://github.com/vzool/zakat/issues"
