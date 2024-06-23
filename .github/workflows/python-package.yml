@@ -34,4 +34,4 @@ jobs:
         pip install pytest-runner==6.0.1
     - name: Test with pytest
       run: |
-        pytest
+        pytest --capture=no

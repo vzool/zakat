@@ -3,7 +3,7 @@
 ![Zakat Tracker Logo](images/logo.jpg)
 
 # ZakatTracker: A Python Library for Islamic Financial Management
-
+###### [UNDER ACTIVE DEVELOPMENT]
 <p>
 <a href="https://github.com/vzool/zakat/blob/main/README.ar.md"><img src="https://img.shields.io/badge/lang-ar-green.svg" alt="ar" data-canonical-src="https://img.shields.io/badge/lang-en-green.svg" style="max-width: 100%;"></a>
 </p>

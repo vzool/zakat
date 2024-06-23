@@ -13,6 +13,11 @@ deps:
 	pip install pytest==8.2.2
 	pip install pytest-runner==6.0.1
 
+.PHONY: test
+# run tests
+test:
+	pytest --capture=no
+
 # show help
 help:
 	@echo ''

@@ -19,7 +19,7 @@ from .zakat_tracker import (
 )
 
 # Version information for the module
-__version__ = ZakatTracker.__version__
+__version__ = ZakatTracker.Version()
 __all__ = [
     "ZakatTracker",
     "Action",
