@@ -4,7 +4,7 @@
 
 <div align="center" style="text-align: center;">
 
-# :star_and_crescent: Zakat: A Python Library for Islamic Financial Management
+# ☪️ Zakat: A Python Library for Islamic Financial Management
 ** **We must pay Zakat if it has reached the Haul and Nisab limits for every transaction** **
 ###### [UNDER ACTIVE DEVELOPMENT]
 <p>
