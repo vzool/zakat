@@ -3,7 +3,7 @@ from setuptools import find_packages, setup
 setup(
     name='zakat',
     packages=find_packages(include=['zakat']),
-    version='0.2.0',
+    version='0.2.01',
     description='A Python Library for Islamic Financial Management.',
     author='Abdelaziz Elrashed Elshaikh Mohamed',
     install_requires=[],

@@ -4,7 +4,8 @@
 
 <div align="center" style="text-align: center;">
 
-# ZakatTracker: A Python Library for Islamic Financial Management
+# :star_and_crescent: Zakat: A Python Library for Islamic Financial Management
+** **We must pay Zakat if it has reached the Haul and Nisab limits for every transaction** **
 ###### [UNDER ACTIVE DEVELOPMENT]
 <p>
 <a href="https://github.com/vzool/zakat/blob/main/README.ar.md"><img src="https://img.shields.io/badge/lang-ar-green.svg" alt="ar" data-canonical-src="https://img.shields.io/badge/lang-en-green.svg" style="max-width: 100%;"></a>
@@ -12,15 +13,17 @@
 
 </div>
 
-ZakatTracker is a user-friendly Python library designed to simplify the tracking and calculation of Zakat, a fundamental pillar of Islamic finance. Whether you're an individual or an organization, ZakatTracker provides the tools to accurately manage your Zakat obligations.
+Zakat is a user-friendly Python library designed to simplify the tracking and calculation of Zakat, a fundamental pillar of Islamic finance. Whether you're an individual or an organization, Zakat provides the tools to accurately manage your Zakat obligations.
 
 ### Key Features:
 
 - Transaction Tracking: Easily record both income and expenses with detailed descriptions, ensuring comprehensive financial records.
 
-- Automated Zakat Calculation: Automatically calculate Zakat due based on the Nisab (minimum threshold) and the current market price of silver, simplifying compliance with Islamic financial principles.
+- Automated Zakat Calculation: Automatically calculate Zakat due based on the Nisab (minimum threshold), Haul (time cycles) and the current market price of silver, simplifying compliance with Islamic financial principles.
 
 - Customizable Nisab: Set your own Nisab value based on your preferred calculation method or personal financial situation.
+
+- Customizable Haul: Set your own Haul cycle based on your preferred calender method or personal financial situation.
 
 - Multiple Accounts: Manage Zakat for different assets or accounts separately for greater financial clarity.
 
@@ -42,7 +45,7 @@ ZakatTracker is a user-friendly Python library designed to simplify the tracking
 
 ### Customizable:
 
-- Tailor the library's settings (e.g., Nisab value) to your specific needs and preferences.
+- Tailor the library's settings (e.g., Nisab value and Haul cycles) to your specific needs and preferences.
 
 ### Who Can Benefit:
 
@@ -50,14 +53,14 @@ ZakatTracker is a user-friendly Python library designed to simplify the tracking
 
 - Organizations: Streamline Zakat calculation and distribution for charitable projects and initiatives.
 
-- Islamic Financial Institutions: Integrate ZakatTracker into existing systems for enhanced financial management and reporting.
+- Islamic Financial Institutions: Integrate Zakat into existing systems for enhanced financial management and reporting.
 
 ### Get Started:
 
-Install the ZakatTracker library using pip:
+Install the Zakat library using pip:
 
 ```bash
 pip install zakat
 ```
 
-Explore the documentation and examples to begin tracking your Zakat and achieving financial peace of mind in accordance with Islamic principles.
+Explore the documentation, source code and examples to begin tracking your Zakat and achieving financial peace of mind in accordance with Islamic principles.

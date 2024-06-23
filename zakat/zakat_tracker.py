@@ -10,12 +10,14 @@
 
 This module provides a ZakatTracker class for tracking and calculating Zakat.
 
-The ZakatTracker class allows users to record financial transactions, calculate Zakat due based on the Nisab (minimum threshold for Zakat) and the current silver price, and manage account balances. It supports importing transactions from CSV files, exporting data to JSON format, and saving/loading the tracker state.
+The ZakatTracker class allows users to record financial transactions, and calculate Zakat due based on the Nisab (the minimum threshold for Zakat) and Haul (after completing one year since every transaction received in the same account).
+We use the current silver price and manage account balances.
+It supports importing transactions from CSV files, exporting data to JSON format, and saving/loading the tracker state.
 
 Key Features:
 
 *   Tracking of positive and negative transactions
-*   Calculation of Zakat based on Nisab and silver price
+*   Calculation of Zakat based on Nisab, Haul and silver price
 *   Import of transactions from CSV files
 *   Export of data to JSON format
 *   Persistence of tracker state using pickle files
@@ -63,14 +65,14 @@ from math import floor
 from enum import Enum, auto
 
 class Action(Enum):
-		CREATE = auto()
-		TRACK = auto()
-		LOG = auto()
-		SUB = auto()
-		ADD_FILE = auto()
-		REMOVE_FILE = auto()
-		REPORT = auto()
-		ZAKAT = auto()
+	CREATE = auto()
+	TRACK = auto()
+	LOG = auto()
+	SUB = auto()
+	ADD_FILE = auto()
+	REMOVE_FILE = auto()
+	REPORT = auto()
+	ZAKAT = auto()
 
 class JSONEncoder(json.JSONEncoder):
 	def default(self, obj):
@@ -93,7 +95,7 @@ class ZakatTracker:
 
     The `ZakatTracker` class is designed to handle both positive and negative transactions,
     allowing for flexible tracking of financial activities related to Zakat. It also supports
-    the concept of a "nisab" (minimum threshold for Zakat) and can calculate Zakat due
+    the concept of a "nisab" (minimum threshold for Zakat) and a "haul" (complete one year for Transaction) can calculate Zakat due
     based on the current silver price.
 
     The class uses a pickle file as its database to persist the tracker state,
@@ -109,7 +111,7 @@ class ZakatTracker:
         ZakatCut (function): A function to calculate the Zakat percentage.
         TimeCycle (function): A function to determine the time cycle for Zakat.
         Nisab (function): A function to calculate the Nisab based on the silver price.
-        __version__ (str): The version of the ZakatTracker class.
+        Version (str): The version of the ZakatTracker class.
 
 	Data Structure:
         The ZakatTracker class utilizes a nested dictionary structure called "_vault" to store and manage data.
@@ -123,7 +125,7 @@ class ZakatTracker:
                             - capital (int): The initial amount of the transaction.
                             - count (int): The number of times Zakat has been calculated for this transaction.
                             - last (int): The timestamp of the last Zakat calculation.
-                            - rest (int): The remaining amount after Zakat deductions.
+                            - rest (int): The remaining amount after Zakat deductions and withdrawal.
                             - total (int): The total Zakat deducted from this transaction.
                     - count (int): The total number of transactions for the account.
                     - log (dict): A dictionary storing transaction logs.
@@ -152,7 +154,7 @@ class ZakatTracker:
 	ZakatCut	= lambda x: 0.025*x # Zakat Cut in one Lunar Year
 	TimeCycle	= lambda  : int(60*60*24*354.367056*1e9) # Lunar Year in nanoseconds
 	Nisab		= lambda x: 585*x # Silver Price in Local currency value
-	Version		= lambda  : '0.2.0'
+	Version		= lambda  : '0.2.01'
 
 	def __init__(self, db_path: str = "zakat.pickle", history_mode: bool = True):
 		"""
@@ -223,7 +225,7 @@ class ZakatTracker:
         now (datetime, optional): The datetime object to generate the timestamp from. If not provided, the current datetime is used.
 
         Returns:
-        int: The timestamp in nanoseconds since the Unix epoch (January 1, 1970).
+        int: The timestamp in positive nanoseconds since the Unix epoch (January 1, 1970), before 1970 will return in negative until 1000AD.
         """
 		if now is None:
 			now = datetime.datetime.now()
@@ -509,6 +511,9 @@ class ZakatTracker:
         int: The timestamp of the transaction.
 
         This function creates a new account if it doesn't exist, logs the transaction if logging is True, and updates the account's balance and box.
+
+		Raises:
+		ValueError: If the transction happend again in the same time.
         """
 		if created is None:
 			created = ZakatTracker.time()
@@ -556,6 +561,9 @@ class ZakatTracker:
 
 		This method updates the account's balance, count, and log with the transaction details.
 		It also creates a step in the history of the transaction.
+
+		Raises:
+		ValueError: If the transction happend again in the same time.
 		"""
 		if created is None:
 			created = ZakatTracker.time()
@@ -615,14 +623,14 @@ class ZakatTracker:
 			return self._vault['account'][account]['log']
 		return {}
 
-	def add_file(self, account: str, ref: int, _path: str) -> int:
+	def add_file(self, account: str, ref: int, path: str) -> int:
 		"""
 		Adds a file reference to a specific transaction log entry in the vault.
 
 		Parameters:
 		account (str): The account number associated with the transaction log.
 		ref (int): The reference to the transaction log entry.
-		_path (str): The path of the file to be added.
+		path (str): The path of the file to be added.
 
 		Returns:
 		int: The reference of the added file. If the account or transaction log entry does not exist, returns 0.
@@ -630,7 +638,7 @@ class ZakatTracker:
 		if self.account_exists(account):
 			if ref in self._vault['account'][account]['log']:
 				file_ref = ZakatTracker.time()
-				self._vault['account'][account]['log'][ref]['file'][file_ref] = _path
+				self._vault['account'][account]['log'][ref]['file'][file_ref] = path
 				_nolock = self.nolock(); self.lock()
 				self._step(Action.ADD_FILE, account, ref=ref, file=file_ref)
 				if _nolock: self.free(self.lock())
@@ -724,6 +732,9 @@ class ZakatTracker:
 
 		If the amount to subtract is greater than the account's balance,
 		the remaining amount will be transferred to a new transaction with a negative value.
+
+		Raises:
+		ValueError: If the transction happend again in the same time.
 		"""
 		if x < 0:
 			return
@@ -779,7 +790,7 @@ class ZakatTracker:
 		list[int]: A list of timestamps corresponding to the transactions made during the transfer.
 
 		Raises:
-		ValueError: If the value to be transferred is negative or if the value exceeds the balance in the from_account.
+		ValueError: If the transction happend again in the same time.
 		"""
 		if created is None:
 			created = ZakatTracker.time()
@@ -1001,12 +1012,12 @@ class ZakatTracker:
 		if _nolock: self.free(self.lock())
 		return True
 
-	def export_json(self, _path: str = "data.json") -> bool:
+	def export_json(self, path: str = "data.json") -> bool:
 		"""
         Exports the current state of the ZakatTracker object to a JSON file.
 
         Parameters:
-        _path (str): The path where the JSON file will be saved. Default is "data.json".
+        path (str): The path where the JSON file will be saved. Default is "data.json".
 
         Returns:
         bool: True if the export is successful, False otherwise.
@@ -1014,52 +1025,52 @@ class ZakatTracker:
         Raises:
         No specific exceptions are raised by this method.
         """
-		with open(_path, "w") as file:
+		with open(path, "w") as file:
 			json.dump(self._vault, file, indent=4, cls=JSONEncoder)
 			return True
 		return False
 
-	def save(self, _path: str = None) -> bool:
+	def save(self, path: str = None) -> bool:
 		"""
 		Save the current state of the ZakatTracker object to a pickle file.
 
 		Parameters:
-		_path (str): The path where the pickle file will be saved. If not provided, it will use the default path.
+		path (str): The path where the pickle file will be saved. If not provided, it will use the default path.
 
 		Returns:
 		bool: True if the save operation is successful, False otherwise.
 		"""
-		if _path is None:
-			_path = self.path()
-		with open(_path, "wb") as f:
+		if path is None:
+			path = self.path()
+		with open(path, "wb") as f:
 			pickle.dump(self._vault, f)
 			return True
 		return False
 
-	def load(self, _path: str = None) -> bool:
+	def load(self, path: str = None) -> bool:
 		"""
 		Load the current state of the ZakatTracker object from a pickle file.
 
 		Parameters:
-		_path (str): The path where the pickle file is located. If not provided, it will use the default path.
+		path (str): The path where the pickle file is located. If not provided, it will use the default path.
 
 		Returns:
 		bool: True if the load operation is successful, False otherwise.
 		"""
-		if _path is None:
-			_path = self.path()
-		if os.path.exists(_path):
-			with open(_path, "rb") as f:
+		if path is None:
+			path = self.path()
+		if os.path.exists(path):
+			with open(path, "rb") as f:
 				self._vault = pickle.load(f)
 				return True
 		return False
 
-	def import_csv(self, _path: str = 'file.csv') -> tuple:
+	def import_csv(self, path: str = 'file.csv') -> tuple:
 		"""
         Import transactions from a CSV file.
 
         Parameters:
-        _path (str): The path to the CSV file. Default is 'file.csv'.
+        path (str): The path to the CSV file. Default is 'file.csv'.
 
         Returns:
         tuple: A tuple containing the number of transactions created, the number of transactions found in the cache, and a dictionary of bad transactions.
@@ -1069,7 +1080,7 @@ class ZakatTracker:
         For example:
         safe-45, "Some text", 34872, 1988-06-30 00:00:00
 
-        The function reads the CSV file, checks for duplicate transactions, and creates or updates the transactions in the system.
+        The function reads the CSV file, checks for duplicate transactions, and creates the transactions in the system.
         """
 		cache = []
 		tmp = "tmp"
@@ -1085,7 +1096,7 @@ class ZakatTracker:
 			"%Y-%m-%d",
 		]
 		created, found, bad = 0, 0, {}
-		with open(_path, newline='', encoding="utf-8") as f:
+		with open(path, newline='', encoding="utf-8") as f:
 			i = 0
 			for row in csv.reader(f, delimiter=','):
 				i += 1
@@ -1152,7 +1163,7 @@ class ZakatTracker:
 		return TIMELAPSED, SPOKENTIME
 
 	@staticmethod
-	def generate_random_date(start_date, end_date):
+	def generate_random_date(start_date: datetime.datetime, end_date: datetime.datetime) -> datetime.datetime:
 		"""
 		Generate a random date between two given dates.
 
@@ -1169,12 +1180,12 @@ class ZakatTracker:
 		return start_date + datetime.timedelta(days=random_number_of_days)
 
 	@staticmethod
-	def generate_random_csv_file(_path: str = "data.csv", count: int = 1000):
+	def generate_random_csv_file(path: str = "data.csv", count: int = 1000) -> None:
 		"""
 		Generate a random CSV file with specified parameters.
 
 		Parameters:
-		_path (str): The path where the CSV file will be saved. Default is "data.csv".
+		path (str): The path where the CSV file will be saved. Default is "data.csv".
 		count (int): The number of rows to generate in the CSV file. Default is 1000.
 
 		Returns:
@@ -1183,7 +1194,7 @@ class ZakatTracker:
 		The value is randomly generated between 1000 and 100000, and the date is randomly generated between 1950-01-01 and 2023-12-31.
 		If the row number is not divisible by 13, the value is multiplied by -1.
 		"""
-		with open(_path, "w", newline="") as csvfile:
+		with open(path, "w", newline="") as csvfile:
 			writer = csv.writer(csvfile)
 			for i in range(count):
 				account = f"acc-{random.randint(1, 1000)}"
