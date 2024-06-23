@@ -154,7 +154,7 @@ class ZakatTracker:
 	ZakatCut	= lambda x: 0.025*x # Zakat Cut in one Lunar Year
 	TimeCycle	= lambda  : int(60*60*24*354.367056*1e9) # Lunar Year in nanoseconds
 	Nisab		= lambda x: 585*x # Silver Price in Local currency value
-	Version		= lambda  : '0.2.01'
+	Version		= lambda  : '0.2.2'
 
 	def __init__(self, db_path: str = "zakat.pickle", history_mode: bool = True):
 		"""
