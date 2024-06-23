@@ -1,12 +1,15 @@
-<div align="center" style="text-align: center;">
+<h1 align="center">
+<img src="https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg" width="333">
+</h1><br>
 
-![Zakat Tracker Logo](images/logo.jpg)
+<div align="center" style="text-align: center;">
 
 # ZakatTracker: A Python Library for Islamic Financial Management
 ###### [UNDER ACTIVE DEVELOPMENT]
 <p>
 <a href="https://github.com/vzool/zakat/blob/main/README.ar.md"><img src="https://img.shields.io/badge/lang-ar-green.svg" alt="ar" data-canonical-src="https://img.shields.io/badge/lang-en-green.svg" style="max-width: 100%;"></a>
 </p>
+
 </div>
 
 ZakatTracker is a user-friendly Python library designed to simplify the tracking and calculation of Zakat, a fundamental pillar of Islamic finance. Whether you're an individual or an organization, ZakatTracker provides the tools to accurately manage your Zakat obligations.

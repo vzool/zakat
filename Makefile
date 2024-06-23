@@ -6,17 +6,23 @@ init:
 .PHONY: deps
 # deps development
 deps:
-	pip install --upgrade pip
-	pip install wheel
-	pip install setuptools
-	pip install twine
-	pip install pytest==8.2.2
-	pip install pytest-runner==6.0.1
+	python3 -m pip install --upgrade pip
+	python3 -m pip install wheel
+	python3 -m pip install setuptools
+	python3 -m pip install twine
+	python3 -m pip install pytest==8.2.2
+	python3 -m pip install pytest-runner==6.0.1
+	python3 -m pip install --upgrade twine
 
 .PHONY: test
 # run tests
 test:
 	pytest --capture=no
+
+.PHONY: deploy
+# deploy package
+deploy:
+	python3 -m twine upload --repository zakat dist/*
 
 # show help
 help:

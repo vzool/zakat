@@ -4,7 +4,7 @@ version = "0.1.1720"
 authors = [
   { name="Abdelaziz Elrashed Elshaikh Mohamed", email="aeemh.sdn@gmail.com" },
 ]
-description = "This module provides the ZakatTracker class for tracking and calculating Zakat."
+description = "A Python Library for Islamic Financial Management."
 readme = "README.md"
 requires-python = ">=3.10"
 classifiers = [

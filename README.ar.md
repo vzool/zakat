@@ -1,6 +1,8 @@
-<div align="center" style="text-align: center;">
+<h1 align="center">
+<img src="https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg" width="333">
+</h1><br>
 
-![Zakat Tracker Logo](images/logo.jpg)
+<div align="center" style="text-align: center;">
 
 <div dir="rtl">
 
