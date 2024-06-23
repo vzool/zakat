@@ -1048,9 +1048,10 @@ class ZakatTracker:
 		"""
 		if _path is None:
 			_path = self.path()
-		with open(_path, "rb") as f:
-			self._vault = pickle.load(f)
-			return True
+		if os.path.exists(_path):
+			with open(_path, "rb") as f:
+				self._vault = pickle.load(f)
+				return True
 		return False
 
 	def import_csv(self, _path: str = 'file.csv') -> tuple:

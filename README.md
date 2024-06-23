@@ -1,6 +1,6 @@
 <div align="center" style="text-align: center;">
 
-![Zakat Tracker Logo](images/logo.png)
+![Zakat Tracker Logo](images/logo.jpg)
 
 # ZakatTracker: A Python Library for Islamic Financial Management
 

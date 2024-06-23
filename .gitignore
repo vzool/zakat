@@ -3,3 +3,8 @@ dist
 build
 *.egg-info
 .eggs
+*.csv
+*.pickle
+tmp
+*.json
+*.pyc
