@@ -5,8 +5,8 @@
 <div align="center" style="text-align: center;">
 
 # ☪️ Zakat: A Python Library for Islamic Financial Management
-** **We must pay Zakat if it has reached the Haul and Nisab limits for every transaction** **
-###### [UNDER ACTIVE DEVELOPMENT]
+** **We must pay Zakat if the remaining of every transaction reaches the Haul and Nisab limits** **
+###### [PROJECT UNDER ACTIVE R&D]
 <p>
 <a href="https://github.com/vzool/zakat/blob/main/README.ar.md"><img src="https://img.shields.io/badge/lang-ar-green.svg" alt="ar" data-canonical-src="https://img.shields.io/badge/lang-en-green.svg" style="max-width: 100%;"></a>
 </p>
@@ -31,7 +31,7 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
 
 - Data Persistence: Securely save and load your Zakat tracker data for continued use across sessions.
 
-- History Tracking: Optionally enable a detailed history of actions for transparency and review (can be disabled for privacy).
+- History Tracking: Optionally enable a detailed history of actions for transparency and review (can be disabled optionally).
 
 ### Benefits:
 

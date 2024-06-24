@@ -7,15 +7,15 @@
 <div dir="rtl">
 
 # ☪️ الزكاة (Zakat): مكتبة بايثون للإدارة المالية الإسلامية
-** **يجب علينا إخراج الزكاة إذا بلغت حد الحول والنصاب لكل معاملة** **
-###### [تحت التطوير النشط]
+** **يجب علينا إخراج الزكاة إذا بلغ ما تبقى من كل معاملة مالية مقدار النصاب ومدة الحول** **
+
+###### [المشروع تحت البحث والتطوير النشط]
 </div>
 
 <p>
 <a href="https://github.com/vzool/zakat/blob/main/README.md"><img src="https://img.shields.io/badge/lang-en-green.svg" alt="en" data-canonical-src="https://img.shields.io/badge/lang-en-green.svg" style="max-width: 100%;"></a>
 </p>
 </div>
-
 
 <div dir="rtl">
 
