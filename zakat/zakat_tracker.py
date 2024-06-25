@@ -71,6 +71,7 @@ class Action(Enum):
 	SUB = auto()
 	ADD_FILE = auto()
 	REMOVE_FILE = auto()
+	EXCHANGE = auto()
 	REPORT = auto()
 	ZAKAT = auto()
 
@@ -137,7 +138,7 @@ class ZakatTracker:
             - history (dict):
                 - {timestamp} (list): A list of dictionaries storing the history of actions performed.
                     - {action_dict} (dict):
-                        - action (Action): The type of action (CREATE, TRACK, LOG, SUB, ADD_FILE, REMOVE_FILE, REPORT, ZAKAT).
+                        - action (Action): The type of action (CREATE, TRACK, LOG, SUB, ADD_FILE, REMOVE_FILE, EXCHANGE, REPORT, ZAKAT).
                         - account (str): The account number associated with the action.
                         - ref (int): The reference number of the transaction.
                         - file (int): The reference number of the file (if applicable).
@@ -152,9 +153,9 @@ class ZakatTracker:
 
 	# Hybrid Constants
 	ZakatCut	= lambda x: 0.025*x # Zakat Cut in one Lunar Year
-	TimeCycle	= lambda  : int(60*60*24*354.367056*1e9) # Lunar Year in nanoseconds
+	TimeCycle	= lambda days = 355: int(60*60*24*days*1e9) # Lunar Year in nanoseconds
 	Nisab		= lambda x: 595*x # Silver Price in Local currency value
-	Version		= lambda  : '0.2.2'
+	Version		= lambda  : '0.2.3'
 
 	def __init__(self, db_path: str = "zakat.pickle", history_mode: bool = True):
 		"""
@@ -212,6 +213,7 @@ class ZakatTracker:
         """
 		self._vault = {}
 		self._vault['account'] = {}
+		self._vault['exchange'] = {}
 		self._vault['history'] = {}
 		self._vault['lock'] = None
 		self._vault['report'] = {}
@@ -470,6 +472,14 @@ class ZakatTracker:
 									continue
 								self._vault['account'][x['account']]['log'][x['ref']]['file'][x['file']] = x['value']
 
+				case Action.EXCHANGE:
+					if x['account'] is not None:
+						if x['account'] in self._vault['exchange']:
+							if x['ref'] in self._vault['exchange'][x['account']]:
+								if dry:
+									continue
+								del self._vault['exchange'][x['account']][x['ref']]
+
 				case Action.REPORT:
 					if x['ref'] in self._vault['report']:
 						if dry:
@@ -577,6 +587,27 @@ class ZakatTracker:
 		}
 		self._step(Action.LOG, account, ref=created, value=value)
 		return created
+
+	def exchange(self, account, created: int = None, rate: float = None, description: str = None) -> dict:
+		if rate is not None:
+			if rate <= 1:
+				return None
+			if account not in self._vault['exchange']:
+				self._vault['exchange'][account] = {}
+			if created is None:
+				created = self.time()
+			self._vault['exchange'][account][created] = {"rate": rate, "description": description}
+			self._step(Action.EXCHANGE, account, ref=created, value=rate)
+
+		if account in self._vault['exchange'] and created is not None:
+			valid_rates = [(ts, r) for ts, r in self._vault['exchange'][account].items() if ts <= created]
+			if valid_rates:
+				latest_rate = max(valid_rates, key=lambda x: x[0])
+				return latest_rate[1] # إرجاع قاموس يحتوي على المعدل والوصف
+		return {"rate": 1, "description": None} # إرجاع القيمة الافتراضية مع وصف فارغ
+
+	def exchanges(self) -> dict:
+		return self._vault['exchange'].copy()
 
 	def accounts(self) -> dict:
 		"""
@@ -1163,6 +1194,10 @@ class ZakatTracker:
 		return TIMELAPSED, SPOKENTIME
 
 	@staticmethod
+	def day_to_time(day: int, month: int = 6, year: int = 2024) -> int:  # افتراض أن الشهر هو يونيو والسنة 2024
+		return ZakatTracker.time(datetime.datetime(year, month, day))
+
+	@staticmethod
 	def generate_random_date(start_date: datetime.datetime, end_date: datetime.datetime) -> datetime.datetime:
 		"""
 		Generate a random date between two given dates.
@@ -1637,6 +1672,93 @@ class ZakatTracker:
 			if debug:
 				print('valid', valid)
 			assert self.zakat(report, parts=suite, debug=debug)
+
+			# exchange
+
+			self.exchange("cash", 25, 3.75, "2024-06-25")
+			self.exchange("cash", 22, 3.73, "2024-06-22")
+			self.exchange("cash", 15, 3.69, "2024-06-15")
+			self.exchange("cash", 10, 3.66)
+
+			for i in range(1, 30):
+				rate, description = self.exchange("cash", i).values()
+				if debug:
+					print(i, rate, description)
+				if i < 10:
+					assert rate == 1
+					assert description is None
+				elif i == 10:
+					assert rate == 3.66
+					assert description is None
+				elif i < 15:
+					assert rate == 3.66
+					assert description is None
+				elif i == 15:
+					assert rate == 3.69
+					assert description is not None
+				elif i < 22:
+					assert rate == 3.69
+					assert description is not None
+				elif i == 22:
+					assert rate == 3.73
+					assert description is not None
+				elif i >= 25:
+					assert rate == 3.75
+					assert description is not None
+				rate, description = self.exchange("bank", i).values()
+				if debug:
+					print(i, rate, description)
+				assert rate == 1
+				assert description is None
+
+			assert len(self._vault['exchange']) > 0
+			assert len(self.exchanges()) > 0
+			self._vault['exchange'].clear()
+			assert len(self._vault['exchange']) == 0
+			assert len(self.exchanges()) == 0
+
+			# حفظ أسعار الصرف باستخدام التواريخ بالنانو ثانية
+			self.exchange("cash", ZakatTracker.day_to_time(25), 3.75, "2024-06-25")
+			self.exchange("cash", ZakatTracker.day_to_time(22), 3.73, "2024-06-22")
+			self.exchange("cash", ZakatTracker.day_to_time(15), 3.69, "2024-06-15")
+			self.exchange("cash", ZakatTracker.day_to_time(10), 3.66)
+
+			for i in [x * 0.12 for x in range(-15, 21)]:
+				if i <= 1:
+					assert self.exchange("test", ZakatTracker.time(), i, f"range({i})") is None
+				else:
+					assert self.exchange("test", ZakatTracker.time(), i, f"range({i})") is not None
+
+			# اختبار النتائج باستخدام التواريخ بالنانو ثانية
+			for i in range(1, 31):
+				timestamp_ns = ZakatTracker.day_to_time(i)
+				rate, description = self.exchange("cash", timestamp_ns).values()
+				print(i, rate, description)
+				if i < 10:
+					assert rate == 1
+					assert description is None
+				elif i == 10:
+					assert rate == 3.66
+					assert description is None
+				elif i < 15:
+					assert rate == 3.66
+					assert description is None
+				elif i == 15:
+					assert rate == 3.69
+					assert description is not None
+				elif i < 22:
+					assert rate == 3.69
+					assert description is not None
+				elif i == 22:
+					assert rate == 3.73
+					assert description is not None
+				elif i >= 25:
+					assert rate == 3.75
+					assert description is not None
+				rate, description = self.exchange("bank", i).values()
+				print(i, rate, description)
+				assert rate == 1
+				assert description is None
 
 			assert self.export_json("1000-transactions-test.json")
 			assert self.save("1000-transactions-test.pickle")
