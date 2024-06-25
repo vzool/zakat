@@ -55,6 +55,10 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
 
 - Islamic Financial Institutions: Integrate Zakat into existing systems for enhanced financial management and reporting.
 
+### Documentation
+
+- [Mechanism of Zakat: The Rooms and Boxes Algorithm](./docs/algorithm.md)
+
 ### Get Started:
 
 Install the Zakat library using pip:
