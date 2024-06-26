@@ -272,7 +272,7 @@ class ZakatTracker:
 			return 0
 		_lock = self._vault['lock']
 		if self.nolock():
-			_lock = self._vault['lock'] = ZakatTracker.time()
+			_lock = self._vault['lock'] = self.time()
 			self._vault['history'][_lock] = []
 		if action is None:
 			return _lock
@@ -523,10 +523,10 @@ class ZakatTracker:
         This function creates a new account if it doesn't exist, logs the transaction if logging is True, and updates the account's balance and box.
 
 		Raises:
-		ValueError: If the transction happend again in the same time.
+		ValueError: If the box transction happend again in the same nanosecond time.
         """
 		if created is None:
-			created = ZakatTracker.time()
+			created = self.time()
 		_nolock = self.nolock(); self.lock()
 		if not self.account_exists(account):
 			if debug:
@@ -543,8 +543,13 @@ class ZakatTracker:
 			if _nolock: self.free(self.lock())
 			return 0
 		if logging:
-			self._log(value, desc, account, created)
-		assert created not in self._vault['account'][account]['box']
+			self._log(value, desc, account, created, debug)
+		if debug:
+			print('create-box', created)
+		if created in self._vault['account'][account]['box']:
+			raise ValueError(f"The box transction happend again in the same nanosecond time({created}).")
+		if debug:
+			print('created-box', created)
 		self._vault['account'][account]['box'][created] = {
 			'capital': value,
 			'count': 0,
@@ -556,7 +561,7 @@ class ZakatTracker:
 		if _nolock: self.free(self.lock())
 		return created
 
-	def _log(self, value: int, desc: str = '', account: str = 1, created: int = None) -> int:
+	def _log(self, value: int, desc: str = '', account: str = 1, created: int = None, debug: bool = False) -> int:
 		"""
 		Log a transaction into the account's log.
 
@@ -573,13 +578,18 @@ class ZakatTracker:
 		It also creates a step in the history of the transaction.
 
 		Raises:
-		ValueError: If the transction happend again in the same time.
+		ValueError: If the log transction happend again in the same nanosecond time.
 		"""
 		if created is None:
-			created = ZakatTracker.time()
+			created = self.time()
 		self._vault['account'][account]['balance'] += value
 		self._vault['account'][account]['count'] += 1
-		assert created not in self._vault['account'][account]['log']
+		if debug:
+			print('create-log', created)
+		if created in self._vault['account'][account]['log']:
+			raise ValueError(f"The log transction happend again in the same nanosecond time({created}).")
+		if debug:
+			print('created-log', created)
 		self._vault['account'][account]['log'][created] = {
 			'value': value,
 			'desc': desc,
@@ -588,7 +598,7 @@ class ZakatTracker:
 		self._step(Action.LOG, account, ref=created, value=value)
 		return created
 
-	def exchange(self, account, created: int = None, rate: float = None, description: str = None) -> dict:
+	def exchange(self, account, created: int = None, rate: float = None, description: str = None, debug: bool = False) -> dict:
 		"""
 		This method is used to record or retrieve exchange rates for a specific account.
 
@@ -611,12 +621,18 @@ class ZakatTracker:
 				created = self.time()
 			self._vault['exchange'][account][created] = {"rate": rate, "description": description}
 			self._step(Action.EXCHANGE, account, ref=created, value=rate)
+			if debug:
+				print("exchange-created-1", f'account: {account}, created: {created}, rate:{rate}, description:{description}')
 
 		if account in self._vault['exchange'] and created is not None:
 			valid_rates = [(ts, r) for ts, r in self._vault['exchange'][account].items() if ts <= created]
 			if valid_rates:
 				latest_rate = max(valid_rates, key=lambda x: x[0])
+				if debug:
+					print("exchange-read-1", f'account: {account}, created: {created}, rate:{rate}, description:{description}', 'latest_rate', latest_rate)
 				return latest_rate[1] # إرجاع قاموس يحتوي على المعدل والوصف
+		if debug:
+			print("exchange-read-0", f'account: {account}, created: {created}, rate:{rate}, description:{description}')
 		return {"rate": 1, "description": None} # إرجاع القيمة الافتراضية مع وصف فارغ
 
 	def exchanges(self) -> dict:
@@ -692,7 +708,7 @@ class ZakatTracker:
 		"""
 		if self.account_exists(account):
 			if ref in self._vault['account'][account]['log']:
-				file_ref = ZakatTracker.time()
+				file_ref = self.time()
 				self._vault['account'][account]['log'][ref]['file'][file_ref] = path
 				_nolock = self.nolock(); self.lock()
 				self._step(Action.ADD_FILE, account, ref=ref, file=file_ref)
@@ -771,32 +787,32 @@ class ZakatTracker:
 			return status
 		return False
 
-	def sub(self, x: int, desc: str = '', account: str = 1, created: int = None, debug: bool = False) -> int:
+	def sub(self, x: int, desc: str = '', account: str = 1, created: int = None, debug: bool = False) -> tuple:
 		"""
-		Subtracts a specified amount from the account's balance.
+		Subtracts a specified value from an account's balance.
 
 		Parameters:
-		x (int): The amount to subtract.
-		desc (str): The description of the transaction.
-		account (str): The account from which to subtract.
-		created (int): The timestamp of the transaction.
-		debug (bool): A flag to enable debug mode.
+		x (int): The amount to be subtracted.
+		desc (str): A description for the transaction. Defaults to an empty string.
+		account (str): The account from which the value will be subtracted. Defaults to '1'.
+		created (int): The timestamp of the transaction. If not provided, the current timestamp will be used.
+		debug (bool): A flag indicating whether to print debug information. Defaults to False.
 
 		Returns:
-		int: The timestamp of the transaction.
+		tuple: A tuple containing the timestamp of the transaction and a list of tuples representing the age of each transaction.
 
 		If the amount to subtract is greater than the account's balance,
 		the remaining amount will be transferred to a new transaction with a negative value.
 
 		Raises:
-		ValueError: If the transction happend again in the same time.
+		ValueError: If the transction happend again in the same nanosecond time.
 		"""
 		if x < 0:
 			return
 		if x == 0:
 			return self.track(x, '', account)
 		if created is None:
-			created = ZakatTracker.time()
+			created = self.time()
 		_nolock = self.nolock(); self.lock()
 		self.track(0, '', account)
 		self._log(-x, desc, account, created)
@@ -830,29 +846,40 @@ class ZakatTracker:
 		if _nolock: self.free(self.lock())
 		return (created, ages)
 
-	def transfer(self, value: int, from_account: str, to_account: str, desc: str = '', created: int = None) -> list[int]:
+	def transfer(self, amount: int, from_account: str, to_account: str, desc: str = '', created: int = None, debug: bool = False) -> list[int]:
 		"""
 		Transfers a specified value from one account to another.
 
 		Parameters:
-		value (int): The amount to be transferred.
+		amount (int): The amount to be transferred.
 		from_account (str): The account from which the value will be transferred.
 		to_account (str): The account to which the value will be transferred.
 		desc (str, optional): A description for the transaction. Defaults to an empty string.
 		created (int, optional): The timestamp of the transaction. If not provided, the current timestamp will be used.
+		debug (bool): A flag indicating whether to print debug information. Defaults to False.
 
 		Returns:
 		list[int]: A list of timestamps corresponding to the transactions made during the transfer.
 
 		Raises:
-		ValueError: If the transction happend again in the same time.
+		ValueError: If the transction happend again in the same nanosecond time.
 		"""
 		if created is None:
-			created = ZakatTracker.time()
-		(_, ages) = self.sub(value, desc, from_account, created)
+			created = self.time()
+		(_, ages) = self.sub(amount, desc, from_account, created, debug=debug)
 		times = []
-		for age in ages:
-			y = self.track(age[1], desc, to_account, logging=True, created=age[0])
+		source_exchange = self.exchange(from_account, created)
+		target_exchange = self.exchange(to_account, created)
+
+		for age, value in ages:
+			# Convert source amount to the base currency
+			source_amount_base = value * source_exchange['rate']
+			# Convert base amount to the target currency
+			target_amount = source_amount_base / target_exchange['rate']
+			# Perform the transfer
+			y = self.track(target_amount, desc, to_account, logging=True, created=age, debug=debug)
+			if debug:
+				print(f"Transferred {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).")
 			times.append(y)
 		return times
 
@@ -871,7 +898,7 @@ class ZakatTracker:
 		tuple: A tuple containing a boolean indicating the eligibility for Zakat, a list of brief statistics, and a dictionary containing the Zakat plan.
 		"""
 		if now is None:
-			now = ZakatTracker.time()
+			now = self.time()
 		if cycle is None:
 			cycle = ZakatTracker.TimeCycle()
 		if nisab is None:
@@ -1033,10 +1060,10 @@ class ZakatTracker:
 			print('######### zakat #######')
 			print('parts_exist', parts_exist)
 		_nolock = self.nolock(); self.lock()
-		report_time = ZakatTracker.time()
+		report_time = self.time()
 		self._vault['report'][report_time] = report
 		self._step(Action.REPORT, ref=report_time)
-		created = ZakatTracker.time()
+		created = self.time()
 		for x in plan:
 			if debug:
 				print(plan[x])
@@ -1476,7 +1503,7 @@ class ZakatTracker:
 				for x in case[total]['series']:
 					self.track(x[0], f"test-{x} ages", 'ages', True, selected_time * x[1])
 
-				refs = self.transfer(total, 'ages', 'future', 'Zakat Movement')
+				refs = self.transfer(total, 'ages', 'future', 'Zakat Movement', debug=debug)
 
 				if debug:
 					print('refs', refs)
@@ -1547,7 +1574,7 @@ class ZakatTracker:
 				self.lock()
 				x = z[1]
 				y = z[2]
-				self.transfer(z[0], x, y, 'test-transfer')
+				self.transfer(z[0], x, y, 'test-transfer', debug=debug)
 				assert self.balance(x) == z[3]
 				xx = self.accounts()[x]
 				assert xx == z[3]
@@ -1800,6 +1827,73 @@ class ZakatTracker:
 
 			assert self.export_json("1000-transactions-test.json")
 			assert self.save("1000-transactions-test.pickle")
+
+			self.reset()
+
+			# test transfer between accounts with different exchange rate
+
+			debug = True
+			a_account = "Bank (SAR)"
+			b_account = "Bank (USD)"
+			c_account = "Safe (SAR)"
+			self.track(value=1000, desc="SAR Gift", account=a_account, debug=debug)
+
+			assert self.balance(a_account, cached=True) == 1000
+			assert self.balance(a_account, cached=False) == 1000
+
+			self.exchange(a_account, rate=1, debug=debug)
+
+			a_exchange = self.exchange(a_account, created=ZakatTracker.time(), debug=debug)
+			if debug:
+				print('a-exchange', a_exchange)
+			assert a_exchange['rate'] == 1
+
+			self.track(value=500, desc="USD Gift", account=b_account, debug=debug)
+
+			assert self.balance(b_account, cached=True) == 500
+			assert self.balance(b_account, cached=False) == 500
+
+			self.exchange(b_account, rate=3.75, debug=debug)
+
+			b_exchange = self.exchange(b_account, created=ZakatTracker.time(), debug=debug)
+			if debug:
+				print('b-exchange', b_exchange)
+			assert b_exchange['rate'] == 3.75
+
+			# Transfer 100 USD to the SAR account
+			self.transfer(100, b_account, a_account, "100 USD -> SAR", debug=debug)
+
+			assert self.balance(a_account, cached=True) == 1375
+			assert self.balance(a_account, cached=False) == 1375
+			
+			assert self.balance(b_account, cached=True) == 400
+			assert self.balance(b_account, cached=False) == 400
+
+			self.track(750, 'safe-sar', c_account, debug=debug)
+
+			assert self.balance(c_account, cached=True) == 750
+			assert self.balance(c_account, cached=False) == 750
+
+			# Transfer 375 SAR to the USD account
+			self.transfer(375, c_account, b_account, "375 SAR -> USD", debug=debug)
+
+			assert self.balance(c_account, cached=True) == 375
+			assert self.balance(c_account, cached=False) == 375
+			
+			assert self.balance(b_account, cached=True) == 500
+			assert self.balance(b_account, cached=False) == 500
+
+			# Transfer 3.75 SAR to the USD account
+			# self.transfer(3.75, a_account, b_account, "3.75 SAR -> USD", debug=debug)
+			
+			# assert self.balance(a_account, cached=True) == 1371.25
+			# assert self.balance(a_account, cached=False) == 1371.25
+			
+			# assert self.balance(b_account, cached=True) == 401
+			# assert self.balance(b_account, cached=False) == 401
+
+			assert self.export_json("accounts-transfer-with-exchange-rates.json")
+			assert self.save("accounts-transfer-with-exchange-rates.pickle")
 
 			# check & zakat
 
