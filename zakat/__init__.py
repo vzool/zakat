@@ -1,14 +1,15 @@
 """
- _____     _         _     _____               _             
-|__  /__ _| | ____ _| |_  |_   _| __ __ _  ___| | _____ _ __ 
-  / // _` | |/ / _` | __|   | || '__/ _` |/ __| |/ / _ \ '__|
- / /| (_| |   < (_| | |_    | || | | (_| | (__|   <  __/ |   
-/____\__,_|_|\_\__,_|\__|   |_||_|  \__,_|\___|_|\_\___|_|   
+ _____     _         _     _     _ _                          
+|__  /__ _| | ____ _| |_  | |   (_) |__  _ __ __ _ _ __ _   _ 
+  / // _` | |/ / _` | __| | |   | | '_ \| '__/ _` | '__| | | |
+ / /| (_| |   < (_| | |_  | |___| | |_) | | | (_| | |  | |_| |
+/____\__,_|_|\_\__,_|\__| |_____|_|_.__/|_|  \__,_|_|   \__, |
+                                                        |___/ 
 
 "رَبَّنَا افْتَحْ بَيْنَنَا وَبَيْنَ قَوْمِنَا بِالْحَقِّ وَأَنتَ خَيْرُ الْفَاتِحِينَ (89)" -- سورة الأعراف
 ... Never Trust, Always Verify ...
 
-This module provides the ZakatTracker class for tracking and calculating Zakat.
+This file provides the ZakatLibrary classes, functions for tracking and calculating Zakat.
 """
 # Importing necessary classes and functions from the main module
 from .zakat_tracker import (

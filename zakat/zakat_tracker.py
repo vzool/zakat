@@ -589,6 +589,19 @@ class ZakatTracker:
 		return created
 
 	def exchange(self, account, created: int = None, rate: float = None, description: str = None) -> dict:
+		"""
+		This method is used to record or retrieve exchange rates for a specific account.
+
+		Parameters:
+		- account (str): The account number for which the exchange rate is being recorded or retrieved.
+		- created (int): The timestamp of the exchange rate. If not provided, the current timestamp will be used.
+		- rate (float): The exchange rate to be recorded. If not provided, the method will retrieve the latest exchange rate.
+		- description (str): A description of the exchange rate.
+
+		Returns:
+		- dict: A dictionary containing the latest exchange rate and its description. If no exchange rate is found,
+		it returns a dictionary with default values for the rate and description.
+		"""
 		if rate is not None:
 			if rate <= 1:
 				return None
@@ -607,6 +620,17 @@ class ZakatTracker:
 		return {"rate": 1, "description": None} # إرجاع القيمة الافتراضية مع وصف فارغ
 
 	def exchanges(self) -> dict:
+		"""
+        Retrieve the recorded exchange rates for all accounts.
+
+        Parameters:
+        None
+
+        Returns:
+        dict: A dictionary containing all recorded exchange rates.
+        The keys are account names or numbers, and the values are dictionaries containing the exchange rates.
+        Each exchange rate dictionary has timestamps as keys and exchange rate details as values.
+        """
 		return self._vault['exchange'].copy()
 
 	def accounts(self) -> dict:
@@ -1194,7 +1218,21 @@ class ZakatTracker:
 		return TIMELAPSED, SPOKENTIME
 
 	@staticmethod
-	def day_to_time(day: int, month: int = 6, year: int = 2024) -> int:  # افتراض أن الشهر هو يونيو والسنة 2024
+	def day_to_time(day: int, month: int = 6, year: int = 2024) -> int: # افتراض أن الشهر هو يونيو والسنة 2024
+		"""
+		Convert a specific day, month, and year into a timestamp.
+
+		Parameters:
+		day (int): The day of the month.
+		month (int): The month of the year. Default is 6 (June).
+		year (int): The year. Default is 2024.
+
+		Returns:
+		int: The timestamp representing the given day, month, and year.
+
+		Note:
+		This method assumes the default month and year if not provided.
+		"""
 		return ZakatTracker.time(datetime.datetime(year, month, day))
 
 	@staticmethod
