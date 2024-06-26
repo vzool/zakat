@@ -505,6 +505,14 @@ class ZakatTracker:
 			del self._vault['history'][ref]
 		return True
 
+	def ref_exists(self, account: str, ref_type: str, ref: int) -> bool:
+		if account in self._vault['account']:
+			return ref in self._vault['account'][account][ref_type]
+		return False
+
+	def box_exists(self, account: str, ref: int) -> bool:
+		return self.ref_exists(account, 'box', ref)
+
 	def track(self, value: int = 0, desc: str = '', account: str = 1, logging: bool = True, created: int = None, debug: bool = False) -> int:
 		"""
         This function tracks a transaction for a specific account.
@@ -546,7 +554,7 @@ class ZakatTracker:
 			self._log(value, desc, account, created, debug)
 		if debug:
 			print('create-box', created)
-		if created in self._vault['account'][account]['box']:
+		if self.box_exists(account, created):
 			raise ValueError(f"The box transction happend again in the same nanosecond time({created}).")
 		if debug:
 			print('created-box', created)
@@ -560,6 +568,9 @@ class ZakatTracker:
 		self._step(Action.TRACK, account, ref=created, value=value)
 		if _nolock: self.free(self.lock())
 		return created
+
+	def log_exists(self, account: str, ref: int) -> bool:
+		return self.ref_exists(account, 'log', ref)
 
 	def _log(self, value: int, desc: str = '', account: str = 1, created: int = None, debug: bool = False) -> int:
 		"""
@@ -586,7 +597,7 @@ class ZakatTracker:
 		self._vault['account'][account]['count'] += 1
 		if debug:
 			print('create-log', created)
-		if created in self._vault['account'][account]['log']:
+		if self.log_exists(account, created):
 			raise ValueError(f"The log transction happend again in the same nanosecond time({created}).")
 		if debug:
 			print('created-log', created)

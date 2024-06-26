@@ -1,6 +1,6 @@
 # Mechanism of Zakat: The Rooms and Boxes Algorithm
 
-The "Rooms and Boxes" algorithm introduces an innovative mechanism for managing financial accounts and meticulously calculating Zakat. By breaking down finances into distinct "rooms" and "boxes," this method ensures accuracy and comprehensive tracking of Zakat obligations.
+The "Rooms and Boxes" algorithm introduces an innovative mechanism for managing financial accounts and meticulously calculating Zakat. By breaking down finances into distinct "rooms" and "boxes" this method ensures accuracy and comprehensive tracking of Zakat obligations.
 
 ### Breakdown of Concepts:
 
@@ -31,7 +31,7 @@ The "Rooms and Boxes" algorithm introduces an innovative mechanism for managing 
 
 **Aggregated Zakat:**
 
-- If boxes meet the "Hawl" but don't individually reach the "Nisab," they are grouped. If their collective value hits the "Nisab," Zakat is calculated on the combined amount.
+- If boxes meet the "Hawl" but don't individually reach the "Nisab" they are grouped. If their collective value hits the "Nisab" Zakat is calculated on the combined amount.
 
 **Nisab and Hawl:**
 
