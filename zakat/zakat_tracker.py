@@ -1933,100 +1933,63 @@ class ZakatTracker:
 			# test transfer between accounts with different exchange rate
 
 			debug = True
-			a_account = "Bank (SAR)"
-			b_account = "Bank (USD)"
-			c_account = "Safe (SAR)"
-			self.track(value=1000, desc="SAR Gift", account=a_account, debug=debug)
+			a_SAR = "Bank (SAR)"
+			b_USD = "Bank (USD)"
+			c_SAR = "Safe (SAR)"
+			# 0: track, 1: check-exchange, 2: do-exchange, 3: transfer
+			for case in[
+				(0, a_SAR, "SAR Gift", 1000, 1000),
+				(1, a_SAR, 1),
+				(0, b_USD, "USD Gift", 500, 500),
+				(1, b_USD, 1),
+				(2, b_USD, 3.75),
+				(1, b_USD, 3.75),
+				(3, 100, b_USD, a_SAR, "100 USD -> SAR", 400, 1375),
+				(0, c_SAR, "Salary", 750, 750),
+				(3, 375, c_SAR, b_USD, "375 SAR -> USD", 375, 500),
+				(3, 3.75, a_SAR, b_USD, "3.75 SAR -> USD", 1371.25, 501),
+			]:
+				match(case[0]):
+					case 0: # track
+						_, account, desc, x, balance = case
+						self.track(value=x, desc=desc, account=account, debug=debug)
 
-			cached_value = self.balance(a_account, cached=True)
-			fresh_value = self.balance(a_account, cached=False)
-			if debug:
-				print('account', a_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
-			assert cached_value == 1000
-			assert fresh_value == 1000
+						cached_value = self.balance(account, cached=True)
+						fresh_value = self.balance(account, cached=False)
+						if debug:
+							print('account', account, 'cached_value', cached_value, 'fresh_value', fresh_value)
+						assert cached_value == balance
+						assert fresh_value == balance
+					case 1: # check-exchange
+						_, account, expected_rate = case
+						t_exchange = self.exchange(account, created=ZakatTracker.time(), debug=debug)
+						if debug:
+							print('t-exchange', t_exchange)
+						assert t_exchange['rate'] == expected_rate
+					case 2: # do-exchange
+						_, account, rate = case
+						self.exchange(account, rate=rate, debug=debug)
+						b_exchange = self.exchange(account, created=ZakatTracker.time(), debug=debug)
+						if debug:
+							print('b-exchange', b_exchange)
+						assert b_exchange['rate'] == rate
+					case 3: # transfer
+						_, x, a, b, desc, a_balance, b_balance = case
+						self.transfer(x, a, b, desc, debug=debug)
 
-			self.exchange(a_account, rate=1, debug=debug)
+						cached_value = self.balance(a, cached=True)
+						fresh_value = self.balance(a, cached=False)
+						if debug:
+							print('account', a, 'cached_value', cached_value, 'fresh_value', fresh_value)
+						assert cached_value == a_balance
+						assert fresh_value == a_balance
 
-			a_exchange = self.exchange(a_account, created=ZakatTracker.time(), debug=debug)
-			if debug:
-				print('a-exchange', a_exchange)
-			assert a_exchange['rate'] == 1
-
-			self.track(value=500, desc="USD Gift", account=b_account, debug=debug)
-
-			cached_value = self.balance(b_account, cached=True)
-			fresh_value = self.balance(b_account, cached=False)
-			if debug:
-				print('account', b_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
-			assert cached_value == 500
-			assert fresh_value == 500
-
-			self.exchange(b_account, rate=3.75, debug=debug)
-
-			b_exchange = self.exchange(b_account, created=ZakatTracker.time(), debug=debug)
-			if debug:
-				print('b-exchange', b_exchange)
-			assert b_exchange['rate'] == 3.75
-
-			# Transfer 100 USD to the SAR account
-			self.transfer(100, b_account, a_account, "100 USD -> SAR", debug=debug)
-
-			cached_value = self.balance(a_account, cached=True)
-			fresh_value = self.balance(a_account, cached=False)
-			if debug:
-				print('account', a_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
-			assert cached_value == 1375
-			assert fresh_value == 1375
-
-			cached_value = self.balance(b_account, cached=True)
-			fresh_value = self.balance(b_account, cached=False)
-			if debug:
-				print('account', b_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
-			assert cached_value == 400
-			assert fresh_value == 400
-
-			self.track(750, 'safe-sar', c_account, debug=debug)
-
-			cached_value = self.balance(c_account, cached=True)
-			fresh_value = self.balance(c_account, cached=False)
-			if debug:
-				print('account', c_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
-			assert cached_value == 750
-			assert fresh_value == 750
-
-			# Transfer 375 SAR to the USD account
-			self.transfer(375, c_account, b_account, "375 SAR -> USD", debug=debug)
-
-			cached_value = self.balance(c_account, cached=True)
-			fresh_value = self.balance(c_account, cached=False)
-			if debug:
-				print('account', c_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
-			assert cached_value == 375
-			assert fresh_value == 375
-
-			cached_value = self.balance(b_account, cached=True)
-			fresh_value = self.balance(b_account, cached=False)
-			if debug:
-				print('account', b_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
-			assert cached_value == 500
-			assert fresh_value == 500
-
-			# Transfer 3.75 SAR to the USD account
-			self.transfer(3.75, a_account, b_account, "3.75 SAR -> USD", debug=debug)
-			
-			cached_value = self.balance(a_account, cached=True)
-			fresh_value = self.balance(a_account, cached=False)
-			if debug:
-				print('account', a_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
-			assert cached_value == 1371.25
-			assert fresh_value == 1371.25
-
-			cached_value = self.balance(b_account, cached=True)
-			fresh_value = self.balance(b_account, cached=False)
-			if debug:
-				print('account', b_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
-			assert cached_value == 501
-			assert fresh_value == 501
+						cached_value = self.balance(b, cached=True)
+						fresh_value = self.balance(b, cached=False)
+						if debug:
+							print('account', b, 'cached_value', cached_value, 'fresh_value', fresh_value)
+						assert cached_value == b_balance
+						assert fresh_value == b_balance
 
 			# Transfer all in chunks randomly from B to A
 			a_balance = 1371.25
@@ -2037,7 +2000,7 @@ class ZakatTracker:
 			for x in amounts:
 				pass
 				# TODO: This
-				# self.transfer(x, b_account, a_account, f"{x} USD -> SAR", debug=debug)
+				# self.transfer(x, b_USD, a_SAR, f"{x} USD -> SAR", debug=debug)
 			
 			# TODO: Transfer all chunks randomly from C to A
 			# ...
