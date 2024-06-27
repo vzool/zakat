@@ -71,6 +71,7 @@ class Action(Enum):
 	SUB = auto()
 	ADD_FILE = auto()
 	REMOVE_FILE = auto()
+	BOX_TRANSFER = auto()
 	EXCHANGE = auto()
 	REPORT = auto()
 	ZAKAT = auto()
@@ -85,6 +86,12 @@ class MathOperation(Enum):
 	ADDITION = auto()
 	EQUAL = auto()
 	SUBTRACTION = auto()
+
+class CapitalOverflow(Exception):
+    """Exception raised for capital overflow."""
+    def __init__(self, message):
+        self.message = message
+        super().__init__(self.message)
 
 class ZakatTracker:
 	"""
@@ -138,7 +145,7 @@ class ZakatTracker:
             - history (dict):
                 - {timestamp} (list): A list of dictionaries storing the history of actions performed.
                     - {action_dict} (dict):
-                        - action (Action): The type of action (CREATE, TRACK, LOG, SUB, ADD_FILE, REMOVE_FILE, EXCHANGE, REPORT, ZAKAT).
+                        - action (Action): The type of action (CREATE, TRACK, LOG, SUB, ADD_FILE, REMOVE_FILE, BOX_TRANSFER, EXCHANGE, REPORT, ZAKAT).
                         - account (str): The account number associated with the action.
                         - ref (int): The reference number of the transaction.
                         - file (int): The reference number of the file (if applicable).
@@ -472,6 +479,14 @@ class ZakatTracker:
 									continue
 								self._vault['account'][x['account']]['log'][x['ref']]['file'][x['file']] = x['value']
 
+				case Action.BOX_TRANSFER:
+					if x['account'] is not None:
+						if self.account_exists(x['account']):
+							if x['ref'] in self._vault['account'][x['account']]['box']:
+								if dry:
+									continue
+								self._vault['account'][x['account']]['box'][x['ref']]['rest'] -= x['value']
+
 				case Action.EXCHANGE:
 					if x['account'] is not None:
 						if x['account'] in self._vault['exchange']:
@@ -506,11 +521,32 @@ class ZakatTracker:
 		return True
 
 	def ref_exists(self, account: str, ref_type: str, ref: int) -> bool:
+		"""
+		Check if a specific reference (transaction) exists in the vault for a given account and reference type.
+
+		Parameters:
+		account (str): The account number for which to check the existence of the reference.
+		ref_type (str): The type of reference (e.g., 'box', 'log', etc.).
+		ref (int): The reference (transaction) number to check for existence.
+
+		Returns:
+		bool: True if the reference exists for the given account and reference type, False otherwise.
+		"""
 		if account in self._vault['account']:
 			return ref in self._vault['account'][account][ref_type]
 		return False
 
 	def box_exists(self, account: str, ref: int) -> bool:
+		"""
+        Check if a specific box (transaction) exists in the vault for a given account and reference.
+
+        Parameters:
+        - account (str): The account number for which to check the existence of the box.
+        - ref (int): The reference (transaction) number to check for existence.
+
+        Returns:
+        - bool: True if the box exists for the given account and reference, False otherwise.
+        """
 		return self.ref_exists(account, 'box', ref)
 
 	def track(self, value: int = 0, desc: str = '', account: str = 1, logging: bool = True, created: int = None, debug: bool = False) -> int:
@@ -570,6 +606,16 @@ class ZakatTracker:
 		return created
 
 	def log_exists(self, account: str, ref: int) -> bool:
+		"""
+        Checks if a specific transaction log entry exists for a given account.
+
+        Parameters:
+        account (str): The account number associated with the transaction log.
+        ref (int): The reference to the transaction log entry.
+
+        Returns:
+        bool: True if the transaction log entry exists, False otherwise.
+        """
 		return self.ref_exists(account, 'log', ref)
 
 	def _log(self, value: int, desc: str = '', account: str = 1, created: int = None, debug: bool = False) -> int:
@@ -874,6 +920,7 @@ class ZakatTracker:
 
 		Raises:
 		ValueError: If the transction happend again in the same nanosecond time.
+		CapitalOverflow: If the transferred amount+rest exceeds the capital limit.
 		"""
 		if created is None:
 			created = self.time()
@@ -888,6 +935,20 @@ class ZakatTracker:
 			# Convert base amount to the target currency
 			target_amount = source_amount_base / target_exchange['rate']
 			# Perform the transfer
+			if self.box_exists(to_account, age):
+				if debug:
+					print('box_exists', age)
+				capital = self._vault['account'][to_account]['box'][age]['capital']
+				rest = self._vault['account'][to_account]['box'][age]['rest']
+				if debug:
+					print(f"Transfer {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).")
+				if rest + target_amount > capital:
+					raise CapitalOverflow(f"Transfer from({from_account}) to({to_account}) with box({age}) => amount({target_amount}) + rest({rest}) value OverFlow the capital({capital})")
+				self._vault['account'][to_account]['box'][age]['rest'] += target_amount
+				self._step(Action.BOX_TRANSFER, to_account, ref=age, value=target_amount)
+				y = self._log(target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account, debug=debug)
+				times.append((age, y))
+				continue
 			y = self.track(target_amount, desc, to_account, logging=True, created=age, debug=debug)
 			if debug:
 				print(f"Transferred {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).")
@@ -1315,6 +1376,34 @@ class ZakatTracker:
 				if not i % 13 == 0:
 					value *= -1
 				writer.writerow([account, desc, value, date])
+
+	@staticmethod
+	def create_random_list(max_sum, min_value=0, max_value=10):
+		"""
+		Creates a list of random integers whose sum does not exceed the specified maximum.
+
+		Args:
+			max_sum: The maximum allowed sum of the list elements.
+			min_value: The minimum possible value for an element (inclusive).
+			max_value: The maximum possible value for an element (inclusive).
+
+		Returns:
+			A list of random integers.
+		"""
+		result = []
+		current_sum = 0
+
+		while current_sum < max_sum:
+			# Calculate the remaining space for the next element
+			remaining_sum = max_sum - current_sum
+			# Determine the maximum possible value for the next element
+			next_max_value = min(remaining_sum, max_value)
+			# Generate a random element within the allowed range
+			next_element = random.randint(min_value, next_max_value)
+			result.append(next_element)
+			current_sum += next_element
+
+		return result
 
 	def _test_core(self, restore = False, debug = False):
 		
@@ -1849,8 +1938,12 @@ class ZakatTracker:
 			c_account = "Safe (SAR)"
 			self.track(value=1000, desc="SAR Gift", account=a_account, debug=debug)
 
-			assert self.balance(a_account, cached=True) == 1000
-			assert self.balance(a_account, cached=False) == 1000
+			cached_value = self.balance(a_account, cached=True)
+			fresh_value = self.balance(a_account, cached=False)
+			if debug:
+				print('account', a_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
+			assert cached_value == 1000
+			assert fresh_value == 1000
 
 			self.exchange(a_account, rate=1, debug=debug)
 
@@ -1861,8 +1954,12 @@ class ZakatTracker:
 
 			self.track(value=500, desc="USD Gift", account=b_account, debug=debug)
 
-			assert self.balance(b_account, cached=True) == 500
-			assert self.balance(b_account, cached=False) == 500
+			cached_value = self.balance(b_account, cached=True)
+			fresh_value = self.balance(b_account, cached=False)
+			if debug:
+				print('account', b_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
+			assert cached_value == 500
+			assert fresh_value == 500
 
 			self.exchange(b_account, rate=3.75, debug=debug)
 
@@ -1874,34 +1971,76 @@ class ZakatTracker:
 			# Transfer 100 USD to the SAR account
 			self.transfer(100, b_account, a_account, "100 USD -> SAR", debug=debug)
 
-			assert self.balance(a_account, cached=True) == 1375
-			assert self.balance(a_account, cached=False) == 1375
-			
-			assert self.balance(b_account, cached=True) == 400
-			assert self.balance(b_account, cached=False) == 400
+			cached_value = self.balance(a_account, cached=True)
+			fresh_value = self.balance(a_account, cached=False)
+			if debug:
+				print('account', a_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
+			assert cached_value == 1375
+			assert fresh_value == 1375
+
+			cached_value = self.balance(b_account, cached=True)
+			fresh_value = self.balance(b_account, cached=False)
+			if debug:
+				print('account', b_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
+			assert cached_value == 400
+			assert fresh_value == 400
 
 			self.track(750, 'safe-sar', c_account, debug=debug)
 
-			assert self.balance(c_account, cached=True) == 750
-			assert self.balance(c_account, cached=False) == 750
+			cached_value = self.balance(c_account, cached=True)
+			fresh_value = self.balance(c_account, cached=False)
+			if debug:
+				print('account', c_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
+			assert cached_value == 750
+			assert fresh_value == 750
 
 			# Transfer 375 SAR to the USD account
 			self.transfer(375, c_account, b_account, "375 SAR -> USD", debug=debug)
 
-			assert self.balance(c_account, cached=True) == 375
-			assert self.balance(c_account, cached=False) == 375
-			
-			assert self.balance(b_account, cached=True) == 500
-			assert self.balance(b_account, cached=False) == 500
+			cached_value = self.balance(c_account, cached=True)
+			fresh_value = self.balance(c_account, cached=False)
+			if debug:
+				print('account', c_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
+			assert cached_value == 375
+			assert fresh_value == 375
+
+			cached_value = self.balance(b_account, cached=True)
+			fresh_value = self.balance(b_account, cached=False)
+			if debug:
+				print('account', b_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
+			assert cached_value == 500
+			assert fresh_value == 500
 
 			# Transfer 3.75 SAR to the USD account
-			# self.transfer(3.75, a_account, b_account, "3.75 SAR -> USD", debug=debug)
+			self.transfer(3.75, a_account, b_account, "3.75 SAR -> USD", debug=debug)
 			
-			# assert self.balance(a_account, cached=True) == 1371.25
-			# assert self.balance(a_account, cached=False) == 1371.25
+			cached_value = self.balance(a_account, cached=True)
+			fresh_value = self.balance(a_account, cached=False)
+			if debug:
+				print('account', a_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
+			assert cached_value == 1371.25
+			assert fresh_value == 1371.25
+
+			cached_value = self.balance(b_account, cached=True)
+			fresh_value = self.balance(b_account, cached=False)
+			if debug:
+				print('account', b_account, 'cached_value', cached_value, 'fresh_value', fresh_value)
+			assert cached_value == 501
+			assert fresh_value == 501
+
+			# Transfer all in chunks randomly from B to A
+			a_balance = 1371.25
+			b_balance = 501
+			amounts = ZakatTracker.create_random_list(b_balance)
+			if debug:
+				print('amounts', amounts)
+			for x in amounts:
+				pass
+				# TODO: This
+				# self.transfer(x, b_account, a_account, f"{x} USD -> SAR", debug=debug)
 			
-			# assert self.balance(b_account, cached=True) == 401
-			# assert self.balance(b_account, cached=False) == 401
+			# TODO: Transfer all chunks randomly from C to A
+			# ...
 
 			assert self.export_json("accounts-transfer-with-exchange-rates.json")
 			assert self.save("accounts-transfer-with-exchange-rates.pickle")
@@ -1979,6 +2118,8 @@ class ZakatTracker:
 			assert self.nolock()
 		except:
 			pp().pprint(self._vault)
+			assert self.export_json("test-snapshot.json")
+			assert self.save("test-snapshot.pickle")
 			raise
 
 def main():
