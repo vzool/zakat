@@ -87,12 +87,6 @@ class MathOperation(Enum):
 	EQUAL = auto()
 	SUBTRACTION = auto()
 
-class CapitalOverflow(Exception):
-    """Exception raised for capital overflow."""
-    def __init__(self, message):
-        self.message = message
-        super().__init__(self.message)
-
 class ZakatTracker:
 	"""
     A class for tracking and calculating Zakat.
@@ -669,19 +663,19 @@ class ZakatTracker:
 		- dict: A dictionary containing the latest exchange rate and its description. If no exchange rate is found,
 		it returns a dictionary with default values for the rate and description.
 		"""
+		if created is None:
+			created = self.time()
 		if rate is not None:
 			if rate <= 1:
 				return None
 			if account not in self._vault['exchange']:
 				self._vault['exchange'][account] = {}
-			if created is None:
-				created = self.time()
 			self._vault['exchange'][account][created] = {"rate": rate, "description": description}
 			self._step(Action.EXCHANGE, account, ref=created, value=rate)
 			if debug:
 				print("exchange-created-1", f'account: {account}, created: {created}, rate:{rate}, description:{description}')
 
-		if account in self._vault['exchange'] and created is not None:
+		if account in self._vault['exchange']:
 			valid_rates = [(ts, r) for ts, r in self._vault['exchange'][account].items() if ts <= created]
 			if valid_rates:
 				latest_rate = max(valid_rates, key=lambda x: x[0])
@@ -920,14 +914,18 @@ class ZakatTracker:
 
 		Raises:
 		ValueError: If the transction happend again in the same nanosecond time.
-		CapitalOverflow: If the transferred amount+rest exceeds the capital limit.
 		"""
+		if amount <= 0:
+			return None
 		if created is None:
 			created = self.time()
 		(_, ages) = self.sub(amount, desc, from_account, created, debug=debug)
 		times = []
 		source_exchange = self.exchange(from_account, created)
 		target_exchange = self.exchange(to_account, created)
+
+		if debug:
+			print('ages', ages)
 
 		for age, value in ages:
 			# Convert source amount to the base currency
@@ -942,10 +940,12 @@ class ZakatTracker:
 				rest = self._vault['account'][to_account]['box'][age]['rest']
 				if debug:
 					print(f"Transfer {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).")
+				selected_age = age
 				if rest + target_amount > capital:
-					raise CapitalOverflow(f"Transfer from({from_account}) to({to_account}) with box({age}) => amount({target_amount}) + rest({rest}) value OverFlow the capital({capital})")
+					self._vault['account'][to_account]['box'][age]['capital'] += target_amount
+					selected_age = ZakatTracker.time()
 				self._vault['account'][to_account]['box'][age]['rest'] += target_amount
-				self._step(Action.BOX_TRANSFER, to_account, ref=age, value=target_amount)
+				self._step(Action.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
 				y = self._log(target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account, debug=debug)
 				times.append((age, y))
 				continue
@@ -1991,19 +1991,63 @@ class ZakatTracker:
 						assert cached_value == b_balance
 						assert fresh_value == b_balance
 
-			# Transfer all in chunks randomly from B to A
-			a_balance = 1371.25
-			b_balance = 501
-			amounts = ZakatTracker.create_random_list(b_balance)
+			# Transfer all in many chunks randomly from B to A
+			a_SAR_balance = 1371.25
+			b_USD_balance = 501
+			b_USD_exchange = self.exchange(b_USD)
+			amounts = ZakatTracker.create_random_list(b_USD_balance)
 			if debug:
 				print('amounts', amounts)
+			i = 0
 			for x in amounts:
-				pass
-				# TODO: This
-				# self.transfer(x, b_USD, a_SAR, f"{x} USD -> SAR", debug=debug)
+				if debug:
+					print(f'{i} - transfer-with-exchnage({x})')
+				self.transfer(x, b_USD, a_SAR, f"{x} USD -> SAR", debug=debug)
+				
+				b_USD_balance -= x
+				cached_value = self.balance(b_USD, cached=True)
+				fresh_value = self.balance(b_USD, cached=False)
+				if debug:
+					print('account', b_USD, 'cached_value', cached_value, 'fresh_value', fresh_value, 'excepted', b_USD_balance)
+				assert cached_value == b_USD_balance
+				assert fresh_value == b_USD_balance
+
+				a_SAR_balance += x * b_USD_exchange['rate']
+				cached_value = self.balance(a_SAR, cached=True)
+				fresh_value = self.balance(a_SAR, cached=False)
+				if debug:
+					print('account', a_SAR, 'cached_value', cached_value, 'fresh_value', fresh_value, 'expected', a_SAR_balance, 'rate', b_USD_exchange['rate'])
+				assert cached_value == a_SAR_balance
+				assert fresh_value == a_SAR_balance
+				i += 1
 			
-			# TODO: Transfer all chunks randomly from C to A
-			# ...
+			# Transfer all in many chunks randomly from C to A
+			c_SAR_balance = 375
+			amounts = ZakatTracker.create_random_list(c_SAR_balance)
+			if debug:
+				print('amounts', amounts)
+			i = 0
+			for x in amounts:
+				if debug:
+					print(f'{i} - transfer-with-exchnage({x})')
+				self.transfer(x, c_SAR, a_SAR, f"{x} SAR -> a_SAR", debug=debug)
+				
+				c_SAR_balance -= x
+				cached_value = self.balance(c_SAR, cached=True)
+				fresh_value = self.balance(c_SAR, cached=False)
+				if debug:
+					print('account', c_SAR, 'cached_value', cached_value, 'fresh_value', fresh_value, 'excepted', c_SAR_balance)
+				assert cached_value == c_SAR_balance
+				assert fresh_value == c_SAR_balance
+
+				a_SAR_balance += x
+				cached_value = self.balance(a_SAR, cached=True)
+				fresh_value = self.balance(a_SAR, cached=False)
+				if debug:
+					print('account', a_SAR, 'cached_value', cached_value, 'fresh_value', fresh_value, 'expected', a_SAR_balance)
+				assert cached_value == a_SAR_balance
+				assert fresh_value == a_SAR_balance
+				i += 1
 
 			assert self.export_json("accounts-transfer-with-exchange-rates.json")
 			assert self.save("accounts-transfer-with-exchange-rates.pickle")
@@ -2080,7 +2124,7 @@ class ZakatTracker:
 			assert len(self._vault['report']) == 0
 			assert self.nolock()
 		except:
-			pp().pprint(self._vault)
+			# pp().pprint(self._vault)
 			assert self.export_json("test-snapshot.json")
 			assert self.save("test-snapshot.pickle")
 			raise
