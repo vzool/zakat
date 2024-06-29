@@ -13,6 +13,7 @@ deps:
 	python3 -m pip install pytest==8.2.2
 	python3 -m pip install pytest-runner==6.0.1
 	python3 -m pip install --upgrade twine
+	python3 -m pip install build
 
 .PHONY: test
 # run tests
