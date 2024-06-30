@@ -9,5 +9,5 @@ def test_zakat_tracker():
     print("#########################")
     print("######## TEST DONE ########")
     print("#########################")
-    print(ZakatTracker.DurationFromNanoSeconds(ZakatTracker.time()-start))
+    print(ZakatTracker.duration_from_nanoseconds(ZakatTracker.time() - start))
     print("#########################")
