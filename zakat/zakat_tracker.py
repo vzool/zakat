@@ -575,6 +575,7 @@ class ZakatTracker:
         This function creates a new account if it doesn't exist, logs the transaction if logging is True, and updates the account's balance and box.
 
         Raises:
+        ValueError: The log transaction happened again in the same nanosecond time.
         ValueError: The box transaction happened again in the same nanosecond time.
         """
         if created is None:
@@ -646,7 +647,7 @@ class ZakatTracker:
         It also creates a step in the history of the transaction.
 
         Raises:
-        ValueError: The box transaction happened again in the same nanosecond time.
+        ValueError: The log transaction happened again in the same nanosecond time.
         """
         if created is None:
             created = self.time()
@@ -655,7 +656,7 @@ class ZakatTracker:
         if debug:
             print('create-log', created)
         if self.log_exists(account, created):
-            raise ValueError(f"The box transaction happened again in the same nanosecond time({created}).")
+            raise ValueError(f"The log transaction happened again in the same nanosecond time({created}).")
         if debug:
             print('created-log', created)
         self._vault['account'][account]['log'][created] = {
@@ -904,6 +905,7 @@ class ZakatTracker:
 
         Raises:
         ValueError: The box transaction happened again in the same nanosecond time.
+        ValueError: The log transaction happened again in the same nanosecond time.
         """
         if x < 0:
             return tuple()
@@ -966,6 +968,7 @@ class ZakatTracker:
 
         Raises:
         ValueError: The box transaction happened again in the same nanosecond time.
+        ValueError: The log transaction happened again in the same nanosecond time.
         """
         if amount <= 0:
             return []
@@ -1305,8 +1308,8 @@ class ZakatTracker:
 
         The function reads the CSV file, checks for duplicate transactions, and creates the transactions in the system.
         """
-        cache = []
-        tmp = "tmp"
+        cache: list[int] = []
+        tmp: str = "tmp"
         try:
             with open(tmp, "rb") as f:
                 cache = pickle.load(f)
