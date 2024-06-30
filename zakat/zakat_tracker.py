@@ -1619,7 +1619,7 @@ class ZakatTracker:
             assert count == 0
             self.reset()
 
-    def test(self, debug: bool = False):
+    def test(self, debug: bool = False) -> bool:
 
         try:
 
@@ -1640,8 +1640,7 @@ class ZakatTracker:
 
             # Always preserve box age during transfer
 
-            created = ZakatTracker.time()
-            series = [
+            series: list[tuple] = [
                 (30, 4),
                 (60, 3),
                 (90, 2),
@@ -1757,10 +1756,10 @@ class ZakatTracker:
                 assert self.balance(x, False) == z[4]
                 assert xx == z[4]
 
-                l = self._vault['account'][x]['log']
                 s = 0
-                for i in l:
-                    s += l[i]['value']
+                log = self._vault['account'][x]['log']
+                for i in log:
+                    s += log[i]['value']
                 if debug:
                     print('s', s, 'z[5]', z[5])
                 assert s == z[5]
@@ -1774,10 +1773,10 @@ class ZakatTracker:
                 assert self.balance(y, False) == z[9]
                 assert yy == z[9]
 
-                l = self._vault['account'][y]['log']
                 s = 0
-                for i in l:
-                    s += l[i]['value']
+                log = self._vault['account'][y]['log']
+                for i in log:
+                    s += log[i]['value']
                 assert s == z[10]
 
                 assert self.box_size(y) == z[11]
@@ -1976,7 +1975,8 @@ class ZakatTracker:
             for i in range(1, 31):
                 timestamp_ns = ZakatTracker.day_to_time(i)
                 rate, description = self.exchange("cash", timestamp_ns).values()
-                print(i, rate, description)
+                if debug:
+                    print(i, rate, description)
                 if i < 10:
                     assert rate == 1
                     assert description is None
@@ -1999,7 +1999,8 @@ class ZakatTracker:
                     assert rate == 3.75
                     assert description is not None
                 rate, description = self.exchange("bank", i).values()
-                print(i, rate, description)
+                if debug:
+                    print(i, rate, description)
                 assert rate == 1
                 assert description is None
 
@@ -2010,7 +2011,6 @@ class ZakatTracker:
 
             # test transfer between accounts with different exchange rate
 
-            debug = True
             a_SAR = "Bank (SAR)"
             b_USD = "Bank (USD)"
             c_SAR = "Safe (SAR)"
@@ -2079,7 +2079,7 @@ class ZakatTracker:
             i = 0
             for x in amounts:
                 if debug:
-                    print(f'{i} - transfer-with-exchnage({x})')
+                    print(f'{i} - transfer-with-exchange({x})')
                 self.transfer(x, b_USD, a_SAR, f"{x} USD -> SAR", debug=debug)
 
                 b_USD_balance -= x
@@ -2109,7 +2109,7 @@ class ZakatTracker:
             i = 0
             for x in amounts:
                 if debug:
-                    print(f'{i} - transfer-with-exchnage({x})')
+                    print(f'{i} - transfer-with-exchange({x})')
                 self.transfer(x, c_SAR, a_SAR, f"{x} SAR -> a_SAR", debug=debug)
 
                 c_SAR_balance -= x
@@ -2167,12 +2167,12 @@ class ZakatTracker:
                     if debug:
                         print(f"############# check(rate: {rate}) #############")
                     self.reset()
-                    self.exchange(case[1], created=case[2], rate=rate)
-                    self.track(case[0], desc='test-check', account=case[1], logging=True, created=case[2])
+                    self.exchange(account=case[1], created=case[2], rate=rate)
+                    self.track(value=case[0], desc='test-check', account=case[1], logging=True, created=case[2])
 
                     # assert self.nolock()
-                    history_size = len(self._vault['history'])
-                    print('history_size', history_size)
+                    # history_size = len(self._vault['history'])
+                    # print('history_size', history_size)
                     # assert history_size == 2
                     assert self.lock()
                     assert not self.nolock()
@@ -2213,27 +2213,26 @@ class ZakatTracker:
             assert self.recall(False, debug) is False
             self.free(self.lock())
             assert self.nolock()
-            print('history_size', self._vault['history'])
-            assert len(self._vault['history']) == 3
-            assert self.recall(False, debug) is True
-            print('history_size', self._vault['history'])
-            assert len(self._vault['history']) == 2
-            assert self.recall(False, debug) is True
-            print('history_size', self._vault['history'])
-            assert len(self._vault['history']) == 1
-            assert self.recall(False, debug) is True
-            print('history_size', self._vault['history'])
+            for i in range(3, 0, -1):
+                history_size = len(self._vault['history'])
+                if debug:
+                    print('history_size', history_size)
+                assert history_size == i
+                assert self.recall(False, debug) is True
 
-            # assert self.nolock()
-            # assert len(self._vault['history']) == 1
+            assert self.nolock()
 
             assert self.recall(False, debug) is False
-            assert len(self._vault['history']) == 0
+            history_size = len(self._vault['history'])
+            if debug:
+                print('history_size', history_size)
+            assert history_size == 0
 
             assert len(self._vault['account']) == 0
             assert len(self._vault['history']) == 0
             assert len(self._vault['report']) == 0
             assert self.nolock()
+            return True
         except:
             # pp().pprint(self._vault)
             assert self.export_json("test-snapshot.json")
@@ -2244,7 +2243,7 @@ class ZakatTracker:
 def main():
     ledger = ZakatTracker()
     start = ZakatTracker.time()
-    ledger.test(True)
+    assert ledger.test(True)
     print("#########################")
     print("######## TEST DONE ########")
     print("#########################")
