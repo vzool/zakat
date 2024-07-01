@@ -1308,7 +1308,10 @@ class ZakatTracker:
             >>> obj.import_csv_cache_path()
             '/data/reports.import_csv.pickle'
         """
-        return self.path() + '.import_csv.pickle'
+        path = self.path()
+        if path.endswith(".pickle"):
+            path = path[:-7]
+        return path + '.import_csv.pickle'
 
     def import_csv(self, path: str = 'file.csv', debug: bool = False) -> tuple:
         """
@@ -1362,7 +1365,7 @@ class ZakatTracker:
                 account = row[0]
                 desc = row[1]
                 value = float(row[2])
-                rate: int = 1
+                rate = 1.0
                 if row[4:5]:  # Empty list if index is out of range
                     rate = float(row[4])
                 date: int = 0
@@ -1469,13 +1472,14 @@ class ZakatTracker:
         return start_date + datetime.timedelta(days=random_number_of_days)
 
     @staticmethod
-    def generate_random_csv_file(path: str = "data.csv", count: int = 1000) -> None:
+    def generate_random_csv_file(path: str = "data.csv", count: int = 1000, with_rate: bool = False) -> None:
         """
         Generate a random CSV file with specified parameters.
 
         Parameters:
         path (str): The path where the CSV file will be saved. Default is "data.csv".
         count (int): The number of rows to generate in the CSV file. Default is 1000.
+        with_rate (bool): If True, a random rate between 1.2% and 12% is added. Default is False.
 
         Returns:
         None. The function generates a CSV file at the specified path with the given count of rows.
@@ -1494,7 +1498,11 @@ class ZakatTracker:
                                                          datetime.datetime(2023, 12, 31)).strftime("%Y-%m-%d %H:%M:%S")
                 if not i % 13 == 0:
                     value *= -1
-                writer.writerow([account, desc, value, date])
+                row = [account, desc, value, date]
+                if with_rate:
+                    rate = random.randint(1,100) * 0.12
+                    row.append(rate)
+                writer.writerow(row)
 
     @staticmethod
     def create_random_list(max_sum, min_value=0, max_value=10):
