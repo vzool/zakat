@@ -687,10 +687,12 @@ class ZakatTracker:
         no_lock = self.nolock()
         self.lock()
         if rate is not None:
-            if rate <= 1:
+            if rate <= 0:
                 return dict()
             if account not in self._vault['exchange']:
                 self._vault['exchange'][account] = {}
+            if len(self._vault['exchange'][account]) == 0 and rate <= 1:
+                return {"rate": 1, "description": None}
             self._vault['exchange'][account][created] = {"rate": rate, "description": description}
             self._step(Action.EXCHANGE, account, ref=created, value=rate)
             if no_lock:
@@ -2007,7 +2009,7 @@ class ZakatTracker:
             self.exchange("cash", ZakatTracker.day_to_time(10), 3.66)
 
             for i in [x * 0.12 for x in range(-15, 21)]:
-                if i <= 1:
+                if i <= 0:
                     assert len(self.exchange("test", ZakatTracker.time(), i, f"range({i})")) == 0
                 else:
                     assert len(self.exchange("test", ZakatTracker.time(), i, f"range({i})")) > 0
