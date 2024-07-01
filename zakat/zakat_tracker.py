@@ -1291,27 +1291,53 @@ class ZakatTracker:
                 return True
         return False
 
-    def import_csv(self, path: str = 'file.csv') -> tuple:
+    def import_csv_cache_path(self):
+        """Generates the cache file path for imported CSV data.
+
+        This function constructs the file path where cached data from CSV imports
+        will be stored. The cache file is a pickle file (.pickle extension) appended
+        to the base path of the object.
+
+        Returns:
+            str: The full path to the import CSV cache file.
+
+        Example:
+            >>> obj = ZakatTracker('/data/reports')
+            >>> obj.import_csv_cache_path()
+            '/data/reports.import_csv.pickle'
         """
-        Import transactions from a CSV file.
+        return self.path() + '.import_csv.pickle'
+
+    def import_csv(self, path: str = 'file.csv', debug: bool = False) -> tuple:
+        """
+        The function reads the CSV file, checks for duplicate transactions, and creates the transactions in the system.
 
         Parameters:
         path (str): The path to the CSV file. Default is 'file.csv'.
+        debug (bool): A flag indicating whether to print debug information.
 
         Returns:
-        tuple: A tuple containing the number of transactions created, the number of transactions found in the cache, and a dictionary of bad transactions.
+        tuple: A tuple containing the number of transactions created, the number of transactions found in the cache,
+                and a dictionary of bad transactions.
 
-        The CSV file should have the following format:
-        account, desc, value, date
-        For example:
-        safe-45, "Some text", 34872, 1988-06-30 00:00:00
+        Notes:
+            * Currency Pair Assumption: This function assumes that the exchange rates stored for each account
+                                        are appropriate for the currency pairs involved in the conversions.
+            * The exchange rate for each account is based on the last encountered transaction rate that is not equal
+                to 1.0 or the previous rate for that account.
+            * Those rates will be merged into the exchange rates main data, and later it will be used for all subsequent
+              transactions of the same account within the whole imported and existing dataset when doing `check` and
+              `zakat` operations.
 
-        The function reads the CSV file, checks for duplicate transactions, and creates the transactions in the system.
+        Example Usage:
+            The CSV file should have the following format, rate is optional per transaction:
+            account, desc, value, date, rate
+            For example:
+            safe-45, "Some text", 34872, 1988-06-30 00:00:00, 1
         """
         cache: list[int] = []
-        tmp: str = "tmp"
         try:
-            with open(tmp, "rb") as f:
+            with open(self.import_csv_cache_path(), "rb") as f:
                 cache = pickle.load(f)
         except:
             pass
@@ -1322,6 +1348,7 @@ class ZakatTracker:
             "%Y-%m-%d",
         ]
         created, found, bad = 0, 0, {}
+        data: list[tuple] = []
         with open(path, newline='', encoding="utf-8") as f:
             i = 0
             for row in csv.reader(f, delimiter=','):
@@ -1333,7 +1360,10 @@ class ZakatTracker:
                 account = row[0]
                 desc = row[1]
                 value = float(row[2])
-                date = 0
+                rate: int = 1
+                if row[4:5]:  # Empty list if index is out of range
+                    rate = float(row[4])
+                date: int = 0
                 for time_format in date_formats:
                     try:
                         date = self.time(datetime.datetime.strptime(row[3], time_format))
@@ -1344,13 +1374,24 @@ class ZakatTracker:
                 if date == 0 or value == 0:
                     bad[i] = row
                     continue
-                if value > 0:
-                    self.track(value, desc, account, True, date)
-                elif value < 0:
-                    self.sub(-value, desc, account, date)
-                created += 1
-                cache.append(hashed)
-        with open(tmp, "wb") as f:
+                if date in data:
+                    print('import_csv-duplicated(time)', date)
+                    continue
+                data.append((date, value, desc, account, rate, hashed))
+
+        if debug:
+            print('import_csv', len(data))
+        for row in sorted(data, key=lambda x: x[0]):
+            (date, value, desc, account, rate, hashed) = row
+            if rate > 1:
+                self.exchange(account, created=date, rate=rate)
+            if value > 0:
+                self.track(value, desc, account, True, date)
+            elif value < 0:
+                self.sub(-value, desc, account, date)
+            created += 1
+            cache.append(hashed)
+        with open(self.import_csv_cache_path(), "wb") as f:
             pickle.dump(cache, f)
         return created, found, bad
 
@@ -1824,14 +1865,14 @@ class ZakatTracker:
                 os.remove(_path)
             self.generate_random_csv_file(_path, count)
             assert os.path.getsize(_path) > 0
-            tmp = "tmp"
-            if os.path.exists(tmp):
-                os.remove(tmp)
-            (created, found, bad) = self.import_csv(_path)
+            cache_path = self.import_csv_cache_path()
+            if os.path.exists(cache_path):
+                os.remove(cache_path)
+            (created, found, bad) = self.import_csv(_path, debug)
             bad_count = len(bad)
             if debug:
-                print(f"csv-imported: ({created}, {found}, {bad_count})")
-            tmp_size = os.path.getsize(tmp)
+                print(f"csv-imported: ({created}, {found}, {bad_count}) = count({count})")
+            tmp_size = os.path.getsize(cache_path)
             assert tmp_size > 0
             assert created + found + bad_count == count
             assert created == count
@@ -1841,7 +1882,7 @@ class ZakatTracker:
             if debug:
                 print(f"csv-imported: ({created_2}, {found_2}, {bad_2_count})")
                 print(bad)
-            assert tmp_size == os.path.getsize(tmp)
+            assert tmp_size == os.path.getsize(cache_path)
             assert created_2 + found_2 + bad_2_count == count
             assert created == found_2
             assert bad_count == bad_2_count
