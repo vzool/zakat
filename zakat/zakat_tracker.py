@@ -1867,104 +1867,116 @@ class ZakatTracker:
             assert self.recall(False, debug) is True
             assert len(self._vault['history']) == 9
 
-            # csv
-
-            _path = "test.csv"
             count = 1000
-            if os.path.exists(_path):
-                os.remove(_path)
-            self.generate_random_csv_file(_path, count)
-            assert os.path.getsize(_path) > 0
-            cache_path = self.import_csv_cache_path()
-            if os.path.exists(cache_path):
-                os.remove(cache_path)
-            (created, found, bad) = self.import_csv(_path, debug)
-            bad_count = len(bad)
-            if debug:
-                print(f"csv-imported: ({created}, {found}, {bad_count}) = count({count})")
-            tmp_size = os.path.getsize(cache_path)
-            assert tmp_size > 0
-            assert created + found + bad_count == count
-            assert created == count
-            assert bad_count == 0
-            (created_2, found_2, bad_2) = self.import_csv(_path)
-            bad_2_count = len(bad_2)
-            if debug:
-                print(f"csv-imported: ({created_2}, {found_2}, {bad_2_count})")
-                print(bad)
-            assert tmp_size == os.path.getsize(cache_path)
-            assert created_2 + found_2 + bad_2_count == count
-            assert created == found_2
-            assert bad_count == bad_2_count
-            assert found_2 == count
-            assert bad_2_count == 0
-            assert created_2 == 0
 
-            # payment parts
+            for with_rate, path in {
+                False: 'test-import_csv-no-exchange',
+                True: 'test-import_csv-with-exchange',
+            }.items():
 
-            positive_parts = self.build_payment_parts(100, positive_only=True)
-            assert self.check_payment_parts(positive_parts) != 0
-            assert self.check_payment_parts(positive_parts) != 0
-            all_parts = self.build_payment_parts(300, positive_only=False)
-            assert self.check_payment_parts(all_parts) != 0
-            assert self.check_payment_parts(all_parts) != 0
-            if debug:
-                pp().pprint(positive_parts)
-                pp().pprint(all_parts)
-            # dynamic discount
-            suite = []
-            count = 3
-            for exceed in [False, True]:
-                case = []
-                for parts in [positive_parts, all_parts]:
-                    part = parts.copy()
-                    demand = part['demand']
+                if debug:
+                    print('test_import_csv', with_rate, path)
+
+                # csv
+
+                csv_path = path + '.csv'
+                if os.path.exists(csv_path):
+                    os.remove(csv_path)
+                self.generate_random_csv_file(csv_path, count, with_rate)
+                assert os.path.getsize(csv_path) > 0
+                cache_path = self.import_csv_cache_path()
+                if os.path.exists(cache_path):
+                    os.remove(cache_path)
+                # self.reset()
+                (created, found, bad) = self.import_csv(csv_path, debug)
+                bad_count = len(bad)
+                if debug:
+                    print(f"csv-imported: ({created}, {found}, {bad_count}) = count({count})")
+                tmp_size = os.path.getsize(cache_path)
+                assert tmp_size > 0
+                assert created + found + bad_count == count
+                assert created == count
+                assert bad_count == 0
+                (created_2, found_2, bad_2) = self.import_csv(csv_path)
+                bad_2_count = len(bad_2)
+                if debug:
+                    print(f"csv-imported: ({created_2}, {found_2}, {bad_2_count})")
+                    print(bad)
+                assert tmp_size == os.path.getsize(cache_path)
+                assert created_2 + found_2 + bad_2_count == count
+                assert created == found_2
+                assert bad_count == bad_2_count
+                assert found_2 == count
+                assert bad_2_count == 0
+                assert created_2 == 0
+
+                # payment parts
+
+                positive_parts = self.build_payment_parts(100, positive_only=True)
+                assert self.check_payment_parts(positive_parts) != 0
+                assert self.check_payment_parts(positive_parts) != 0
+                all_parts = self.build_payment_parts(300, positive_only=False)
+                assert self.check_payment_parts(all_parts) != 0
+                assert self.check_payment_parts(all_parts) != 0
+                if debug:
+                    pp().pprint(positive_parts)
+                    pp().pprint(all_parts)
+                # dynamic discount
+                suite = []
+                count = 3
+                for exceed in [False, True]:
+                    case = []
+                    for parts in [positive_parts, all_parts]:
+                        part = parts.copy()
+                        demand = part['demand']
+                        if debug:
+                            print(demand, part['total'])
+                        i = 0
+                        z = demand / count
+                        cp = {
+                            'account': {},
+                            'demand': demand,
+                            'exceed': exceed,
+                            'total': part['total'],
+                        }
+                        j = ''
+                        for x, y in part['account'].items():
+                            if exceed and z <= demand:
+                                i += 1
+                                y['part'] = z
+                                if debug:
+                                    print(exceed, y)
+                                cp['account'][x] = y
+                                case.append(y)
+                            elif not exceed and y['balance'] >= z:
+                                i += 1
+                                y['part'] = z
+                                if debug:
+                                    print(exceed, y)
+                                cp['account'][x] = y
+                                case.append(y)
+                            j = x
+                            if i >= count:
+                                break
+                        if len(cp['account'][j]) > 0:
+                            suite.append(cp)
+                if debug:
+                    print('suite', len(suite))
+                for case in suite:
                     if debug:
-                        print(demand, part['total'])
-                    i = 0
-                    z = demand / count
-                    cp = {
-                        'account': {},
-                        'demand': demand,
-                        'exceed': exceed,
-                        'total': part['total'],
-                    }
-                    j = ''
-                    for x, y in part['account'].items():
-                        if exceed and z <= demand:
-                            i += 1
-                            y['part'] = z
-                            if debug:
-                                print(exceed, y)
-                            cp['account'][x] = y
-                            case.append(y)
-                        elif not exceed and y['balance'] >= z:
-                            i += 1
-                            y['part'] = z
-                            if debug:
-                                print(exceed, y)
-                            cp['account'][x] = y
-                            case.append(y)
-                        j = x
-                        if i >= count:
-                            break
-                    if len(cp['account'][j]) > 0:
-                        suite.append(cp)
-            if debug:
-                print('suite', len(suite))
-            for case in suite:
-                if debug:
-                    print(case)
-                result = self.check_payment_parts(case)
-                if debug:
-                    print('check_payment_parts', result)
-                assert result == 0
+                        print(case)
+                    result = self.check_payment_parts(case)
+                    if debug:
+                        print('check_payment_parts', result)
+                    assert result == 0
 
-            report = self.check(2.17, None, debug)
-            (valid, brief, plan) = report
-            if debug:
-                print('valid', valid)
-            assert self.zakat(report, parts=suite, debug=debug)
+                report = self.check(2.17, None, debug)
+                (valid, brief, plan) = report
+                if debug:
+                    print('valid', valid)
+                assert self.zakat(report, parts=suite, debug=debug)
+                assert self.save(path + '.pickle')
+                assert self.export_json(path + '.json')
 
             # exchange
 
