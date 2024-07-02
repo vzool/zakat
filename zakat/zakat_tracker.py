@@ -1294,7 +1294,8 @@ class ZakatTracker:
         return False
 
     def import_csv_cache_path(self):
-        """Generates the cache file path for imported CSV data.
+        """
+        Generates the cache file path for imported CSV data.
 
         This function constructs the file path where cached data from CSV imports
         will be stored. The cache file is a pickle file (.pickle extension) appended
