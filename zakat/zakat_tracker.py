@@ -160,7 +160,7 @@ class ZakatTracker:
     ZakatCut = lambda x: 0.025 * x  # Zakat Cut in one Lunar Year
     TimeCycle = lambda days=355: int(60 * 60 * 24 * days * 1e9)  # Lunar Year in nanoseconds
     Nisab = lambda x: 595 * x  # Silver Price in Local currency value
-    Version = lambda: '0.2.4'
+    Version = lambda: '0.2.41'
 
     def __init__(self, db_path: str = "zakat.pickle", history_mode: bool = True):
         """
@@ -1473,7 +1473,7 @@ class ZakatTracker:
         return start_date + datetime.timedelta(days=random_number_of_days)
 
     @staticmethod
-    def generate_random_csv_file(path: str = "data.csv", count: int = 1000, with_rate: bool = False) -> None:
+    def generate_random_csv_file(path: str = "data.csv", count: int = 1000, with_rate: bool = False, debug: bool = False) -> int:
         """
         Generate a random CSV file with specified parameters.
 
@@ -1481,6 +1481,7 @@ class ZakatTracker:
         path (str): The path where the CSV file will be saved. Default is "data.csv".
         count (int): The number of rows to generate in the CSV file. Default is 1000.
         with_rate (bool): If True, a random rate between 1.2% and 12% is added. Default is False.
+        debug (bool): A flag indicating whether to print debug information.
 
         Returns:
         None. The function generates a CSV file at the specified path with the given count of rows.
@@ -1489,6 +1490,7 @@ class ZakatTracker:
         and the date is randomly generated between 1950-01-01 and 2023-12-31.
         If the row number is not divisible by 13, the value is multiplied by -1.
         """
+        i = 0
         with open(path, "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
             for i in range(count):
@@ -1502,8 +1504,14 @@ class ZakatTracker:
                 row = [account, desc, value, date]
                 if with_rate:
                     rate = random.randint(1,100) * 0.12
+                    if debug:
+                        print('before-append', row)
                     row.append(rate)
+                    if debug:
+                        print('after-append', row)
                 writer.writerow(row)
+                i = i + 1
+        return i
 
     @staticmethod
     def create_random_list(max_sum, min_value=0, max_value=10):
@@ -1868,7 +1876,7 @@ class ZakatTracker:
             assert self.recall(False, debug) is True
             assert len(self._vault['history']) == 9
 
-            count = 1000
+            csv_count = 1000
 
             for with_rate, path in {
                 False: 'test-import_csv-no-exchange',
@@ -1883,20 +1891,23 @@ class ZakatTracker:
                 csv_path = path + '.csv'
                 if os.path.exists(csv_path):
                     os.remove(csv_path)
-                self.generate_random_csv_file(csv_path, count, with_rate)
+                c = self.generate_random_csv_file(csv_path, csv_count, with_rate, debug)
+                if debug:
+                    print('generate_random_csv_file', c)
+                assert c == csv_count
                 assert os.path.getsize(csv_path) > 0
                 cache_path = self.import_csv_cache_path()
                 if os.path.exists(cache_path):
                     os.remove(cache_path)
-                # self.reset()
+                self.reset()
                 (created, found, bad) = self.import_csv(csv_path, debug)
                 bad_count = len(bad)
                 if debug:
-                    print(f"csv-imported: ({created}, {found}, {bad_count}) = count({count})")
+                    print(f"csv-imported: ({created}, {found}, {bad_count}) = count({csv_count})")
                 tmp_size = os.path.getsize(cache_path)
                 assert tmp_size > 0
-                assert created + found + bad_count == count
-                assert created == count
+                assert created + found + bad_count == csv_count
+                assert created == csv_count
                 assert bad_count == 0
                 (created_2, found_2, bad_2) = self.import_csv(csv_path)
                 bad_2_count = len(bad_2)
@@ -1904,10 +1915,10 @@ class ZakatTracker:
                     print(f"csv-imported: ({created_2}, {found_2}, {bad_2_count})")
                     print(bad)
                 assert tmp_size == os.path.getsize(cache_path)
-                assert created_2 + found_2 + bad_2_count == count
+                assert created_2 + found_2 + bad_2_count == csv_count
                 assert created == found_2
                 assert bad_count == bad_2_count
-                assert found_2 == count
+                assert found_2 == csv_count
                 assert bad_2_count == 0
                 assert created_2 == 0
 
@@ -1942,16 +1953,18 @@ class ZakatTracker:
                         }
                         j = ''
                         for x, y in part['account'].items():
-                            if exceed and z <= demand:
+                            x_exchange = self.exchange(x)
+                            zz = self.exchange_calc(z, 1, x_exchange['rate'])
+                            if exceed and zz <= demand:
                                 i += 1
-                                y['part'] = z
+                                y['part'] = zz
                                 if debug:
                                     print(exceed, y)
                                 cp['account'][x] = y
                                 case.append(y)
-                            elif not exceed and y['balance'] >= z:
+                            elif not exceed and y['balance'] >= zz:
                                 i += 1
-                                y['part'] = z
+                                y['part'] = zz
                                 if debug:
                                     print(exceed, y)
                                 cp['account'][x] = y
@@ -1968,7 +1981,7 @@ class ZakatTracker:
                         print(case)
                     result = self.check_payment_parts(case)
                     if debug:
-                        print('check_payment_parts', result)
+                        print('check_payment_parts', result, f'exceed: {exceed}')
                     assert result == 0
 
                 report = self.check(2.17, None, debug)
