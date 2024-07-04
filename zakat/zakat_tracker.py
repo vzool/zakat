@@ -63,6 +63,7 @@ from time import sleep
 from pprint import PrettyPrinter as pp
 from math import floor
 from enum import Enum, auto
+from sys import version_info
 
 
 class Action(Enum):
@@ -160,7 +161,7 @@ class ZakatTracker:
     ZakatCut = lambda x: 0.025 * x  # Zakat Cut in one Lunar Year
     TimeCycle = lambda days=355: int(60 * 60 * 24 * days * 1e9)  # Lunar Year in nanoseconds
     Nisab = lambda x: 595 * x  # Silver Price in Local currency value
-    Version = lambda: '0.2.41'
+    Version = lambda: '0.2.5'
 
     def __init__(self, db_path: str = "zakat.pickle", history_mode: bool = True):
         """
@@ -1261,18 +1262,28 @@ class ZakatTracker:
 
     def save(self, path: str = None) -> bool:
         """
-        Save the current state of the ZakatTracker object to a pickle file.
+        Saves the ZakatTracker's current state to a pickle file.
+
+        This method serializes the internal data (`_vault`) along with metadata
+        (Python version, pickle protocol) for future compatibility.
 
         Parameters:
-        path (str): The path where the pickle file will be saved. If not provided, it will use the default path.
+            path (str, optional): File path for saving. Defaults to a predefined location.
 
         Returns:
-        bool: True if the save operation is successful, False otherwise.
+            bool: True if the save operation is successful, False otherwise.
         """
         if path is None:
             path = self.path()
         with open(path, "wb") as f:
-            pickle.dump(self._vault, f)
+            version = f'{version_info.major}.{version_info.minor}.{version_info.micro}'
+            pickle_protocol = pickle.HIGHEST_PROTOCOL
+            data = {
+                'python_version': version,
+                'pickle_protocol': pickle_protocol,
+                'data': self._vault,
+            }
+            pickle.dump(data, f, protocol=pickle_protocol)
             return True
 
     def load(self, path: str = None) -> bool:
@@ -1289,7 +1300,8 @@ class ZakatTracker:
             path = self.path()
         if os.path.exists(path):
             with open(path, "rb") as f:
-                self._vault = pickle.load(f)
+                data = pickle.load(f)
+                self._vault = data['data']
                 return True
         return False
 
