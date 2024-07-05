@@ -21,9 +21,9 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
 
 - Automated Zakat Calculation: Automatically calculate Zakat due based on the Nisab (minimum threshold), Haul (time cycles) and the current market price of silver, simplifying compliance with Islamic financial principles.
 
-- Customizable Nisab: Set your own Nisab value based on your preferred calculation method or personal financial situation.
+- Customizable "Nisab": Set your own "Nisab" value based on your preferred calculation method or personal financial situation.
 
-- Customizable Haul: Set your own Haul cycle based on your preferred calender method or personal financial situation.
+- Customizable "Haul": Set your own "Haul" cycle based on your preferred calender method or personal financial situation.
 
 - Multiple Accounts: Manage Zakat for different assets or accounts separately for greater financial clarity.
 
@@ -58,6 +58,8 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
 ### Documentation
 
 - [Mechanism of Zakat: The Rooms and Boxes Algorithm](./docs/algorithm.md)
+
+- [The Zakat Formula: A Mathematical Representation of Islamic Charity](./docs/mathematics.md)
 
 ### Get Started:
 
