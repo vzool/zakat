@@ -1,5 +1,7 @@
 # The Zakat Formula: A Mathematical Representation of Islamic Charity
 
+_**Note**: If you found any issues in reading this page, consider viewing this document in [PDF format](mathematics.pdf)._
+
 Zakat, one of the Five Pillars of Islam, is a mandatory form of charity for Muslims who meet specific wealth criteria. It serves as a means of purifying one's wealth and redistributing it to those in need. While the principles of Zakat are well-established, the calculation of the amount due can vary based on the type of assets and their value according to their exchange rates on Zakat time.
 
 This paper focuses on a specific mathematical representation of the Zakat formula using LaTeX, a typesetting system widely used for scientific and mathematical documents.
@@ -7,6 +9,7 @@ This paper focuses on a specific mathematical representation of the Zakat formul
 ### The Zakat Formula
 
 The Zakat formula can be expressed using the following mathematical equation:
+
 $Z_{\text{year } n} = \left[ P - \sum_{i=1}^{n-1} Z_{\text{year } i} \right] \times Z$
 
 Where:
@@ -34,6 +37,7 @@ Let's illustrate the formula with an example. Suppose a person has an initial we
 $Z_{\text{year } 1} = (100,000 - 0) \times 0.025 = 2,500$
 
 In the second year, the Zakat due would be:
+
 $Z_{\text{year } 2} = (100,000 - 2,500) \times 0.025 = 2,437.50$
 
 This process continues for each subsequent year, with the Zakat amount decreasing gradually as the remaining wealth shrinks.
@@ -100,16 +104,16 @@ Z_{\text{room } r, \text{ year } n} = \left[ \sum_{j=1}^{m} (P_{r,j} \times ER_{
 
 Where:
 
-*   \( Z_{\text{room } r, \text{ year } n} \): Zakat for room _r_ in year _n_
-*   \( P_{r,j} \): Initial principal in box _j_ of room _r_
-*   \( ER_{r,j} \): Exchange rate for the currency in box _j_ of room _r_ (relative to the base currency used for Zakat calculation)
-*   \( \sum_{j=1}^{m} \): Summation over all boxes (j = 1 to m) in room _r_
-*   \( \sum_{i=1}^{n-1} Z_{r,j,i} \): Sum of Zakat paid in previous years for box _j_ in room _r_ (from year 1 to year n-1)
+*   \( $Z_{\text{room } r, \text{ year } n}$ \): Zakat for room _r_ in year _n_
+*   \( $P_{r,j}$ \): Initial principal in box _j_ of room _r_
+*   \( $ER_{r,j}$ \): Exchange rate for the currency in box _j_ of room _r_ (relative to the base currency used for Zakat calculation)
+*   \( $\sum_{j=1}^{m}$ \): Summation over all boxes (j = 1 to m) in room _r_
+*   \( $\sum_{i=1}^{n-1} Z_{r,j,i}$ \): Sum of Zakat paid in previous years for box _j_ in room _r_ (from year 1 to year n-1)
 *   \( Z \): Zakat rate (typically 2.5%)
 
 ### Explanation of the Exchange Rate Modification:
 
-The addition of \( ER_{r,j} \) allows us to convert the initial principal in each box to a common base currency. This is essential when dealing with multiple currencies within different accounts. By multiplying the initial principal (\( P_{r,j} \)) by the corresponding exchange rate (\( ER_{r,j} \)), we ensure that all amounts are expressed in the same currency for consistent Zakat calculation.
+The addition of \( $ER_{r,j}$ \) allows us to convert the initial principal in each box to a common base currency. This is essential when dealing with multiple currencies within different accounts. By multiplying the initial principal \( $P_{r,j}$ \) by the corresponding exchange rate \( $ER_{r,j}$ \), we ensure that all amounts are expressed in the same currency for consistent Zakat calculation.
 
 ### Practical Implementation:
 
