@@ -21,6 +21,8 @@ from zakat.zakat_tracker import (
 
 from zakat.file_server import (
     start_file_server,
+    find_available_port,
+    FileType,
 )
 
 # Version information for the module
@@ -31,4 +33,6 @@ __all__ = [
     "JSONEncoder",
     "MathOperation",
     "start_file_server",
+    "find_available_port",
+    "FileType",
 ]
