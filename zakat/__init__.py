@@ -12,11 +12,15 @@
 This file provides the ZakatLibrary classes, functions for tracking and calculating Zakat.
 """
 # Importing necessary classes and functions from the main module
-from .zakat_tracker import (
+from zakat.zakat_tracker import (
     ZakatTracker,
     Action,
     JSONEncoder,
     MathOperation,
+)
+
+from zakat.file_server import (
+    start_file_server,
 )
 
 # Version information for the module
@@ -26,4 +30,5 @@ __all__ = [
     "Action",
     "JSONEncoder",
     "MathOperation",
+    "start_file_server",
 ]

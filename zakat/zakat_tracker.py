@@ -1020,7 +1020,7 @@ class ZakatTracker:
         ValueError: The log transaction happened again in the same nanosecond time.
         """
         if from_account == to_account:
-        	raise ValueError(f'Transfer to the same account is forbidden. {to_account}')
+            raise ValueError(f'Transfer to the same account is forbidden. {to_account}')
         if amount <= 0:
             return []
         if created is None:
@@ -1533,7 +1533,8 @@ class ZakatTracker:
         return start_date + datetime.timedelta(days=random_number_of_days)
 
     @staticmethod
-    def generate_random_csv_file(path: str = "data.csv", count: int = 1000, with_rate: bool = False, debug: bool = False) -> int:
+    def generate_random_csv_file(path: str = "data.csv", count: int = 1000, with_rate: bool = False,
+                                 debug: bool = False) -> int:
         """
         Generate a random CSV file with specified parameters.
 
@@ -1563,7 +1564,7 @@ class ZakatTracker:
                     value *= -1
                 row = [account, desc, value, date]
                 if with_rate:
-                    rate = random.randint(1,100) * 0.12
+                    rate = random.randint(1, 100) * 0.12
                     if debug:
                         print('before-append', row)
                     row.append(rate)
@@ -1766,12 +1767,12 @@ class ZakatTracker:
 
             # Same account transfer
             for x in [1, 'a', True, 1.8, None]:
-            	failed = False
-            	try:
-            		self.transfer(1, x, x, 'same-account', debug= debug)
-            	except:
-            		failed = True
-            	assert failed is True
+                failed = False
+                try:
+                    self.transfer(1, x, x, 'same-account', debug=debug)
+                except:
+                    failed = True
+                assert failed is True
 
             # Always preserve box age during transfer
 
