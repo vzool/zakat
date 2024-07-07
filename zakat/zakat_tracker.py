@@ -143,6 +143,7 @@ class ZakatTracker:
                             - value (int): The transaction amount (positive or negative).
                             - desc (str): The description of the transaction.
                             - file (dict): A dictionary storing file references associated with the transaction.
+                    - hide (bool): Indicates whether the account is hidden or not.
                     - zakatable (bool): Indicates whether the account is subject to Zakat.
             - exchange (dict):
             	- account (dict):
@@ -599,6 +600,7 @@ class ZakatTracker:
                 'box': {},
                 'count': 0,
                 'log': {},
+                'hide': False,
                 'zakatable': True,
             }
             self._step(Action.CREATE, account)
@@ -866,6 +868,39 @@ class ZakatTracker:
         x = 0
         return [x := x + y['rest'] for y in self._vault['account'][account]['box'].values()][-1]
 
+    def hide(self, account, status: bool = None) -> bool:
+        """
+        Check or set the hide status of a specific account.
+
+        Parameters:
+        account (str): The account number.
+        status (bool, optional): The new hide status. If not provided, the function will return the current status.
+
+        Returns:
+        bool: The current or updated hide status of the account.
+
+        Raises:
+        None
+
+        Example:
+        >>> tracker = ZakatTracker()
+        >>> ref = tracker.track(51, 'desc', 'account1')
+        >>> tracker.hide('account1')  # Set the hide status of 'account1' to True
+        False
+        >>> tracker.hide('account1', True)  # Set the hide status of 'account1' to True
+        True
+        >>> tracker.hide('account1')  # Get the hide status of 'account1' by default
+        True
+        >>> tracker.hide('account1', False)
+        False
+        """
+        if self.account_exists(account):
+            if status is None:
+                return self._vault['account'][account]['hide']
+            self._vault['account'][account]['hide'] = status
+            return status
+        return False
+
     def zakatable(self, account, status: bool = None) -> bool:
         """
         Check or set the zakatable status of a specific account.
@@ -883,6 +918,8 @@ class ZakatTracker:
         Example:
         >>> tracker = ZakatTracker()
         >>> ref = tracker.track(51, 'desc', 'account1')
+        >>> tracker.zakatable('account1')  # Set the zakatable status of 'account1' to True
+        True
         >>> tracker.zakatable('account1', True)  # Set the zakatable status of 'account1' to True
         True
         >>> tracker.zakatable('account1')  # Get the zakatable status of 'account1' by default
@@ -1662,6 +1699,12 @@ class ZakatTracker:
                 assert self.nolock()
             assert self.boxes(x) != {}
             assert self.logs(x) != {}
+
+            assert not self.hide(x)
+            assert self.hide(x, False) is False
+            assert self.hide(x) is False
+            assert self.hide(x, True)
+            assert self.hide(x)
 
             assert self.zakatable(x)
             assert self.zakatable(x, False) is False
