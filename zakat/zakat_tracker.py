@@ -64,6 +64,7 @@ from pprint import PrettyPrinter as pp
 from math import floor
 from enum import Enum, auto
 from sys import version_info
+from decimal import Decimal
 
 
 class Action(Enum):
@@ -83,6 +84,8 @@ class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Action) or isinstance(obj, MathOperation):
             return obj.name  # Serialize as the enum member's name
+        elif isinstance(obj, Decimal):
+            return float(obj)
         return super().default(obj)
 
 
@@ -141,6 +144,11 @@ class ZakatTracker:
                             - desc (str): The description of the transaction.
                             - file (dict): A dictionary storing file references associated with the transaction.
                     - zakatable (bool): Indicates whether the account is subject to Zakat.
+            - exchange (dict):
+            	- account (dict):
+            		- {timestamps} (dict):
+            			- rate (float): Exchange rate when compared to local currency.
+            			- description (str): The description of the exchange rate.
             - history (dict):
                 - {timestamp} (list): A list of dictionaries storing the history of actions performed.
                     - {action_dict} (dict):
@@ -161,7 +169,7 @@ class ZakatTracker:
     ZakatCut = lambda x: 0.025 * x  # Zakat Cut in one Lunar Year
     TimeCycle = lambda days=355: int(60 * 60 * 24 * days * 1e9)  # Lunar Year in nanoseconds
     Nisab = lambda x: 595 * x  # Silver Price in Local currency value
-    Version = lambda: '0.2.5'
+    Version = lambda: '0.2.6'
 
     def __init__(self, db_path: str = "zakat.pickle", history_mode: bool = True):
         """
@@ -970,9 +978,12 @@ class ZakatTracker:
         list[int]: A list of timestamps corresponding to the transactions made during the transfer.
 
         Raises:
+        ValueError: Transfer to the same account is forbidden.
         ValueError: The box transaction happened again in the same nanosecond time.
         ValueError: The log transaction happened again in the same nanosecond time.
         """
+        if from_account == to_account:
+        	raise ValueError(f'Transfer to the same account is forbidden. {to_account}')
         if amount <= 0:
             return []
         if created is None:
@@ -1709,6 +1720,15 @@ class ZakatTracker:
             assert failed is True
 
             self.reset()
+
+            # Same account transfer
+            for x in [1, 'a', True, 1.8, None]:
+            	failed = False
+            	try:
+            		self.transfer(1, x, x, 'same-account', debug= debug)
+            	except:
+            		failed = True
+            	assert failed is True
 
             # Always preserve box age during transfer
 
