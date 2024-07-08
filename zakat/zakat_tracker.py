@@ -65,6 +65,7 @@ from math import floor
 from enum import Enum, auto
 from sys import version_info
 from decimal import Decimal
+from typing import List, Dict, Any
 
 
 class Action(Enum):
@@ -118,12 +119,12 @@ class ZakatTracker:
     for interacting with and managing the Zakat tracker.
 
     Attributes:
-        ZakatCut (function): A function to calculate the Zakat percentage.
-        TimeCycle (function): A function to determine the time cycle for Zakat.
-        Nisab (function): A function to calculate the Nisab based on the silver price.
-        Version (str): The version of the ZakatTracker class.
+        ZakatTracker.ZakatCut (function): A function to calculate the Zakat percentage.
+        ZakatTracker.TimeCycle (function): A function to determine the time cycle for Zakat.
+        ZakatTracker.Nisab (function): A function to calculate the Nisab based on the silver price.
+        ZakatTracker.Version (function): The version of the ZakatTracker class.
 
-	Data Structure:
+    Data Structure:
         The ZakatTracker class utilizes a nested dictionary structure called "_vault" to store and manage data.
 
         _vault (dict):
@@ -146,10 +147,10 @@ class ZakatTracker:
                     - hide (bool): Indicates whether the account is hidden or not.
                     - zakatable (bool): Indicates whether the account is subject to Zakat.
             - exchange (dict):
-            	- account (dict):
-            		- {timestamps} (dict):
-            			- rate (float): Exchange rate when compared to local currency.
-            			- description (str): The description of the exchange rate.
+                - account (dict):
+                    - {timestamps} (dict):
+                        - rate (float): Exchange rate when compared to local currency.
+                        - description (str): The description of the exchange rate.
             - history (dict):
                 - {timestamp} (list): A list of dictionaries storing the history of actions performed.
                     - {action_dict} (dict):
@@ -166,11 +167,71 @@ class ZakatTracker:
 
     """
 
-    # Hybrid Constants
-    ZakatCut = lambda x: 0.025 * float(x)  # Zakat Cut in one Lunar Year
-    TimeCycle = lambda days=355: int(60 * 60 * 24 * days * 1e9)  # Lunar Year in nanoseconds
-    Nisab = lambda x: 595 * x  # Silver Price in Local currency value
-    Version = lambda: '0.2.61'
+    @staticmethod
+    def Version():
+        """
+        Returns the current version of the software.
+
+        This function returns a string representing the current version of the software,
+        including major, minor, and patch version numbers in the format "X.Y.Z".
+
+        Returns:
+        str: The current version of the software.
+        """
+        return '0.2.62'
+
+    @staticmethod
+    def ZakatCut(x: float) -> float:
+        """
+        Calculates the Zakat amount due on an asset.
+
+        This function calculates the zakat amount due on a given asset value over one lunar year.
+        Zakat is an Islamic obligatory alms-giving, calculated as a fixed percentage of an individual's wealth
+        that exceeds a certain threshold (Nisab).
+
+        Parameters:
+        x: The total value of the asset on which Zakat is to be calculated.
+
+        Returns:
+        The amount of Zakat due on the asset, calculated as 2.5% of the asset's value.
+        """
+        return 0.025 * x  # Zakat Cut in one Lunar Year
+
+    @staticmethod
+    def TimeCycle(days: int = 355) -> int:
+        """
+        Calculates the approximate duration of a lunar year in nanoseconds.
+
+        This function calculates the approximate duration of a lunar year based on the given number of days.
+        It converts the given number of days into nanoseconds for use in high-precision timing applications.
+
+        Parameters:
+        days: The number of days in a lunar year. Defaults to 355,
+              which is an approximation of the average length of a lunar year.
+
+        Returns:
+        The approximate duration of a lunar year in nanoseconds.
+        """
+        return int(60 * 60 * 24 * days * 1e9)  # Lunar Year in nanoseconds
+
+    @staticmethod
+    def Nisab(x: float) -> float:
+        """
+        Calculates the Nisab value based on the current silver price.
+
+        This function calculates the nisab value, which is the minimum threshold of wealth,
+        that makes an individual liable for paying Zakat.
+        The Nisab value is determined by the equivalent value of a specific amount
+        of silver (currently 595 grams) in the local currency.
+
+        Parameters:
+        x: The current price of one gram of silver in the local currency.
+
+        Returns:
+        The nisab value in the local currency, calculated as the product of the silver price per gram,
+        and the weight of the silver threshold (595 grams).
+        """
+        return 595 * x  # Silver Price in Local currency value
 
     def __init__(self, db_path: str = "zakat.pickle", history_mode: bool = True):
         """
@@ -985,7 +1046,7 @@ class ZakatTracker:
                 ages.append((j, target))
                 target = 0
                 break
-            elif rest < target and rest > 0:
+            elif target > rest > 0:
                 chunk = rest
                 target -= chunk
                 self._step(Action.SUB, account, ref=j, value=chunk)
@@ -1131,7 +1192,7 @@ class ZakatTracker:
                         brief[2] += total
                         plan[x][index] = {'total': total, 'count': epoch}
                 else:
-                    chunk = ZakatTracker.ZakatCut(rest)
+                    chunk = ZakatTracker.ZakatCut(float(rest))
                     if chunk > 0:
                         if x not in plan:
                             plan[x] = {}
@@ -1147,7 +1208,7 @@ class ZakatTracker:
 
     def build_payment_parts(self, demand: float, positive_only: bool = True) -> dict:
         """
-        Build payment parts for the zakat distribution.
+        Build payment parts for the Zakat distribution.
 
         Parameters:
         demand (float): The total demand for payment in local currency.
@@ -1201,12 +1262,12 @@ class ZakatTracker:
         7: The sum of 'part' values in parts['account'] does not match with 'demand' value.
         """
         for i in ['demand', 'account', 'total', 'exceed']:
-            if not i in parts:
+            if i not in parts:
                 return 1
         exceed = parts['exceed']
         for x in parts['account']:
             for j in ['balance', 'rate', 'part']:
-                if not j in parts['account'][x]:
+                if j not in parts['account'][x]:
                     return 2
                 if parts['account'][x]['part'] <= 0:
                     return 3
@@ -1224,7 +1285,7 @@ class ZakatTracker:
             return 7
         return 0
 
-    def zakat(self, report: tuple, parts: dict = None, debug: bool = False) -> bool:
+    def zakat(self, report: tuple, parts: List[Dict[str, Dict | bool | Any]] = None, debug: bool = False) -> bool:
         """
         Perform Zakat calculation based on the given report and optional parts.
 
@@ -1613,7 +1674,7 @@ class ZakatTracker:
         for _ in range(limit):
             y = ZakatTracker.time()
             z = '-'
-            if not y in xlist:
+            if y not in xlist:
                 xlist.append(y)
             else:
                 z = 'x'
@@ -1660,7 +1721,6 @@ class ZakatTracker:
         for x in table:
             for y in table[x]:
                 self.lock()
-                ref = 0
                 if y[0] == 0:
                     ref = self.track(y[1], 'test-add', x, True, ZakatTracker.time(), debug)
                 else:
@@ -1683,10 +1743,10 @@ class ZakatTracker:
                 if debug:
                     print("debug-1", z, y[3])
                 assert z == y[3]
-                l = self._vault['account'][x]['log']
+                o = self._vault['account'][x]['log']
                 z = 0
-                for i in l:
-                    z += l[i]['value']
+                for i in o:
+                    z += o[i]['value']
                 if debug:
                     print("debug-2", z, type(z))
                     print("debug-2", y[4], type(y[4]))
