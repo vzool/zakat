@@ -167,10 +167,10 @@ class ZakatTracker:
     """
 
     # Hybrid Constants
-    ZakatCut = lambda x: 0.025 * x  # Zakat Cut in one Lunar Year
+    ZakatCut = lambda x: 0.025 * float(x)  # Zakat Cut in one Lunar Year
     TimeCycle = lambda days=355: int(60 * 60 * 24 * days * 1e9)  # Lunar Year in nanoseconds
     Nisab = lambda x: 595 * x  # Silver Price in Local currency value
-    Version = lambda: '0.2.6'
+    Version = lambda: '0.2.61'
 
     def __init__(self, db_path: str = "zakat.pickle", history_mode: bool = True):
         """
@@ -1123,7 +1123,7 @@ class ZakatTracker:
                 if rest >= nisab:
                     total = 0
                     for _ in range(epoch):
-                        total += ZakatTracker.ZakatCut(rest - total)
+                        total += ZakatTracker.ZakatCut(float(rest) - float(total))
                     if total > 0:
                         if x not in plan:
                             plan[x] = {}
