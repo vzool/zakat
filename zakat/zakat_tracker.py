@@ -1,9 +1,9 @@
 """
- _____     _         _     _____               _             
-|__  /__ _| | ____ _| |_  |_   _| __ __ _  ___| | _____ _ __ 
+ _____     _         _     _____               _
+|__  /__ _| | ____ _| |_  |_   _| __ __ _  ___| | _____ _ __
   / // _` | |/ / _` | __|   | || '__/ _` |/ __| |/ / _ \ '__|
- / /| (_| |   < (_| | |_    | || | | (_| | (__|   <  __/ |   
-/____\__,_|_|\_\__,_|\__|   |_||_|  \__,_|\___|_|\_\___|_|   
+ / /| (_| |   < (_| | |_    | || | | (_| | (__|   <  __/ |
+/____\__,_|_|\_\__,_|\__|   |_||_|  \__,_|\___|_|\_\___|_|
 
 "رَبَّنَا افْتَحْ بَيْنَنَا وَبَيْنَ قَوْمِنَا بِالْحَقِّ وَأَنتَ خَيْرُ الْفَاتِحِينَ (89)" -- سورة الأعراف
 ... Never Trust, Always Verify ...
@@ -178,7 +178,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.63'
+        return '0.2.64'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1153,6 +1153,7 @@ class ZakatTracker:
             if not self.zakatable(x):
                 continue
             _box = self._vault['account'][x]['box']
+            _log = self._vault['account'][x]['log']
             limit = len(_box) + 1
             ids = sorted(self._vault['account'][x]['box'].keys())
             for i in range(-1, -limit, -1):
@@ -1190,7 +1191,7 @@ class ZakatTracker:
                             plan[x] = {}
                         valid = True
                         brief[2] += total
-                        plan[x][index] = {'total': total, 'count': epoch}
+                        plan[x][index] = {'total': total, 'count': epoch, 'box': j, 'log': _log[j]['desc']}
                 else:
                     chunk = ZakatTracker.ZakatCut(float(rest))
                     if chunk > 0:
@@ -1201,6 +1202,8 @@ class ZakatTracker:
                         below_nisab += rest
                         brief[2] += chunk
                         plan[x][index]['below_nisab'] = chunk
+                        plan[x][index]['box'] = j
+                        plan[x][index]['log'] = _log[j]['desc']
         valid = valid or below_nisab >= nisab
         if debug:
             print(f"below_nisab({below_nisab}) >= nisab({nisab})")
