@@ -178,7 +178,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.64'
+        return '0.2.65'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1191,7 +1191,17 @@ class ZakatTracker:
                             plan[x] = {}
                         valid = True
                         brief[2] += total
-                        plan[x][index] = {'total': total, 'count': epoch, 'box': j, 'log': _log[j]['desc']}
+                        plan[x][index] = {
+                            'total': total,
+                            'count': epoch,
+                            'box_time': j,
+                            'box_capital': _box[j]['capital'],
+                            'box_rest': _box[j]['rest'],
+                            'box_last': _box[j]['last'],
+                            'box_total': _box[j]['total'],
+                            'box_count': _box[j]['count'],
+                            'box_log': _log[j]['desc'],
+                        }
                 else:
                     chunk = ZakatTracker.ZakatCut(float(rest))
                     if chunk > 0:
@@ -1202,8 +1212,13 @@ class ZakatTracker:
                         below_nisab += rest
                         brief[2] += chunk
                         plan[x][index]['below_nisab'] = chunk
-                        plan[x][index]['box'] = j
-                        plan[x][index]['log'] = _log[j]['desc']
+                        plan[x][index]['box_time'] = j
+                        plan[x][index]['box_capital'] = _box[j]['capital']
+                        plan[x][index]['box_rest'] = _box[j]['rest']
+                        plan[x][index]['box_last'] = _box[j]['last']
+                        plan[x][index]['box_total'] = _box[j]['total']
+                        plan[x][index]['box_count'] = _box[j]['count']
+                        plan[x][index]['box_log'] = _log[j]['desc']
         valid = valid or below_nisab >= nisab
         if debug:
             print(f"below_nisab({below_nisab}) >= nisab({nisab})")
