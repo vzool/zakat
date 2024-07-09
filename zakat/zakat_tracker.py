@@ -106,7 +106,7 @@ class ZakatTracker:
 
     The `ZakatTracker` class is designed to handle both positive and negative transactions,
     allowing for flexible tracking of financial activities related to Zakat. It also supports
-    the concept of a "nisab" (minimum threshold for Zakat) and a "haul" (complete one year for Transaction) can calculate Zakat due
+    the concept of a "Nisab" (minimum threshold for Zakat) and a "haul" (complete one year for Transaction) can calculate Zakat due
     based on the current silver price.
 
     The class uses a pickle file as its database to persist the tracker state,
@@ -178,7 +178,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.62'
+        return '0.2.63'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -215,23 +215,23 @@ class ZakatTracker:
         return int(60 * 60 * 24 * days * 1e9)  # Lunar Year in nanoseconds
 
     @staticmethod
-    def Nisab(x: float) -> float:
+    def Nisab(gram_price: float, gram_quantity: float = 595) -> float:
         """
-        Calculates the Nisab value based on the current silver price.
+        Calculate the total value of Nisab (a unit of weight in Islamic jurisprudence) based on the given price per gram.
 
-        This function calculates the nisab value, which is the minimum threshold of wealth,
+        This function calculates the Nisab value, which is the minimum threshold of wealth,
         that makes an individual liable for paying Zakat.
         The Nisab value is determined by the equivalent value of a specific amount
-        of silver (currently 595 grams) in the local currency.
+        of gold or silver (currently 595 grams in silver) in the local currency.
 
         Parameters:
-        x: The current price of one gram of silver in the local currency.
+        - gram_price (float): The price per gram of Nisab.
+        - gram_quantity (float): The quantity of grams in a Nisab. Default is 595 grams of silver.
 
         Returns:
-        The nisab value in the local currency, calculated as the product of the silver price per gram,
-        and the weight of the silver threshold (595 grams).
+        - float: The total value of Nisab based on the given price per gram.
         """
-        return 595 * x  # Silver Price in Local currency value
+        return gram_price * gram_quantity
 
     def __init__(self, db_path: str = "zakat.pickle", history_mode: bool = True):
         """
