@@ -178,7 +178,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.65'
+        return '0.2.66'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1161,7 +1161,7 @@ class ZakatTracker:
                 rest = _box[j]['rest']
                 if rest <= 0:
                     continue
-                exchange = self.exchange(x, created=j)
+                exchange = self.exchange(x, created=self.time())
                 if debug:
                     print('exchanges', self.exchanges())
                 rest = ZakatTracker.exchange_calc(rest, exchange['rate'], 1)
@@ -1201,6 +1201,7 @@ class ZakatTracker:
                             'box_total': _box[j]['total'],
                             'box_count': _box[j]['count'],
                             'box_log': _log[j]['desc'],
+                            'exchange_rate': exchange['rate'],
                         }
                 else:
                     chunk = ZakatTracker.ZakatCut(float(rest))
@@ -1219,6 +1220,7 @@ class ZakatTracker:
                         plan[x][index]['box_total'] = _box[j]['total']
                         plan[x][index]['box_count'] = _box[j]['count']
                         plan[x][index]['box_log'] = _log[j]['desc']
+                        plan[x][index]['exchange_rate'] = exchange['rate']
         valid = valid or below_nisab >= nisab
         if debug:
             print(f"below_nisab({below_nisab}) >= nisab({nisab})")
