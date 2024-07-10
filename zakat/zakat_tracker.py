@@ -373,7 +373,8 @@ class ZakatTracker:
         """
         Check if the vault lock is currently not set.
 
-        :return: True if the vault lock is not set, False otherwise.
+        Returns:
+        bool: True if the vault lock is not set, False otherwise.
         """
         return self._vault['lock'] is None
 
@@ -394,7 +395,8 @@ class ZakatTracker:
         It provides a snapshot of the internal data structure, allowing for further
         processing or analysis.
 
-        :return: A copy of the internal vault dictionary.
+        Returns:
+        dict: A copy of the internal vault dictionary.
         """
         return self._vault.copy()
 
@@ -405,7 +407,8 @@ class ZakatTracker:
         The history is a dictionary where each key is a unique identifier for a step,
         and the corresponding value is a dictionary containing information about the step.
 
-        :return: A copy of the history of steps taken in the ZakatTracker.
+        Returns:
+        dict: A copy of the history of steps taken in the ZakatTracker.
         """
         return self._vault['history'].copy()
 
@@ -1403,10 +1406,10 @@ class ZakatTracker:
         (Python version, pickle protocol) for future compatibility.
 
         Parameters:
-            path (str, optional): File path for saving. Defaults to a predefined location.
+        path (str, optional): File path for saving. Defaults to a predefined location.
 
         Returns:
-            bool: True if the save operation is successful, False otherwise.
+        bool: True if the save operation is successful, False otherwise.
         """
         if path is None:
             path = self.path()
@@ -1449,7 +1452,7 @@ class ZakatTracker:
         to the base path of the object.
 
         Returns:
-            str: The full path to the import CSV cache file.
+        str: The full path to the import CSV cache file.
 
         Example:
             >>> obj = ZakatTracker('/data/reports')
