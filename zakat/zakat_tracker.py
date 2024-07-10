@@ -1204,6 +1204,8 @@ class ZakatTracker:
                             'box_count': _box[j]['count'],
                             'box_log': _log[j]['desc'],
                             'exchange_rate': exchange['rate'],
+                            'exchange_time': exchange['time'],
+                            'exchange_desc': exchange['description'],
                         }
                 else:
                     chunk = ZakatTracker.ZakatCut(float(rest))
@@ -1223,6 +1225,8 @@ class ZakatTracker:
                         plan[x][index]['box_count'] = _box[j]['count']
                         plan[x][index]['box_log'] = _log[j]['desc']
                         plan[x][index]['exchange_rate'] = exchange['rate']
+                        plan[x][index]['exchange_time'] = exchange['time']
+                        plan[x][index]['exchange_desc'] = exchange['description']
         valid = valid or below_nisab >= nisab
         if debug:
             print(f"below_nisab({below_nisab}) >= nisab({nisab})")
