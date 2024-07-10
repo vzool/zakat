@@ -178,7 +178,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.66'
+        return '0.2.67'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -764,7 +764,7 @@ class ZakatTracker:
             if account not in self._vault['exchange']:
                 self._vault['exchange'][account] = {}
             if len(self._vault['exchange'][account]) == 0 and rate <= 1:
-                return {"rate": 1, "description": None}
+                return {"time": created, "rate": 1, "description": None}
             self._vault['exchange'][account][created] = {"rate": rate, "description": description}
             self._step(Action.EXCHANGE, account, ref=created, value=rate)
             if no_lock:
@@ -781,10 +781,12 @@ class ZakatTracker:
                     print("exchange-read-1",
                           f'account: {account}, created: {created}, rate:{rate}, description:{description}',
                           'latest_rate', latest_rate)
-                return latest_rate[1]  # إرجاع قاموس يحتوي على المعدل والوصف
+                result = latest_rate[1]
+                result['time'] = latest_rate[0]
+                return result  # إرجاع قاموس يحتوي على المعدل والوصف
         if debug:
             print("exchange-read-0", f'account: {account}, created: {created}, rate:{rate}, description:{description}')
-        return {"rate": 1, "description": None}  # إرجاع القيمة الافتراضية مع وصف فارغ
+        return {"time": created, "rate": 1, "description": None}  # إرجاع القيمة الافتراضية مع وصف فارغ
 
     @staticmethod
     def exchange_calc(x: float, x_rate: float, y_rate: float) -> float:
@@ -2156,9 +2158,11 @@ class ZakatTracker:
             self.exchange("cash", 10, 3.66)
 
             for i in range(1, 30):
-                rate, description = self.exchange("cash", i).values()
+                exchange = self.exchange("cash", i)
+                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
                 if debug:
-                    print(i, rate, description)
+                    print(i, rate, description, created)
+                assert created
                 if i < 10:
                     assert rate == 1
                     assert description is None
@@ -2180,9 +2184,11 @@ class ZakatTracker:
                 elif i >= 25:
                     assert rate == 3.75
                     assert description is not None
-                rate, description = self.exchange("bank", i).values()
+                exchange = self.exchange("bank", i)
+                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
                 if debug:
-                    print(i, rate, description)
+                    print(i, rate, description, created)
+                assert created
                 assert rate == 1
                 assert description is None
 
@@ -2207,9 +2213,11 @@ class ZakatTracker:
             # اختبار النتائج باستخدام التواريخ بالنانو ثانية
             for i in range(1, 31):
                 timestamp_ns = ZakatTracker.day_to_time(i)
-                rate, description = self.exchange("cash", timestamp_ns).values()
+                exchange = self.exchange("cash", timestamp_ns)
+                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
                 if debug:
-                    print(i, rate, description)
+                    print(i, rate, description, created)
+                assert created
                 if i < 10:
                     assert rate == 1
                     assert description is None
@@ -2231,9 +2239,11 @@ class ZakatTracker:
                 elif i >= 25:
                     assert rate == 3.75
                     assert description is not None
-                rate, description = self.exchange("bank", i).values()
+                exchange = self.exchange("bank", i)
+                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
                 if debug:
-                    print(i, rate, description)
+                    print(i, rate, description, created)
+                assert created
                 assert rate == 1
                 assert description is None
 
