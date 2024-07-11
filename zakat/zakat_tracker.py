@@ -178,7 +178,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.67'
+        return '0.2.68'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1220,6 +1220,8 @@ class ZakatTracker:
                         below_nisab += rest
                         brief[2] += chunk
                         plan[x][index]['below_nisab'] = chunk
+                        plan[x][index]['total'] = chunk
+                        plan[x][index]['count'] = epoch
                         plan[x][index]['box_time'] = j
                         plan[x][index]['box_capital'] = _box[j]['capital']
                         plan[x][index]['box_rest'] = _box[j]['rest']
@@ -1271,12 +1273,13 @@ class ZakatTracker:
         return parts
 
     @staticmethod
-    def check_payment_parts(parts: dict) -> int:
+    def check_payment_parts(parts: dict, debug: bool = False) -> int:
         """
         Checks the validity of payment parts.
 
         Parameters:
         parts (dict): A dictionary containing payment parts information.
+        debug (bool): Flag to enable debug mode.
 
         Returns:
         int: Returns 0 if the payment parts are valid, otherwise returns the error code.
@@ -1284,11 +1287,10 @@ class ZakatTracker:
         Error Codes:
         1: 'demand', 'account', 'total', or 'exceed' key is missing in parts.
         2: 'balance', 'rate' or 'part' key is missing in parts['account'][x].
-        3: 'part' value in parts['account'][x] is less than or equal to 0.
+        3: 'part' value in parts['account'][x] is less than 0.
         4: If 'exceed' is False, 'balance' value in parts['account'][x] is less than or equal to 0.
-        5: 'part' value in parts['account'][x] is less than 0.
-        6: If 'exceed' is False, 'part' value in parts['account'][x] is greater than 'balance' value.
-        7: The sum of 'part' values in parts['account'] does not match with 'demand' value.
+        5: If 'exceed' is False, 'part' value in parts['account'][x] is greater than 'balance' value.
+        6: The sum of 'part' values in parts['account'] does not match with 'demand' value.
         """
         for i in ['demand', 'account', 'total', 'exceed']:
             if i not in parts:
@@ -1298,20 +1300,25 @@ class ZakatTracker:
             for j in ['balance', 'rate', 'part']:
                 if j not in parts['account'][x]:
                     return 2
-                if parts['account'][x]['part'] <= 0:
+                if parts['account'][x]['part'] < 0:
                     return 3
                 if not exceed and parts['account'][x]['balance'] <= 0:
                     return 4
         demand = parts['demand']
         z = 0
         for _, y in parts['account'].items():
-            if y['part'] < 0:
-                return 5
             if not exceed and y['part'] > y['balance']:
-                return 6
+                return 5
             z += ZakatTracker.exchange_calc(y['part'], y['rate'], 1)
-        if z != demand:
-            return 7
+        z = round(z, 2)
+        demand = round(demand, 2)
+        if debug:
+            print('check_payment_parts', f'z = {z}, demand = {demand}')
+            print('check_payment_parts', type(z), type(demand))
+            print('check_payment_parts', z != demand)
+            print('check_payment_parts', str(z) != str(demand))
+        if z != demand and str(z) != str(demand):
+            return 6
         return 0
 
     def zakat(self, report: tuple, parts: List[Dict[str, Dict | bool | Any]] = None, debug: bool = False) -> bool:
@@ -1366,14 +1373,17 @@ class ZakatTracker:
                 self._step(Action.ZAKAT, account=x, ref=j, value=plan[x][i]['count'], key='count',
                            math_operation=MathOperation.ADDITION)
                 if not parts_exist:
-                    self._vault['account'][x]['box'][j]['rest'] -= plan[x][i]['total']
+                    try:
+                        self._vault['account'][x]['box'][j]['rest'] -= plan[x][i]['total']
+                    except TypeError:
+                        self._vault['account'][x]['box'][j]['rest'] -= Decimal(plan[x][i]['total'])
                     self._step(Action.ZAKAT, account=x, ref=j, value=plan[x][i]['total'], key='rest',
                                math_operation=MathOperation.SUBTRACTION)
         if parts_exist:
             for transaction in parts:
                 for account, part in transaction['account'].items():
                     if debug:
-                        print('zakat-part', account, part['part'])
+                        print('zakat-part', account, part['rate'])
                     target_exchange = self.exchange(account)
                     amount = ZakatTracker.exchange_calc(part['part'], part['rate'], target_exchange['rate'])
                     self.sub(amount, desc='zakat-part', account=account, debug=debug)
