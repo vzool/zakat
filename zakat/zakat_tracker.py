@@ -2256,7 +2256,9 @@ class ZakatTracker:
                             suite.append(cp)
                 if debug:
                     print('suite', len(suite))
+                # vault = self._vault.copy()
                 for case in suite:
+                    # self._vault = vault.copy()
                     if debug:
                         print('case', case)
                     result = self.check_payment_parts(case)
@@ -2264,11 +2266,15 @@ class ZakatTracker:
                         print('check_payment_parts', result, f'exceed: {exceed}')
                     assert result == 0
 
-                report = self.check(2.17, None, debug)
-                (valid, brief, plan) = report
-                if debug:
-                    print('valid', valid)
-                assert self.zakat(report, parts=suite, debug=debug)
+                    report = self.check(2.17, None, debug)
+                    (valid, brief, plan) = report
+                    if debug:
+                        print('valid', valid)
+                    zakat_result = self.zakat(report, parts=case, debug=debug)
+                    if debug:
+                        print('zakat-result', zakat_result)
+                    assert valid == zakat_result
+
                 assert self.save(path + '.pickle')
                 assert self.export_json(path + '.json')
 
