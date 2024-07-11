@@ -178,7 +178,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.68'
+        return '0.2.69'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -726,7 +726,10 @@ class ZakatTracker:
         """
         if created is None:
             created = self.time()
-        self._vault['account'][account]['balance'] += value
+        try:
+            self._vault['account'][account]['balance'] += value
+        except TypeError:
+            self._vault['account'][account]['balance'] += Decimal(value)
         self._vault['account'][account]['count'] += 1
         if debug:
             print('create-log', created)
@@ -1351,6 +1354,7 @@ class ZakatTracker:
         self._step(Action.REPORT, ref=report_time)
         created = self.time()
         for x in plan:
+            target_exchange = self.exchange(x)
             if debug:
                 print(plan[x])
                 print('-------------')
@@ -1366,19 +1370,21 @@ class ZakatTracker:
                            key='last',
                            math_operation=MathOperation.EQUAL)
                 self._vault['account'][x]['box'][j]['last'] = created
-                self._vault['account'][x]['box'][j]['total'] += plan[x][i]['total']
-                self._step(Action.ZAKAT, account=x, ref=j, value=plan[x][i]['total'], key='total',
+                amount = ZakatTracker.exchange_calc(float(plan[x][i]['total']), 1, float(target_exchange['rate']))
+                self._vault['account'][x]['box'][j]['total'] += amount
+                self._step(Action.ZAKAT, account=x, ref=j, value=amount, key='total',
                            math_operation=MathOperation.ADDITION)
                 self._vault['account'][x]['box'][j]['count'] += plan[x][i]['count']
                 self._step(Action.ZAKAT, account=x, ref=j, value=plan[x][i]['count'], key='count',
                            math_operation=MathOperation.ADDITION)
                 if not parts_exist:
                     try:
-                        self._vault['account'][x]['box'][j]['rest'] -= plan[x][i]['total']
+                        self._vault['account'][x]['box'][j]['rest'] -= amount
                     except TypeError:
-                        self._vault['account'][x]['box'][j]['rest'] -= Decimal(plan[x][i]['total'])
-                    self._step(Action.ZAKAT, account=x, ref=j, value=plan[x][i]['total'], key='rest',
-                               math_operation=MathOperation.SUBTRACTION)
+                        self._vault['account'][x]['box'][j]['rest'] -= Decimal(amount)
+                    # self._step(Action.ZAKAT, account=x, ref=j, value=amount, key='rest',
+                    #            math_operation=MathOperation.SUBTRACTION)
+                    self._log(-float(amount), desc='zakat', account=x, created=None, debug=debug)
         if parts_exist:
             for transaction in parts:
                 for account, part in transaction['account'].items():
