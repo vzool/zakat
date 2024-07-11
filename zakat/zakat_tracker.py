@@ -1324,7 +1324,7 @@ class ZakatTracker:
             return 6
         return 0
 
-    def zakat(self, report: tuple, parts: List[Dict[str, Dict | bool | Any]] = None, debug: bool = False) -> bool:
+    def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
         """
         Perform Zakat calculation based on the given report and optional parts.
 
@@ -1341,9 +1341,8 @@ class ZakatTracker:
             return valid
         parts_exist = parts is not None
         if parts_exist:
-            for part in parts:
-                if self.check_payment_parts(part) != 0:
-                    return False
+            if self.check_payment_parts(parts, debug=debug) != 0:
+                return False
         if debug:
             print('######### zakat #######')
             print('parts_exist', parts_exist)
@@ -1386,13 +1385,14 @@ class ZakatTracker:
                     #            math_operation=MathOperation.SUBTRACTION)
                     self._log(-float(amount), desc='zakat', account=x, created=None, debug=debug)
         if parts_exist:
-            for transaction in parts:
-                for account, part in transaction['account'].items():
-                    if debug:
-                        print('zakat-part', account, part['rate'])
-                    target_exchange = self.exchange(account)
-                    amount = ZakatTracker.exchange_calc(part['part'], part['rate'], target_exchange['rate'])
-                    self.sub(amount, desc='zakat-part', account=account, debug=debug)
+            for account, part in parts['account'].items():
+                if part['part'] == 0:
+                    continue
+                if debug:
+                    print('zakat-part', account, part['rate'])
+                target_exchange = self.exchange(account)
+                amount = ZakatTracker.exchange_calc(part['part'], part['rate'], target_exchange['rate'])
+                self.sub(amount, desc='zakat-part', account=account, debug=debug)
         if no_lock:
             self.free(self.lock())
         return True
