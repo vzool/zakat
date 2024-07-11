@@ -2057,6 +2057,105 @@ class ZakatTracker:
             assert self.recall(False, debug) is True
             assert len(self._vault['history']) == 9
 
+            # exchange
+
+            self.exchange("cash", 25, 3.75, "2024-06-25")
+            self.exchange("cash", 22, 3.73, "2024-06-22")
+            self.exchange("cash", 15, 3.69, "2024-06-15")
+            self.exchange("cash", 10, 3.66)
+
+            for i in range(1, 30):
+                exchange = self.exchange("cash", i)
+                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
+                if debug:
+                    print(i, rate, description, created)
+                assert created
+                if i < 10:
+                    assert rate == 1
+                    assert description is None
+                elif i == 10:
+                    assert rate == 3.66
+                    assert description is None
+                elif i < 15:
+                    assert rate == 3.66
+                    assert description is None
+                elif i == 15:
+                    assert rate == 3.69
+                    assert description is not None
+                elif i < 22:
+                    assert rate == 3.69
+                    assert description is not None
+                elif i == 22:
+                    assert rate == 3.73
+                    assert description is not None
+                elif i >= 25:
+                    assert rate == 3.75
+                    assert description is not None
+                exchange = self.exchange("bank", i)
+                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
+                if debug:
+                    print(i, rate, description, created)
+                assert created
+                assert rate == 1
+                assert description is None
+
+            assert len(self._vault['exchange']) > 0
+            assert len(self.exchanges()) > 0
+            self._vault['exchange'].clear()
+            assert len(self._vault['exchange']) == 0
+            assert len(self.exchanges()) == 0
+
+            # حفظ أسعار الصرف باستخدام التواريخ بالنانو ثانية
+            self.exchange("cash", ZakatTracker.day_to_time(25), 3.75, "2024-06-25")
+            self.exchange("cash", ZakatTracker.day_to_time(22), 3.73, "2024-06-22")
+            self.exchange("cash", ZakatTracker.day_to_time(15), 3.69, "2024-06-15")
+            self.exchange("cash", ZakatTracker.day_to_time(10), 3.66)
+
+            for i in [x * 0.12 for x in range(-15, 21)]:
+                if i <= 0:
+                    assert len(self.exchange("test", ZakatTracker.time(), i, f"range({i})")) == 0
+                else:
+                    assert len(self.exchange("test", ZakatTracker.time(), i, f"range({i})")) > 0
+
+            # اختبار النتائج باستخدام التواريخ بالنانو ثانية
+            for i in range(1, 31):
+                timestamp_ns = ZakatTracker.day_to_time(i)
+                exchange = self.exchange("cash", timestamp_ns)
+                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
+                if debug:
+                    print(i, rate, description, created)
+                assert created
+                if i < 10:
+                    assert rate == 1
+                    assert description is None
+                elif i == 10:
+                    assert rate == 3.66
+                    assert description is None
+                elif i < 15:
+                    assert rate == 3.66
+                    assert description is None
+                elif i == 15:
+                    assert rate == 3.69
+                    assert description is not None
+                elif i < 22:
+                    assert rate == 3.69
+                    assert description is not None
+                elif i == 22:
+                    assert rate == 3.73
+                    assert description is not None
+                elif i >= 25:
+                    assert rate == 3.75
+                    assert description is not None
+                exchange = self.exchange("bank", i)
+                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
+                if debug:
+                    print(i, rate, description, created)
+                assert created
+                assert rate == 1
+                assert description is None
+
+            # csv
+
             csv_count = 1000
 
             for with_rate, path in {
@@ -2159,7 +2258,7 @@ class ZakatTracker:
                     print('suite', len(suite))
                 for case in suite:
                     if debug:
-                        print(case)
+                        print('case', case)
                     result = self.check_payment_parts(case)
                     if debug:
                         print('check_payment_parts', result, f'exceed: {exceed}')
@@ -2172,103 +2271,6 @@ class ZakatTracker:
                 assert self.zakat(report, parts=suite, debug=debug)
                 assert self.save(path + '.pickle')
                 assert self.export_json(path + '.json')
-
-            # exchange
-
-            self.exchange("cash", 25, 3.75, "2024-06-25")
-            self.exchange("cash", 22, 3.73, "2024-06-22")
-            self.exchange("cash", 15, 3.69, "2024-06-15")
-            self.exchange("cash", 10, 3.66)
-
-            for i in range(1, 30):
-                exchange = self.exchange("cash", i)
-                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
-                if debug:
-                    print(i, rate, description, created)
-                assert created
-                if i < 10:
-                    assert rate == 1
-                    assert description is None
-                elif i == 10:
-                    assert rate == 3.66
-                    assert description is None
-                elif i < 15:
-                    assert rate == 3.66
-                    assert description is None
-                elif i == 15:
-                    assert rate == 3.69
-                    assert description is not None
-                elif i < 22:
-                    assert rate == 3.69
-                    assert description is not None
-                elif i == 22:
-                    assert rate == 3.73
-                    assert description is not None
-                elif i >= 25:
-                    assert rate == 3.75
-                    assert description is not None
-                exchange = self.exchange("bank", i)
-                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
-                if debug:
-                    print(i, rate, description, created)
-                assert created
-                assert rate == 1
-                assert description is None
-
-            assert len(self._vault['exchange']) > 0
-            assert len(self.exchanges()) > 0
-            self._vault['exchange'].clear()
-            assert len(self._vault['exchange']) == 0
-            assert len(self.exchanges()) == 0
-
-            # حفظ أسعار الصرف باستخدام التواريخ بالنانو ثانية
-            self.exchange("cash", ZakatTracker.day_to_time(25), 3.75, "2024-06-25")
-            self.exchange("cash", ZakatTracker.day_to_time(22), 3.73, "2024-06-22")
-            self.exchange("cash", ZakatTracker.day_to_time(15), 3.69, "2024-06-15")
-            self.exchange("cash", ZakatTracker.day_to_time(10), 3.66)
-
-            for i in [x * 0.12 for x in range(-15, 21)]:
-                if i <= 0:
-                    assert len(self.exchange("test", ZakatTracker.time(), i, f"range({i})")) == 0
-                else:
-                    assert len(self.exchange("test", ZakatTracker.time(), i, f"range({i})")) > 0
-
-            # اختبار النتائج باستخدام التواريخ بالنانو ثانية
-            for i in range(1, 31):
-                timestamp_ns = ZakatTracker.day_to_time(i)
-                exchange = self.exchange("cash", timestamp_ns)
-                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
-                if debug:
-                    print(i, rate, description, created)
-                assert created
-                if i < 10:
-                    assert rate == 1
-                    assert description is None
-                elif i == 10:
-                    assert rate == 3.66
-                    assert description is None
-                elif i < 15:
-                    assert rate == 3.66
-                    assert description is None
-                elif i == 15:
-                    assert rate == 3.69
-                    assert description is not None
-                elif i < 22:
-                    assert rate == 3.69
-                    assert description is not None
-                elif i == 22:
-                    assert rate == 3.73
-                    assert description is not None
-                elif i >= 25:
-                    assert rate == 3.75
-                    assert description is not None
-                exchange = self.exchange("bank", i)
-                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
-                if debug:
-                    print(i, rate, description, created)
-                assert created
-                assert rate == 1
-                assert description is None
 
             assert self.export_json("1000-transactions-test.json")
             assert self.save("1000-transactions-test.pickle")
