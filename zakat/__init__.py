@@ -14,6 +14,7 @@ This file provides the ZakatLibrary classes, functions for tracking and calculat
 # Importing necessary classes and functions from the main module
 from zakat.zakat_tracker import (
     ZakatTracker,
+    test,
     Action,
     JSONEncoder,
     MathOperation,
@@ -29,6 +30,7 @@ from zakat.file_server import (
 __version__ = ZakatTracker.Version()
 __all__ = [
     "ZakatTracker",
+    "test",
     "Action",
     "JSONEncoder",
     "MathOperation",

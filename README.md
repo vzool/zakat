@@ -69,4 +69,10 @@ Install the Zakat library using pip:
 pip install zakat
 ```
 
+###### Testing
+
+```shell
+python -c "import zakat, sys; sys.exit(zakat.test() is True)"
+```
+
 Explore the documentation, source code and examples to begin tracking your Zakat and achieving financial peace of mind in accordance with Islamic principles.

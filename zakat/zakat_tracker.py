@@ -143,6 +143,7 @@ class ZakatTracker:
                         - {timestamp} (dict):
                             - value (int): The transaction amount (positive or negative).
                             - desc (str): The description of the transaction.
+                            - ref (int): The box reference (positive or None).
                             - file (dict): A dictionary storing file references associated with the transaction.
                     - hide (bool): Indicates whether the account is hidden or not.
                     - zakatable (bool): Indicates whether the account is subject to Zakat.
@@ -178,7 +179,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.69'
+        return '0.2.7'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -529,6 +530,14 @@ class ZakatTracker:
                                 if sub_positive_log_negative == -x['value']:
                                     self._vault['account'][x['account']]['count'] -= 1
                                     sub_positive_log_negative = 0
+                                box_ref = self._vault['account'][x['account']]['log'][x['ref']]['ref']
+                                if not box_ref is None:
+                                    assert self.box_exists(x['account'], box_ref)
+                                    box_value = self._vault['account'][x['account']]['log'][x['ref']]['value']
+                                    assert box_value < 0
+                                    self._vault['account'][x['account']]['box'][box_ref]['rest'] += -box_value
+                                    self._vault['account'][x['account']]['balance'] += -box_value
+                                    self._vault['account'][x['account']]['count'] -= 1
                                 del self._vault['account'][x['account']]['log'][x['ref']]
 
                 case Action.SUB:
@@ -652,6 +661,8 @@ class ZakatTracker:
         ValueError: The log transaction happened again in the same nanosecond time.
         ValueError: The box transaction happened again in the same nanosecond time.
         """
+        if debug:
+            print('track', f'debug={debug}')
         if created is None:
             created = self.time()
         no_lock = self.nolock()
@@ -673,7 +684,7 @@ class ZakatTracker:
                 self.free(self.lock())
             return 0
         if logging:
-            self._log(value, desc, account, created, debug)
+            self._log(value=value, desc=desc, account=account, created=created, ref=None, debug=debug)
         if debug:
             print('create-box', created)
         if self.box_exists(account, created):
@@ -705,7 +716,7 @@ class ZakatTracker:
         """
         return self.ref_exists(account, 'log', ref)
 
-    def _log(self, value: float, desc: str = '', account: str = 1, created: int = None, debug: bool = False) -> int:
+    def _log(self, value: float, desc: str = '', account: str = 1, created: int = None, ref: int = None, debug: bool = False) -> int:
         """
         Log a transaction into the account's log.
 
@@ -724,6 +735,8 @@ class ZakatTracker:
         Raises:
         ValueError: The log transaction happened again in the same nanosecond time.
         """
+        if debug:
+            print('_log', f'debug={debug}')
         if created is None:
             created = self.time()
         try:
@@ -740,6 +753,7 @@ class ZakatTracker:
         self._vault['account'][account]['log'][created] = {
             'value': value,
             'desc': desc,
+            'ref': ref,
             'file': {},
         }
         self._step(Action.LOG, account, ref=created, value=value)
@@ -760,6 +774,8 @@ class ZakatTracker:
         - dict: A dictionary containing the latest exchange rate and its description. If no exchange rate is found,
         it returns a dictionary with default values for the rate and description.
         """
+        if debug:
+            print('exchange', f'debug={debug}')
         if created is None:
             created = self.time()
         no_lock = self.nolock()
@@ -1024,6 +1040,8 @@ class ZakatTracker:
         ValueError: The box transaction happened again in the same nanosecond time.
         ValueError: The log transaction happened again in the same nanosecond time.
         """
+        if debug:
+            print('sub', f'debug={debug}')
         if x < 0:
             return tuple()
         if x == 0:
@@ -1034,7 +1052,7 @@ class ZakatTracker:
         no_lock = self.nolock()
         self.lock()
         self.track(0, '', account)
-        self._log(-x, desc, account, created)
+        self._log(value=-x, desc=desc, account=account, created=created, ref=None, debug=debug)
         ids = sorted(self._vault['account'][account]['box'].keys())
         limit = len(ids) + 1
         target = x
@@ -1088,6 +1106,8 @@ class ZakatTracker:
         ValueError: The box transaction happened again in the same nanosecond time.
         ValueError: The log transaction happened again in the same nanosecond time.
         """
+        if debug:
+            print('transfer', f'debug={debug}')
         if from_account == to_account:
             raise ValueError(f'Transfer to the same account is forbidden. {to_account}')
         if amount <= 0:
@@ -1119,8 +1139,8 @@ class ZakatTracker:
                     selected_age = ZakatTracker.time()
                 self._vault['account'][to_account]['box'][age]['rest'] += target_amount
                 self._step(Action.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
-                y = self._log(target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account,
-                              debug=debug)
+                y = self._log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account,
+                              created=None, ref=None, debug=debug)
                 times.append((age, y))
                 continue
             y = self.track(target_amount, desc, to_account, logging=True, created=age, debug=debug)
@@ -1147,6 +1167,8 @@ class ZakatTracker:
         tuple: A tuple containing a boolean indicating the eligibility for Zakat, a list of brief statistics,
         and a dictionary containing the Zakat plan.
         """
+        if debug:
+            print('check', f'debug={debug}')
         if now is None:
             now = self.time()
         if cycle is None:
@@ -1295,6 +1317,8 @@ class ZakatTracker:
         5: If 'exceed' is False, 'part' value in parts['account'][x] is greater than 'balance' value.
         6: The sum of 'part' values in parts['account'] does not match with 'demand' value.
         """
+        if debug:
+            print('check_payment_parts', f'debug={debug}')
         for i in ['demand', 'account', 'total', 'exceed']:
             if i not in parts:
                 return 1
@@ -1336,6 +1360,8 @@ class ZakatTracker:
         Returns:
         bool: True if the zakat calculation is successful, False otherwise.
         """
+        if debug:
+            print('zakat', f'debug={debug}')
         valid, _, plan = report
         if not valid:
             return valid
@@ -1383,7 +1409,7 @@ class ZakatTracker:
                         self._vault['account'][x]['box'][j]['rest'] -= Decimal(amount)
                     # self._step(Action.ZAKAT, account=x, ref=j, value=amount, key='rest',
                     #            math_operation=MathOperation.SUBTRACTION)
-                    self._log(-float(amount), desc='zakat', account=x, created=None, debug=debug)
+                    self._log(-float(amount), desc='zakat-زكاة', account=x, created=None, ref=j, debug=debug)
         if parts_exist:
             for account, part in parts['account'].items():
                 if part['part'] == 0:
@@ -1392,7 +1418,7 @@ class ZakatTracker:
                     print('zakat-part', account, part['rate'])
                 target_exchange = self.exchange(account)
                 amount = ZakatTracker.exchange_calc(part['part'], part['rate'], target_exchange['rate'])
-                self.sub(amount, desc='zakat-part', account=account, debug=debug)
+                self.sub(amount, desc='zakat-part-دفعة-زكاة', account=account, debug=debug)
         if no_lock:
             self.free(self.lock())
         return True
@@ -1507,6 +1533,8 @@ class ZakatTracker:
             For example:
             safe-45, "Some text", 34872, 1988-06-30 00:00:00, 1
         """
+        if debug:
+            print('import_csv', f'debug={debug}')
         cache: list[int] = []
         try:
             with open(self.import_csv_cache_path(), "rb") as f:
@@ -1657,6 +1685,8 @@ class ZakatTracker:
         and the date is randomly generated between 1950-01-01 and 2023-12-31.
         If the row number is not divisible by 13, the value is multiplied by -1.
         """
+        if debug:
+            print('generate_random_csv_file', f'debug={debug}')
         i = 0
         with open(path, "w", newline="") as csvfile:
             writer = csv.writer(csvfile)
@@ -1852,7 +1882,8 @@ class ZakatTracker:
             self.reset()
 
     def test(self, debug: bool = False) -> bool:
-
+        if debug:
+            print('test', f'debug={debug}')
         try:
 
             assert self._history()
@@ -2275,8 +2306,8 @@ class ZakatTracker:
                         print('zakat-result', zakat_result)
                     assert valid == zakat_result
 
-                assert self.save(path + '.pickle')
-                assert self.export_json(path + '.json')
+            assert self.save(path + '.pickle')
+            assert self.export_json(path + '.json')
 
             assert self.export_json("1000-transactions-test.json")
             assert self.save("1000-transactions-test.pickle")
@@ -2487,6 +2518,7 @@ class ZakatTracker:
             assert self.recall(False, debug) is False
             self.free(self.lock())
             assert self.nolock()
+
             for i in range(3, 0, -1):
                 history_size = len(self._vault['history'])
                 if debug:
@@ -2495,16 +2527,23 @@ class ZakatTracker:
                 assert self.recall(False, debug) is True
 
             assert self.nolock()
-
             assert self.recall(False, debug) is False
+
             history_size = len(self._vault['history'])
             if debug:
                 print('history_size', history_size)
             assert history_size == 0
 
-            assert len(self._vault['account']) == 0
-            assert len(self._vault['history']) == 0
-            assert len(self._vault['report']) == 0
+            account_size = len(self._vault['account'])
+            if debug:
+                print('account_size', account_size)
+            assert account_size == 0
+
+            report_size = len(self._vault['report'])
+            if debug:
+                print('report_size', report_size)
+            assert report_size == 0
+
             assert self.nolock()
             return True
         except:
@@ -2514,15 +2553,20 @@ class ZakatTracker:
             raise
 
 
-def main():
+def test(debug: bool = False):
     ledger = ZakatTracker()
     start = ZakatTracker.time()
-    assert ledger.test(True)
-    print("#########################")
-    print("######## TEST DONE ########")
-    print("#########################")
-    print(ZakatTracker.duration_from_nanoseconds(ZakatTracker.time() - start))
-    print("#########################")
+    assert ledger.test(debug=debug)
+    if debug:
+        print("#########################")
+        print("######## TEST DONE ########")
+        print("#########################")
+        print(ZakatTracker.duration_from_nanoseconds(ZakatTracker.time() - start))
+        print("#########################")
+
+
+def main():
+    test(debug=True)
 
 
 if __name__ == "__main__":
