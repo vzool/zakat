@@ -74,7 +74,7 @@ pip install zakat
 ###### الاختبارات
 
 ```bash
-python -c "import zakat, sys; sys.exit(zakat.test() is True)"
+python -c "import zakat, sys; sys.exit(zakat.test())"
 ```
 
 استكشف الوثائق والبرمجة المصدرية والأمثلة لبدء تتبع الزكاة (Zakat) الخاصة بك وتحقيق راحة البال المالية وفقًا للمبادئ الإسلامية.
