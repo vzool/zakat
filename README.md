@@ -60,6 +60,7 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
 - [Mechanism of Zakat: The Rooms and Boxes Algorithm](./docs/algorithm.md)
 
 - [The Zakat Formula: A Mathematical Representation of Islamic Charity](./docs/mathematics.md)
+- [How Exchange Rates Work in a Zakat Calculation System?](./docs/exchange_rates.md)
 
 ### Get Started:
 
