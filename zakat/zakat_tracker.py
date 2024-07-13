@@ -1740,7 +1740,8 @@ class ZakatTracker:
 
     def _test_core(self, restore=False, debug=False):
 
-        random.seed(1234567890)
+        if debug:
+            random.seed(1234567890)
 
         # sanity check - random forward time
 
