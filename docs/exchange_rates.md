@@ -54,6 +54,13 @@ In cases where the Zakat algorithm is used for assets like cars, houses, or trad
     * For cars and houses used for personal use, generally, no Zakat is due.
     * For tradable assets like products on a shelf, Zakat is typically calculated as a percentage (often 2.5%) of their value.
 
+5. **Exchange Rates Application:**
+* The algorithm calculates the exchange rate automatically in these situations:
+    * While transferring between accounts.
+    * While checking Zakat obligations for boxes in every account.
+    * While doing check payment parts for collective values to be deducted from due accounts on other accounts.
+    * While Zakat Calculation itself is applied on all boxes within account.
+
 **The Code in Simple Terms:**
 
 The code essentially does this:

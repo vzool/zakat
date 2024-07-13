@@ -388,7 +388,7 @@ class ZakatTracker:
         """
         return self._step()
 
-    def box(self) -> dict:
+    def vault(self) -> dict:
         """
         Returns a copy of the internal vault dictionary.
 
