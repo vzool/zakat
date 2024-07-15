@@ -179,7 +179,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.70'
+        return '0.2.71'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1188,7 +1188,7 @@ class ZakatTracker:
             ids = sorted(self._vault['account'][x]['box'].keys())
             for i in range(-1, -limit, -1):
                 j = ids[i]
-                rest = _box[j]['rest']
+                rest = float(_box[j]['rest'])
                 if rest <= 0:
                     continue
                 exchange = self.exchange(x, created=self.time())

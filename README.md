@@ -63,7 +63,7 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
 
 - [How Exchange Rates Work in a Zakat Calculation System?](./docs/exchange_rates.md)
 
-- [Zakat-Aware Inventory Tracking Algorithm (with Lunar Cycle)](./docs/inventory.md)
+- [Zakat-Aware Inventory Tracking Algorithm (with Lunar Cycle)](./docs/inventory.md) [**PLANNED**]
 
 ### Get Started:
 
