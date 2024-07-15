@@ -179,7 +179,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.71'
+        return '0.2.72'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1291,7 +1291,7 @@ class ZakatTracker:
         for x, y in self.accounts().items():
             if positive_only and y <= 0:
                 continue
-            total += y
+            total += float(y)
             exchange = self.exchange(x)
             parts['account'][x] = {'balance': y, 'rate': exchange['rate'], 'part': 0}
         parts['total'] = total
