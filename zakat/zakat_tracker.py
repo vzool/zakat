@@ -54,6 +54,7 @@ In this file docstring:
 Feel free to suggest any modifications or additions to tailor this file docstring to your preferences.
 """
 import os
+import sys
 import csv
 import json
 import pickle
@@ -179,7 +180,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.72'
+        return '0.2.73'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -400,6 +401,39 @@ class ZakatTracker:
         dict: A copy of the internal vault dictionary.
         """
         return self._vault.copy()
+
+    def stats(self) -> dict[str, tuple]:
+        """
+        Calculates and returns statistics about the object's data storage.
+
+        This method determines the size of the database file on disk and the
+        size of the data currently held in RAM (likely within a dictionary).
+        Both sizes are reported in bytes and in a human-readable format
+        (e.g., KB, MB).
+
+        Returns:
+        dict[str, tuple]: A dictionary containing the following statistics:
+
+            * 'database': A tuple with two elements:
+                - The database file size in bytes (int).
+                - The database file size in human-readable format (str).
+            * 'ram': A tuple with two elements:
+                - The RAM usage (dictionary size) in bytes (int).
+                - The RAM usage in human-readable format (str).
+
+        Example:
+        >>> stats = my_object.stats()
+        >>> print(stats['database'])
+        (256000, '250.0 KB')
+        >>> print(stats['ram'])
+        (12345, '12.1 KB')
+        """
+        ram_size = self.get_dict_size(self.vault())
+        file_size = os.path.getsize(self.path())
+        return {
+            'database': (file_size, self.human_readable_size(file_size)),
+            'ram': (ram_size, self.human_readable_size(ram_size)),
+        }
 
     def steps(self) -> dict:
         """
@@ -716,7 +750,8 @@ class ZakatTracker:
         """
         return self.ref_exists(account, 'log', ref)
 
-    def _log(self, value: float, desc: str = '', account: str = 1, created: int = None, ref: int = None, debug: bool = False) -> int:
+    def _log(self, value: float, desc: str = '', account: str = 1, created: int = None, ref: int = None,
+             debug: bool = False) -> int:
         """
         Log a transaction into the account's log.
 
@@ -1548,7 +1583,7 @@ class ZakatTracker:
             "%Y-%m-%d",
         ]
         created, found, bad = 0, 0, {}
-        data: list[tuple] = []
+        data: dict[int, list] = {}
         with open(path, newline='', encoding="utf-8") as f:
             i = 0
             for row in csv.reader(f, delimiter=','):
@@ -1574,15 +1609,18 @@ class ZakatTracker:
                 if date == 0 or value == 0:
                     bad[i] = row
                     continue
-                if date in data:
-                    print('import_csv-duplicated(time)', date)
-                    continue
-                data.append((date, value, desc, account, rate, hashed))
+                if date not in data:
+                    data[date] = []
+                # TODO: If duplicated time with different accounts with the same amount it is an indicator of a transfer
+                data[date].append((date, value, desc, account, rate, hashed))
 
         if debug:
             print('import_csv', len(data))
-        for row in sorted(data, key=lambda x: x[0]):
+
+        def process(row, index=0):
+            nonlocal created
             (date, value, desc, account, rate, hashed) = row
+            date += index
             if rate > 1:
                 self.exchange(account, created=date, rate=rate)
             if value > 0:
@@ -1591,6 +1629,18 @@ class ZakatTracker:
                 self.sub(-value, desc, account, date)
             created += 1
             cache.append(hashed)
+
+        for date, rows in sorted(data.items()):
+            len_rows = len(rows)
+            if len_rows == 1:
+                process(rows[0])
+                continue
+            if debug:
+                print('-- Duplicated time detected', date, 'len', len_rows)
+                print(rows)
+                print('---------------------------------')
+            for index, row in enumerate(rows):
+                process(row, index)
         with open(self.import_csv_cache_path(), "wb") as f:
             pickle.dump(cache, f)
         return created, found, bad
@@ -1598,6 +1648,88 @@ class ZakatTracker:
     ########
     # TESTS #
     #######
+
+    @staticmethod
+    def human_readable_size(size: float, decimal_places: int = 2) -> str:
+        """
+        Converts a size in bytes to a human-readable format (e.g., KB, MB, GB).
+
+        This function iterates through progressively larger units of information
+        (B, KB, MB, GB, etc.) and divides the input size until it fits within a
+        range that can be expressed with a reasonable number before the unit.
+
+        Parameters:
+        size (float): The size in bytes to convert.
+        decimal_places (int, optional): The number of decimal places to display
+            in the result. Defaults to 2.
+
+        Returns:
+        str: A string representation of the size in a human-readable format,
+            rounded to the specified number of decimal places. For example:
+                - "1.50 KB" (1536 bytes)
+                - "23.00 MB" (24117248 bytes)
+                - "1.23 GB" (1325899906 bytes)
+        """
+        if type(size) not in (float, int):
+            raise TypeError("size must be a float or integer")
+        if type(decimal_places) != int:
+            raise TypeError("decimal_places must be an integer")
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']:
+            if size < 1024.0:
+                break
+            size /= 1024.0
+        return f"{size:.{decimal_places}f} {unit}"
+
+    @staticmethod
+    def get_dict_size(obj: dict, seen: set = None) -> float:
+        """
+        Recursively calculates the approximate memory size of a dictionary and its contents in bytes.
+
+        This function traverses the dictionary structure, accounting for the size of keys, values,
+        and any nested objects. It handles various data types commonly found in dictionaries
+        (e.g., lists, tuples, sets, numbers, strings) and prevents infinite recursion in case
+        of circular references.
+
+        Parameters:
+        obj (dict): The dictionary whose size is to be calculated.
+        seen (set, optional): A set used internally to track visited objects
+                             and avoid circular references. Defaults to None.
+
+        Returns:
+            float: An approximate size of the dictionary and its contents in bytes.
+
+        Note:
+        - This function is a method of the `ZakatTracker` class and is likely used to
+          estimate the memory footprint of data structures relevant to Zakat calculations.
+        - The size calculation is approximate as it relies on `sys.getsizeof()`, which might
+          not account for all memory overhead depending on the Python implementation.
+        - Circular references are handled to prevent infinite recursion.
+        - Basic numeric types (int, float, complex) are assumed to have fixed sizes.
+        - String sizes are estimated based on character length and encoding.
+        """
+        size = 0
+        if seen is None:
+            seen = set()
+
+        obj_id = id(obj)
+        if obj_id in seen:
+            return 0
+
+        seen.add(obj_id)
+        size += sys.getsizeof(obj)
+
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                size += ZakatTracker.get_dict_size(k, seen)
+                size += ZakatTracker.get_dict_size(v, seen)
+        elif isinstance(obj, (list, tuple, set, frozenset)):
+            for item in obj:
+                size += ZakatTracker.get_dict_size(item, seen)
+        elif isinstance(obj, (int, float, complex)):  # Handle numbers
+            pass  # Basic numbers have a fixed size, so nothing to add here
+        elif isinstance(obj, str):  # Handle strings
+            size += len(obj) * sys.getsizeof(str().encode())  # Size per character in bytes
+        return size
 
     @staticmethod
     def duration_from_nanoseconds(ns: int) -> tuple:
@@ -1774,8 +1906,45 @@ class ZakatTracker:
             assert date.hour == 18
             assert date.minute == 30
             assert date.second in [44, 45]
-        assert self.nolock()
 
+        # human_readable_size
+
+        assert ZakatTracker.human_readable_size(0) == "0.00 B"
+        assert ZakatTracker.human_readable_size(512) == "512.00 B"
+        assert ZakatTracker.human_readable_size(1023) == "1023.00 B"
+
+        assert ZakatTracker.human_readable_size(1024) == "1.00 KB"
+        assert ZakatTracker.human_readable_size(2048) == "2.00 KB"
+        assert ZakatTracker.human_readable_size(5120) == "5.00 KB"
+
+        assert ZakatTracker.human_readable_size(1024 ** 2) == "1.00 MB"
+        assert ZakatTracker.human_readable_size(2.5 * 1024 ** 2) == "2.50 MB"
+
+        assert ZakatTracker.human_readable_size(1024 ** 3) == "1.00 GB"
+        assert ZakatTracker.human_readable_size(1024 ** 4) == "1.00 TB"
+        assert ZakatTracker.human_readable_size(1024 ** 5) == "1.00 PB"
+
+        assert ZakatTracker.human_readable_size(1536, decimal_places=0) == "2 KB"
+        assert ZakatTracker.human_readable_size(2.5 * 1024 ** 2, decimal_places=1) == "2.5 MB"
+        assert ZakatTracker.human_readable_size(1234567890, decimal_places=3) == "1.150 GB"
+
+        try:
+            ZakatTracker.human_readable_size("not a number")
+            assert False, "Expected TypeError for invalid input"
+        except TypeError:
+            pass
+
+        try:
+            ZakatTracker.human_readable_size(1024, decimal_places="not an int")
+            assert False, "Expected TypeError for invalid decimal_places"
+        except TypeError:
+            pass
+
+        # get_dict_size
+        assert ZakatTracker.get_dict_size({}) == sys.getsizeof({}), "Empty dictionary size mismatch"
+        assert ZakatTracker.get_dict_size({"a": 1, "b": 2.5, "c": True}) != sys.getsizeof({}), "Not Empty dictionary"
+
+        assert self.nolock()
         assert self._history() is True
 
         table = {
