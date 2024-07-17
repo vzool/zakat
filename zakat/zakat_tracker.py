@@ -180,7 +180,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.74'
+        return '0.2.75'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -335,6 +335,30 @@ class ZakatTracker:
         t = datetime.timedelta(seconds=ns_in_day // 10 ** 9)
         return datetime.datetime.combine(d, datetime.time()) + t
 
+    def clean_history(self, lock: int | None = None) -> int:
+        """
+        Cleans up the history of actions performed on the ZakatTracker instance.
+
+        Parameters:
+        lock (int, optional): The lock ID is used to clean up the empty history.
+            If not provided, it cleans up the empty history records for all locks.
+
+        Returns:
+        int: The number of locks cleaned up.
+        """
+        count = 0
+        if lock in self._vault['history']:
+            if len(self._vault['history'][lock]) <= 0:
+                count += 1
+                del self._vault['history'][lock]
+            return count
+        self.free(self.lock())
+        for lock in self._vault['history']:
+            if len(self._vault['history'][lock]) <= 0:
+                count += 1
+                del self._vault['history'][lock]
+        return count
+
     def _step(self, action: Action = None, account=None, ref: int = None, file: int = None, value: float = None,
               key: str = None, math_operation: MathOperation = None) -> int:
         """
@@ -460,6 +484,7 @@ class ZakatTracker:
         """
         if lock == self._vault['lock']:
             self._vault['lock'] = None
+            self.clean_history(lock)
             if auto_save:
                 return self.save(self.path())
             return True
@@ -1214,6 +1239,8 @@ class ZakatTracker:
         below_nisab = 0
         brief = [0, 0, 0]
         valid = False
+        if debug:
+            print('exchanges', self.exchanges())
         for x in self._vault['account']:
             if not self.zakatable(x):
                 continue
@@ -1227,9 +1254,7 @@ class ZakatTracker:
                 if rest <= 0:
                     continue
                 exchange = self.exchange(x, created=self.time())
-                if debug:
-                    print('exchanges', self.exchanges())
-                rest = ZakatTracker.exchange_calc(rest, exchange['rate'], 1)
+                rest = ZakatTracker.exchange_calc(rest, float(exchange['rate']), 1)
                 brief[0] += rest
                 index = limit + i - 1
                 epoch = (now - j) / cycle
