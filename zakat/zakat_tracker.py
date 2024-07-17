@@ -267,6 +267,57 @@ class ZakatTracker:
             self._vault_path = path
         return self._vault_path
 
+    @staticmethod
+    def scale(x: float | int | Decimal, decimal_places: int = 2) -> int:
+        """
+        Scales a numerical value by a specified power of 10, returning an integer.
+
+        This function is designed to handle various numeric types (`float`, `int`, or `Decimal`) and
+        facilitate precise scaling operations, particularly useful in financial or scientific calculations.
+
+        Parameters:
+        x: The numeric value to scale. Can be a floating-point number, integer, or decimal.
+        decimal_places: The exponent for the scaling factor (10**y). Defaults to 2, meaning the input is scaled
+            by a factor of 100 (e.g., converts 1.23 to 123).
+
+        Returns:
+        The scaled value, rounded to the nearest integer.
+
+        Raises:
+        TypeError: If the input `x` is not a valid numeric type.
+
+        Examples:
+        >>> scale(3.14159)
+        314
+        >>> scale(1234, decimal_places=3)
+        1234000
+        >>> scale(Decimal("0.005"), decimal_places=4)
+        50
+        """
+        if not isinstance(x, (float, int, Decimal)):
+            raise TypeError("Input 'x' must be a float, int, or Decimal.")
+        return int(Decimal(f"{x:.{decimal_places}f}") * (10 ** decimal_places))
+
+    @staticmethod
+    def unscale(x: int, return_type: type = float, decimal_places: int = 2) -> float | int | Decimal:
+        """
+        Unscales an integer by a power of 10.
+
+        Parameters:
+        x: The integer to unscale.
+        return_type: The desired type for the returned value. Can be float, int, or Decimal. Defaults to float.
+        decimal_places: The power of 10 to use. Defaults to 2.
+
+        Returns:
+        The unscaled number, converted to the specified return_type.
+
+        Raises:
+        TypeError: If the return_type is not float, int, or Decimal.
+        """
+        if return_type not in (float, int, Decimal):
+            raise TypeError(f'Invalid return_type({return_type}). Supported types are float, int, and Decimal.')
+        return return_type(x / (10 ** decimal_places))
+
     def _history(self, status: bool = None) -> bool:
         """
         Enable or disable history tracking.
@@ -2001,6 +2052,24 @@ class ZakatTracker:
         # get_dict_size
         assert ZakatTracker.get_dict_size({}) == sys.getsizeof({}), "Empty dictionary size mismatch"
         assert ZakatTracker.get_dict_size({"a": 1, "b": 2.5, "c": True}) != sys.getsizeof({}), "Not Empty dictionary"
+
+        # number scale
+        error = 0
+        total = 0
+        for i in range(101):
+            for j in range(101):
+                total += 1
+                num_str = f'{i}.{j}'
+                num = float(num_str)
+                scaled = self.scale(num)
+                unscaled = self.unscale(scaled)
+                if debug:
+                    print(f'num_str: {num_str} - num: {num} - scaled: {scaled} - unscaled: {unscaled}')
+                if unscaled != num:
+                    error += 1
+        if debug:
+            print(f'total: {total}, error({error}): {100 * error / total}%')
+        assert error == 0
 
         assert self.nolock()
         assert self._history() is True
