@@ -299,7 +299,7 @@ class ZakatTracker:
         return int(Decimal(f"{x:.{decimal_places}f}") * (10 ** decimal_places))
 
     @staticmethod
-    def unscale(x: int, return_type: type = float, decimal_places: int = 2) -> float | int | Decimal:
+    def unscale(x: int, return_type: type = float, decimal_places: int = 2) -> float | Decimal:
         """
         Unscales an integer by a power of 10.
 
@@ -312,11 +312,11 @@ class ZakatTracker:
         The unscaled number, converted to the specified return_type.
 
         Raises:
-        TypeError: If the return_type is not float, int, or Decimal.
+        TypeError: If the return_type is not float or Decimal.
         """
-        if return_type not in (float, int, Decimal):
+        if return_type not in (float, Decimal):
             raise TypeError(f'Invalid return_type({return_type}). Supported types are float, int, and Decimal.')
-        return return_type(x / (10 ** decimal_places))
+        return round(return_type(x / (10 ** decimal_places)), decimal_places)
 
     def _history(self, status: bool = None) -> bool:
         """
@@ -2056,17 +2056,23 @@ class ZakatTracker:
         # number scale
         error = 0
         total = 0
-        for i in range(101):
-            for j in range(101):
-                total += 1
-                num_str = f'{i}.{j}'
-                num = float(num_str)
-                scaled = self.scale(num)
-                unscaled = self.unscale(scaled)
-                if debug:
-                    print(f'num_str: {num_str} - num: {num} - scaled: {scaled} - unscaled: {unscaled}')
-                if unscaled != num:
-                    error += 1
+        for return_type in (
+            float,
+            Decimal,
+        ):
+            for i in range(101):
+                for j in range(101):
+                    total += 1
+                    num_str = f'{i}.{j}'
+                    num = return_type(num_str)
+                    scaled = self.scale(num)
+                    unscaled = self.unscale(scaled, return_type=return_type)
+                    if debug:
+                        print(f'return_type: {return_type}, num_str: {num_str} - num: {num} - scaled: {scaled} - unscaled: {unscaled}')
+                    if unscaled != num:
+                        if debug:
+                            print('***** SCALE ERROR *****')
+                        error += 1
         if debug:
             print(f'total: {total}, error({error}): {100 * error / total}%')
         assert error == 0
