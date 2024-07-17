@@ -3,6 +3,17 @@
 init:
 	python3 -m venv venv
 
+.PHONY: clean
+# clean development
+clean:
+	rm -rf *.csv
+	rm -rf *.pickle
+	rm -rf *.json
+	rm -rf *.txt
+	rm -rf zakat/*.csv
+	rm -rf zakat/*.pickle
+	rm -rf zakat/*.json
+
 .PHONY: deps
 # deps development
 deps:
