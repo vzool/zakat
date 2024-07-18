@@ -180,7 +180,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.76'
+        return '0.2.77'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -2056,23 +2056,29 @@ class ZakatTracker:
         # number scale
         error = 0
         total = 0
-        for return_type in (
-            float,
-            Decimal,
-        ):
-            for i in range(101):
-                for j in range(101):
-                    total += 1
-                    num_str = f'{i}.{j}'
-                    num = return_type(num_str)
-                    scaled = self.scale(num)
-                    unscaled = self.unscale(scaled, return_type=return_type)
-                    if debug:
-                        print(f'return_type: {return_type}, num_str: {num_str} - num: {num} - scaled: {scaled} - unscaled: {unscaled}')
-                    if unscaled != num:
+        for max_i, max_j, decimal_places in [
+            (101, 101, 2),  # fiat currency minimum unit took 2 decimal places
+            (1, 1_000, 8),  # cryptocurrency like Satoshi in Bitcoin took 8 decimal places
+            (1, 1_000, 18)  # cryptocurrency like Wei in Ethereum took 18 decimal places
+        ]:
+            for return_type in (
+                    float,
+                    Decimal,
+            ):
+                for i in range(max_i):
+                    for j in range(max_j):
+                        total += 1
+                        num_str = f'{i}.{j:0{decimal_places}d}'
+                        num = return_type(num_str)
+                        scaled = self.scale(num, decimal_places=decimal_places)
+                        unscaled = self.unscale(scaled, return_type=return_type, decimal_places=decimal_places)
                         if debug:
-                            print('***** SCALE ERROR *****')
-                        error += 1
+                            print(
+                                f'return_type: {return_type}, num_str: {num_str} - num: {num} - scaled: {scaled} - unscaled: {unscaled}')
+                        if unscaled != num:
+                            if debug:
+                                print('***** SCALE ERROR *****')
+                            error += 1
         if debug:
             print(f'total: {total}, error({error}): {100 * error / total}%')
         assert error == 0
