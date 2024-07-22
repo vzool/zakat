@@ -173,7 +173,7 @@ class ZakatTracker:
     """
 
     @staticmethod
-    def Version():
+    def Version() -> str:
         """
         Returns the current version of the software.
 
@@ -183,7 +183,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.78'
+        return '0.2.79'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -249,6 +249,7 @@ class ZakatTracker:
         Returns:
         None
         """
+        self._base_path = None
         self._vault_path = None
         self._vault = None
         self.reset()
@@ -278,7 +279,7 @@ class ZakatTracker:
             base_path = base_path.parent
         base_path.mkdir(parents=True, exist_ok=True)
         self._base_path = base_path
-        return self._vault_path
+        return str(self._vault_path)
 
     def base_path(self, *args) -> str:
         """
@@ -291,7 +292,7 @@ class ZakatTracker:
         str: The generated base path. If no arguments are provided, the existing base path is returned.
         """
         if not args:
-            return self._base_path
+            return str(self._base_path)
         filtered_args = []
         ignored_filename = None
         for arg in args:
@@ -304,8 +305,8 @@ class ZakatTracker:
         full_path.mkdir(parents=True, exist_ok=True)
         if ignored_filename is not None:
             return full_path.resolve() / ignored_filename  # Join with the ignored filename
-        return full_path.resolve() 
-    
+        return str(full_path.resolve())
+
     @staticmethod
     def scale(x: float | int | Decimal, decimal_places: int = 2) -> int:
         """
@@ -326,11 +327,11 @@ class ZakatTracker:
         TypeError: If the input `x` is not a valid numeric type.
 
         Examples:
-        >>> scale(3.14159)
+        >>> ZakatTracker.scale(3.14159)
         314
-        >>> scale(1234, decimal_places=3)
+        >>> ZakatTracker.scale(1234, decimal_places=3)
         1234000
-        >>> scale(Decimal("0.005"), decimal_places=4)
+        >>> ZakatTracker.scale(Decimal("0.005"), decimal_places=4)
         50
         """
         if not isinstance(x, (float, int, Decimal)):
@@ -549,6 +550,48 @@ class ZakatTracker:
             'ram': (ram_size, self.human_readable_size(ram_size)),
         }
 
+    def files(self) -> list[dict[str, str | int]]:
+        """
+        Retrieves information about files associated with this class.
+
+        This class method provides a standardized way to gather details about
+        files used by the class for storage, snapshots, and CSV imports.
+
+        Returns:
+        list[dict[str, str | int]]: A list of dictionaries, each containing information
+            about a specific file:
+
+            * type (str): The type of file ('database', 'snapshot', 'import_csv').
+            * path (str): The full file path.
+            * exists (bool): Whether the file exists on the filesystem.
+            * size (int): The file size in bytes (0 if the file doesn't exist).
+            * human_readable_size (str): A human-friendly representation of the file size (e.g., '10 KB', '2.5 MB').
+
+        Example:
+        ```
+        file_info = MyClass.files()
+        for info in file_info:
+            print(f"Type: {info['type']}, Exists: {info['exists']}, Size: {info['human_readable_size']}")
+        ```
+        """
+        result = []
+        for file_type, path in {
+            'database': self.path(),
+            'snapshot': self.snapshot_cache_path(),
+            'import_csv': self.import_csv_cache_path(),
+        }.items():
+            exists = os.path.exists(path)
+            size = os.path.getsize(path) if exists else 0
+            human_readable_size = self.human_readable_size(size) if exists else 0
+            result.append({
+                'type': file_type,
+                'path': path,
+                'exists': exists,
+                'size': size,
+                'human_readable_size': human_readable_size,
+            })
+        return result
+
     def steps(self) -> dict:
         """
         Returns a copy of the history of steps taken in the ZakatTracker.
@@ -652,7 +695,7 @@ class ZakatTracker:
         if path.endswith(".pickle"):
             path = path[:-7]
         return path + '.snapshots.pickle'
-    
+
     def snapshot(self) -> bool:
         """
         This function creates a snapshot of the current database state.
@@ -669,7 +712,7 @@ class ZakatTracker:
         bool: True if a snapshot with the same hash already exists or if the snapshot is successfully created. False if the snapshot creation fails.
         """
         current_hash = self.file_hash(self.path())
-        cache: dict[str, int] = {} # hash: time_ns
+        cache: dict[str, int] = {}  # hash: time_ns
         try:
             with open(self.snapshot_cache_path(), "rb") as f:
                 cache = pickle.load(f)
@@ -685,7 +728,8 @@ class ZakatTracker:
             pickle.dump(cache, f)
         return True
 
-    def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) -> dict[int, tuple[str, str, bool]]:
+    def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) \
+            -> dict[int, tuple[str, str, bool]]:
         """
         Retrieve a dictionary of snapshots, with their respective hashes, paths, and existence status.
 
@@ -697,7 +741,7 @@ class ZakatTracker:
         - dict[int, tuple[str, str, bool]]: A dictionary where the keys are the timestamps of the snapshots,
         and the values are tuples containing the snapshot's hash, path, and existence status.
         """
-        cache: dict[str, int] = {} # hash: time_ns
+        cache: dict[str, int] = {}  # hash: time_ns
         try:
             with open(self.snapshot_cache_path(), "rb") as f:
                 cache = pickle.load(f)
@@ -705,7 +749,7 @@ class ZakatTracker:
             pass
         if not cache:
             return {}
-        result: dict[int, tuple[str, str, bool]] = {} # time_ns: (hash, path, exists)
+        result: dict[int, tuple[str, str, bool]] = {}  # time_ns: (hash, path, exists)
         for file_hash, ref in cache.items():
             path = self.base_path('snapshots', f'{ref}.pickle')
             exists = os.path.exists(path)
@@ -737,7 +781,6 @@ class ZakatTracker:
         memory = self._vault['history'][ref]
         if debug:
             print(type(memory), 'memory', memory)
-        self.snapshot()
         limit = len(memory) + 1
         sub_positive_log_negative = 0
         for i in range(-1, -limit, -1):
@@ -784,7 +827,8 @@ class ZakatTracker:
                                     try:
                                         self._vault['account'][x['account']]['box'][box_ref]['rest'] += -box_value
                                     except TypeError:
-                                        self._vault['account'][x['account']]['box'][box_ref]['rest'] += Decimal(-box_value)
+                                        self._vault['account'][x['account']]['box'][box_ref]['rest'] += Decimal(
+                                            -box_value)
 
                                     try:
                                         self._vault['account'][x['account']]['balance'] += -box_value
