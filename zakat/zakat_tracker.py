@@ -183,7 +183,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.79'
+        return '0.2.80'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1885,7 +1885,7 @@ class ZakatTracker:
             nonlocal created
             (date, value, desc, account, rate, hashed) = row
             date += index
-            if rate > 1:
+            if rate > 0:
                 self.exchange(account, created=date, rate=rate)
             if value > 0:
                 self.track(value, desc, account, True, date)
