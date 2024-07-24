@@ -1871,42 +1871,64 @@ class ZakatTracker:
                         pass
                 # TODO: not allowed for negative dates
                 if date == 0 or value == 0:
-                    bad[i] = row
+                    bad[i] = row + ('invalid date',)
                     continue
                 if date not in data:
                     data[date] = []
                 # TODO: If duplicated time with different accounts with the same amount it is an indicator of a transfer
-                data[date].append((date, value, desc, account, rate, hashed))
+                data[date].append((i, account, desc, value, date, rate, hashed))
 
         if debug:
             print('import_csv', len(data))
 
-        def process(row, index=0):
-            nonlocal created
-            (date, value, desc, account, rate, hashed) = row
-            date += index
-            if rate > 0:
-                self.exchange(account, created=date, rate=rate)
-            if value > 0:
-                self.track(value, desc, account, True, date)
-            elif value < 0:
-                self.sub(-value, desc, account, date)
-            created += 1
-            cache.append(hashed)
+        if bad:
+            return created, found, bad
 
         for date, rows in sorted(data.items()):
-            len_rows = len(rows)
-            if len_rows == 1:
-                process(rows[0])
-                continue
-            if debug:
-                print('-- Duplicated time detected', date, 'len', len_rows)
-                print(rows)
-                print('---------------------------------')
-            for index, row in enumerate(rows):
-                process(row, index)
-        with open(self.import_csv_cache_path(), "wb") as f:
-            pickle.dump(cache, f)
+            try:
+                len_rows = len(rows)
+                if len_rows == 1:
+                    (_, account, desc, value, date, rate, hashed) = rows[0]
+                    if rate > 0:
+                        self.exchange(account, created=date, rate=rate)
+                    if value > 0:
+                        self.track(value, desc, account, True, date)
+                    elif value < 0:
+                        self.sub(-value, desc, account, date)
+                    created += 1
+                    cache.append(hashed)
+                    continue
+                if debug:
+                    print('-- Duplicated time detected', date, 'len', len_rows)
+                    print(rows)
+                    print('---------------------------------')
+                if len_rows != 2:
+                    raise Exception(f'more than two transactions({len_rows}) at the same time')
+                (i, account1, desc1, value1, date1, rate1, _) = rows[0]
+                (j, account2, desc2, value2, date2, rate2, _) = rows[1]
+                if account1 == account2 or desc1 != desc2 or abs(value1) != abs(value2) or date1 != date2:
+                    raise Exception('invalid transfer')
+                if rate1 > 0:
+                    self.exchange(account1, created=date1, rate=rate1)
+                if rate2 > 0:
+                    self.exchange(account2, created=date2, rate=rate2)
+                values = {
+                    value1: account1,
+                    value2: account2,
+                }
+                self.transfer(
+                    amount=abs(value1),
+                    from_account=values[min(values.keys())],
+                    to_account=values[max(values.keys())],
+                    desc=desc1,
+                    created=date1,
+                )
+            except Exception as e:
+                for (i, account, desc, value, date, rate, _) in rows:
+                    bad[i] = (account, desc, value, date, rate, e)
+                break
+        with open(self.import_csv_cache_path(), "wb") as file:
+            pickle.dump(cache, file)
         return created, found, bad
 
     ########
