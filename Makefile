@@ -26,10 +26,15 @@ deps:
 	python3 -m pip install --upgrade twine
 	python3 -m pip install build
 
+.PHONY: pytest
+# run pytest
+pytest:
+	pytest --capture=no
+
 .PHONY: test
 # run tests
 test:
-	pytest --capture=no
+	make clean && python zakat/zakat_tracker.py
 
 .PHONY: deploy
 # deploy package
