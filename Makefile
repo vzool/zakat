@@ -13,6 +13,9 @@ clean:
 	rm -rf zakat/*.csv
 	rm -rf zakat/*.pickle
 	rm -rf zakat/*.json
+	rm -rf tests/*.csv
+	rm -rf tests/*.pickle
+	rm -rf tests/*.json
 
 .PHONY: deps
 # deps development
