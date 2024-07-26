@@ -7,37 +7,40 @@ init:
 # clean development
 clean:
 	rm -rf *.csv
-	rm -rf *.pickle
+	rm -rf *.camel
 	rm -rf *.json
 	rm -rf *.txt
 	rm -rf zakat/*.csv
-	rm -rf zakat/*.pickle
+	rm -rf zakat/*.camel
 	rm -rf zakat/*.json
 	rm -rf tests/*.csv
-	rm -rf tests/*.pickle
+	rm -rf tests/*.camel
 	rm -rf tests/*.json
+	rm -rf snapshots
 
 .PHONY: deps
 # deps development
 deps:
 	python3 -m pip install --upgrade pip
-	python3 -m pip install wheel
-	python3 -m pip install setuptools
-	python3 -m pip install twine
-	python3 -m pip install pytest==8.2.2
-	python3 -m pip install pytest-runner==6.0.1
+	python3 -m pip install --upgrade wheel
+	python3 -m pip install --upgrade setuptools
 	python3 -m pip install --upgrade twine
-	python3 -m pip install build
+	python3 -m pip install --upgrade pyyaml
+	python3 -m pip install --upgrade camelx
+	python3 -m pip install --upgrade pytest==8.2.2
+	python3 -m pip install --upgrade pytest-runner==6.0.1
+	python3 -m pip install --upgrade twine
+	python3 -m pip install --upgrade build
 
 .PHONY: pytest
 # run pytest
 pytest:
-	pytest --capture=no
+	make clean && pytest --capture=no
 
 .PHONY: test
 # run tests
 test:
-	make clean && python zakat/zakat_tracker.py
+	make clean && python3 zakat/zakat_tracker.py
 
 .PHONY: deploy
 # deploy package

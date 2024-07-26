@@ -20,7 +20,7 @@ Key Features:
 *   Calculation of Zakat based on Nisab, Haul and silver price
 *   Import of transactions from CSV files
 *   Export of data to JSON format
-*   Persistence of tracker state using pickle files
+*   Persistence of tracker state using camel files
 *   History tracking (optional)
 
 The module also includes a few helper functions and classes:
@@ -57,7 +57,6 @@ import os
 import sys
 import csv
 import json
-import pickle
 import random
 import datetime
 import hashlib
@@ -70,6 +69,8 @@ from decimal import Decimal
 from typing import List, Dict, Any
 from pathlib import Path
 from time import time_ns
+from camelx import Camel, CamelRegistry
+import shutil
 
 
 class Action(Enum):
@@ -100,6 +101,24 @@ class MathOperation(Enum):
     SUBTRACTION = auto()
 
 
+reg = CamelRegistry()
+
+@reg.dumper(Action, u'action', version=None)
+def _dump_action(data):
+    return u"{}".format(data.value)
+@reg.loader(u'action', version=None)
+def _load_action(data, version):
+    return Action(int(data))
+    
+@reg.dumper(MathOperation, u'math', version=None)
+def _dump_math(data):
+    return u"{}".format(data.value)
+@reg.loader(u'math', version=None)
+def _load_math(data, version):
+    return MathOperation(int(data))
+
+camel = Camel([reg])
+
 class ZakatTracker:
     """
     A class for tracking and calculating Zakat.
@@ -113,7 +132,7 @@ class ZakatTracker:
     the concept of a "Nisab" (minimum threshold for Zakat) and a "haul" (complete one year for Transaction) can calculate Zakat due
     based on the current silver price.
 
-    The class uses a pickle file as its database to persist the tracker state,
+    The class uses a camel file as its database to persist the tracker state,
     ensuring data integrity across sessions. It also provides options for enabling or
     disabling history tracking, allowing users to choose their preferred level of detail.
 
@@ -183,7 +202,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.81'
+        return '0.2.82'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -238,12 +257,22 @@ class ZakatTracker:
         """
         return gram_price * gram_quantity
 
-    def __init__(self, db_path: str = "zakat.pickle", history_mode: bool = True):
+    @staticmethod
+    def ext() -> str:
+        """
+        Returns the file extension used by the ZakatTracker class.
+
+        Returns:
+        str: The file extension used by the ZakatTracker class, which is 'camel'.
+        """
+        return 'camel'
+
+    def __init__(self, db_path: str = "zakat.camel", history_mode: bool = True):
         """
         Initialize ZakatTracker with database path and history mode.
 
         Parameters:
-        db_path (str): The path to the database file. Default is "zakat.pickle".
+        db_path (str): The path to the database file. Default is "zakat.camel".
         history_mode (bool): The mode for tracking history. Default is True.
 
         Returns:
@@ -685,16 +714,18 @@ class ZakatTracker:
         """
         Generate the path for the cache file used to store snapshots.
 
-        The cache file is a pickle file that stores the timestamps of the snapshots.
-        The file name is derived from the main database file name by replacing the ".pickle" extension with ".snapshots.pickle".
+        The cache file is a camel file that stores the timestamps of the snapshots.
+        The file name is derived from the main database file name by replacing the ".camel" extension with ".snapshots.camel".
 
         Returns:
         str: The path to the cache file.
         """
         path = str(self.path())
-        if path.endswith(".pickle"):
-            path = path[:-7]
-        return path + '.snapshots.pickle'
+        ext = self.ext()
+        ext_len = len(ext)
+        if path.endswith(f'.{ext}'):
+            path = path[:-ext_len-1]
+        return path + f'.snapshots.{ext}'
 
     def snapshot(self) -> bool:
         """
@@ -703,7 +734,7 @@ class ZakatTracker:
         The function calculates the hash of the current database file and checks if a snapshot with the same hash already exists.
         If a snapshot with the same hash exists, the function returns True without creating a new snapshot.
         If a snapshot with the same hash does not exist, the function creates a new snapshot by saving the current database state
-        in a new pickle file with a unique timestamp as the file name. The function also updates the snapshot cache file with the new snapshot's hash and timestamp.
+        in a new camel file with a unique timestamp as the file name. The function also updates the snapshot cache file with the new snapshot's hash and timestamp.
 
         Parameters:
         None
@@ -714,18 +745,18 @@ class ZakatTracker:
         current_hash = self.file_hash(self.path())
         cache: dict[str, int] = {}  # hash: time_ns
         try:
-            with open(self.snapshot_cache_path(), "rb") as f:
-                cache = pickle.load(f)
+            with open(self.snapshot_cache_path(), 'r') as stream:
+                cache = camel.load(stream.read())
         except:
             pass
         if current_hash in cache:
             return True
         time = time_ns()
         cache[current_hash] = time
-        if not self.save(self.base_path('snapshots', f'{time}.pickle')):
+        if not self.save(self.base_path('snapshots', f'{time}.{self.ext()}')):
             return False
-        with open(self.snapshot_cache_path(), "wb") as f:
-            pickle.dump(cache, f)
+        with open(self.snapshot_cache_path(), 'w') as stream:
+            stream.write(camel.dump(cache))
         return True
 
     def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) \
@@ -743,15 +774,15 @@ class ZakatTracker:
         """
         cache: dict[str, int] = {}  # hash: time_ns
         try:
-            with open(self.snapshot_cache_path(), "rb") as f:
-                cache = pickle.load(f)
+            with open(self.snapshot_cache_path(), 'r') as stream:
+                cache = camel.load(stream.read())
         except:
             pass
         if not cache:
             return {}
         result: dict[int, tuple[str, str, bool]] = {}  # time_ns: (hash, path, exists)
         for file_hash, ref in cache.items():
-            path = self.base_path('snapshots', f'{ref}.pickle')
+            path = self.base_path('snapshots', f'{ref}.{self.ext()}')
             exists = os.path.exists(path)
             valid_hash = self.file_hash(path) == file_hash if verified_hash_only else True
             if (verified_hash_only and not valid_hash) or (verified_hash_only and not exists):
@@ -1768,10 +1799,9 @@ class ZakatTracker:
 
     def save(self, path: str = None) -> bool:
         """
-        Saves the ZakatTracker's current state to a pickle file.
+        Saves the ZakatTracker's current state to a camel file.
 
-        This method serializes the internal data (`_vault`) along with metadata
-        (Python version, pickle protocol) for future compatibility.
+        This method serializes the internal data (`_vault`).
 
         Parameters:
         path (str, optional): File path for saving. Defaults to a predefined location.
@@ -1781,23 +1811,19 @@ class ZakatTracker:
         """
         if path is None:
             path = self.path()
-        with open(path, "wb") as f:
-            version = f'{version_info.major}.{version_info.minor}.{version_info.micro}'
-            pickle_protocol = pickle.HIGHEST_PROTOCOL
-            data = {
-                'python_version': version,
-                'pickle_protocol': pickle_protocol,
-                'data': self._vault,
-            }
-            pickle.dump(data, f, protocol=pickle_protocol)
+        with open(f'{path}.tmp', 'w') as stream:
+            # first save in tmp file
+            stream.write(camel.dump(self._vault))
+            # then move tmp file to original location
+            shutil.move(f'{path}.tmp', path)
             return True
 
     def load(self, path: str = None) -> bool:
         """
-        Load the current state of the ZakatTracker object from a pickle file.
+        Load the current state of the ZakatTracker object from a camel file.
 
         Parameters:
-        path (str): The path where the pickle file is located. If not provided, it will use the default path.
+        path (str): The path where the camel file is located. If not provided, it will use the default path.
 
         Returns:
         bool: True if the load operation is successful, False otherwise.
@@ -1805,9 +1831,8 @@ class ZakatTracker:
         if path is None:
             path = self.path()
         if os.path.exists(path):
-            with open(path, "rb") as f:
-                data = pickle.load(f)
-                self._vault = data['data']
+            with open(path, 'r') as stream:
+                self._vault = camel.load(stream.read())
                 return True
         return False
 
@@ -1816,7 +1841,7 @@ class ZakatTracker:
         Generates the cache file path for imported CSV data.
 
         This function constructs the file path where cached data from CSV imports
-        will be stored. The cache file is a pickle file (.pickle extension) appended
+        will be stored. The cache file is a camel file (.camel extension) appended
         to the base path of the object.
 
         Returns:
@@ -1825,12 +1850,14 @@ class ZakatTracker:
         Example:
             >>> obj = ZakatTracker('/data/reports')
             >>> obj.import_csv_cache_path()
-            '/data/reports.import_csv.pickle'
+            '/data/reports.import_csv.camel'
         """
         path = str(self.path())
-        if path.endswith(".pickle"):
-            path = path[:-7]
-        return path + '.import_csv.pickle'
+        ext = self.ext()
+        ext_len = len(ext)
+        if path.endswith(f'.{ext}'):
+            path = path[:-ext_len-1]
+        return path + f'.import_csv.{ext}'
 
     def import_csv(self, path: str = 'file.csv', debug: bool = False) -> tuple:
         """
@@ -1863,8 +1890,8 @@ class ZakatTracker:
             print('import_csv', f'debug={debug}')
         cache: list[int] = []
         try:
-            with open(self.import_csv_cache_path(), "rb") as f:
-                cache = pickle.load(f)
+            with open(self.import_csv_cache_path(), 'r') as stream:
+                cache = camel.load(stream.read())
         except:
             pass
         date_formats = [
@@ -1955,8 +1982,8 @@ class ZakatTracker:
                 for (i, account, desc, value, date, rate, _) in rows:
                     bad[i] = (account, desc, value, date, rate, e)
                 break
-        with open(self.import_csv_cache_path(), "wb") as file:
-            pickle.dump(cache, file)
+        with open(self.import_csv_cache_path(), 'w') as stream:
+            stream.write(camel.dump(cache))
         return created, found, bad
 
     ########
@@ -2663,7 +2690,7 @@ class ZakatTracker:
 
             # storage
 
-            _path = self.path('test.pickle')
+            _path = self.path(f'test.{self.ext()}')
             if os.path.exists(_path):
                 os.remove(_path)
             self.save()
@@ -2905,11 +2932,11 @@ class ZakatTracker:
                         print('zakat-result', zakat_result)
                     assert valid == zakat_result
 
-            assert self.save(path + '.pickle')
+            assert self.save(path + f'.{self.ext()}')
             assert self.export_json(path + '.json')
 
             assert self.export_json("1000-transactions-test.json")
-            assert self.save("1000-transactions-test.pickle")
+            assert self.save(f"1000-transactions-test.{self.ext()}")
 
             self.reset()
 
@@ -3050,7 +3077,7 @@ class ZakatTracker:
                 i += 1
 
             assert self.export_json("accounts-transfer-with-exchange-rates.json")
-            assert self.save("accounts-transfer-with-exchange-rates.pickle")
+            assert self.save(f"accounts-transfer-with-exchange-rates.{self.ext()}")
 
             # check & zakat with exchange rates for many cycles
 
@@ -3088,6 +3115,7 @@ class ZakatTracker:
                     self.reset()
                     self.exchange(account=case[1], created=case[2], rate=rate)
                     self.track(unscaled_value=case[0], desc='test-check', account=case[1], logging=True, created=case[2])
+                    assert self.snapshot()
 
                     # assert self.nolock()
                     # history_size = len(self._vault['history'])
@@ -3163,7 +3191,7 @@ class ZakatTracker:
         except:
             # pp().pprint(self._vault)
             assert self.export_json("test-snapshot.json")
-            assert self.save("test-snapshot.pickle")
+            assert self.save(f"test-snapshot.{self.ext()}")
             raise
 
 

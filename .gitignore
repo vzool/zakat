@@ -5,6 +5,7 @@ build
 .eggs
 *.csv
 *.pickle
+*.camel
 tmp
 *.json
 *.pyc
