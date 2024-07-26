@@ -202,7 +202,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.82'
+        return '0.2.83'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -284,7 +284,6 @@ class ZakatTracker:
         self.reset()
         self._history(history_mode)
         self.path(db_path)
-        self.load()
 
     def path(self, path: str = None) -> str:
         """
