@@ -64,9 +64,8 @@ from time import sleep
 from pprint import PrettyPrinter as pp
 from math import floor
 from enum import Enum, auto
-from sys import version_info
 from decimal import Decimal
-from typing import List, Dict, Any
+from typing import Dict, Any
 from pathlib import Path
 from time import time_ns
 from camelx import Camel, CamelRegistry
@@ -202,7 +201,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.83'
+        return '0.2.84'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -267,7 +266,7 @@ class ZakatTracker:
         """
         return 'camel'
 
-    def __init__(self, db_path: str = "zakat.camel", history_mode: bool = True):
+    def __init__(self, db_path: str = "./zakat_db/zakat.camel", history_mode: bool = True):
         """
         Initialize ZakatTracker with database path and history mode.
 
@@ -724,7 +723,8 @@ class ZakatTracker:
         ext_len = len(ext)
         if path.endswith(f'.{ext}'):
             path = path[:-ext_len-1]
-        return path + f'.snapshots.{ext}'
+        _, filename = os.path.split(path + f'.snapshots.{ext}')
+        return self.base_path(filename)
 
     def snapshot(self) -> bool:
         """
@@ -1856,7 +1856,8 @@ class ZakatTracker:
         ext_len = len(ext)
         if path.endswith(f'.{ext}'):
             path = path[:-ext_len-1]
-        return path + f'.import_csv.{ext}'
+        _, filename = os.path.split(path + f'.import_csv.{ext}')
+        return self.base_path(filename)
 
     def import_csv(self, path: str = 'file.csv', debug: bool = False) -> tuple:
         """
@@ -2302,12 +2303,14 @@ class ZakatTracker:
         assert ZakatTracker.human_readable_size(1234567890, decimal_places=3) == "1.150 GB"
 
         try:
+            # noinspection PyTypeChecker
             ZakatTracker.human_readable_size("not a number")
             assert False, "Expected TypeError for invalid input"
         except TypeError:
             pass
 
         try:
+            # noinspection PyTypeChecker
             ZakatTracker.human_readable_size(1024, decimal_places="not an int")
             assert False, "Expected TypeError for invalid decimal_places"
         except TypeError:
@@ -2689,7 +2692,7 @@ class ZakatTracker:
 
             # storage
 
-            _path = self.path(f'test.{self.ext()}')
+            _path = self.path(f'./zakat_test_db/test.{self.ext()}')
             if os.path.exists(_path):
                 os.remove(_path)
             self.save()
@@ -3187,15 +3190,15 @@ class ZakatTracker:
 
             assert self.nolock()
             return True
-        except:
+        except Exception as e:
             # pp().pprint(self._vault)
             assert self.export_json("test-snapshot.json")
             assert self.save(f"test-snapshot.{self.ext()}")
-            raise
+            raise e
 
 
 def test(debug: bool = False):
-    ledger = ZakatTracker()
+    ledger = ZakatTracker("./zakat_test_db/zakat.camel")
     start = ZakatTracker.time()
     assert ledger.test(debug=debug)
     if debug:
