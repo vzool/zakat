@@ -201,7 +201,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.85'
+        return '0.2.86'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1925,7 +1925,7 @@ class ZakatTracker:
                         pass
                 # TODO: not allowed for negative dates in the future after enhance time functions
                 if date == 0 or value == 0:
-                    bad[i] = row + ('invalid date',)
+                    bad[i] = row + ['invalid date']
                     continue
                 if date not in data:
                     data[date] = []
