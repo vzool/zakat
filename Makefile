@@ -50,8 +50,9 @@ test:
 .PHONY: deploy
 # deploy package
 deploy:
-	python3 -m build
-	python3 -m twine upload --repository zakat dist/*
+    rm -rf dist/
+    python3 -m build
+    python3 -m twine upload --repository zakat dist/*
 
 # show help
 help:
