@@ -18,6 +18,11 @@ clean:
 	rm -rf tests/*.json
 	rm -rf snapshots
 
+.PHONY: dev-build
+# dev-build the library
+dev-build:
+	python3 setup.py build_ext --inplace
+
 .PHONY: deps
 # deps development
 deps:
