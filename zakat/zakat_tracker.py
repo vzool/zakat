@@ -1924,8 +1924,10 @@ class ZakatTracker:
                     except:
                         pass
                 # TODO: not allowed for negative dates in the future after enhance time functions
-                if date == 0 or value == 0:
+                if date == 0:
                     bad[i] = row + ['invalid date']
+                if value == 0:
+                    bad[i] = row + ['invalid value']
                     continue
                 if date not in data:
                     data[date] = []
