@@ -201,7 +201,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.86'
+        return '0.2.87'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1859,12 +1859,13 @@ class ZakatTracker:
         _, filename = os.path.split(path + f'.import_csv.{ext}')
         return self.base_path(filename)
 
-    def import_csv(self, path: str = 'file.csv', debug: bool = False) -> tuple:
+    def import_csv(self, path: str = 'file.csv', scale_decimal_places: int = 0, debug: bool = False) -> tuple:
         """
         The function reads the CSV file, checks for duplicate transactions, and creates the transactions in the system.
 
         Parameters:
         path (str): The path to the CSV file. Default is 'file.csv'.
+        scale_decimal_places (int): The number of decimal places to scale the value. Default is 0.
         debug (bool): A flag indicating whether to print debug information.
 
         Returns:
@@ -1943,13 +1944,14 @@ class ZakatTracker:
             try:
                 len_rows = len(rows)
                 if len_rows == 1:
-                    (_, account, desc, value, date, rate, hashed) = rows[0]
+                    (_, account, desc, unscaled_value, date, rate, hashed) = rows[0]
+                    value = self.unscale(unscaled_value, decimal_places=scale_decimal_places) if scale_decimal_places > 0 else unscaled_value
                     if rate > 0:
-                        self.exchange(account, created=date, rate=rate)
+                        self.exchange(account=account, created=date, rate=rate)
                     if value > 0:
-                        self.track(value, desc, account, True, date)
+                        self.track(unscaled_value=value, desc=desc, account=account, logging=True, created=date)
                     elif value < 0:
-                        self.sub(-value, desc, account, date)
+                        self.sub(unscaled_value=-value, desc=desc, account=account, created=date)
                     created += 1
                     cache.append(hashed)
                     continue
@@ -1961,14 +1963,16 @@ class ZakatTracker:
                 # (one positive and the other negative), this indicates it is a transfer.
                 if len_rows != 2:
                     raise Exception(f'more than two transactions({len_rows}) at the same time')
-                (i, account1, desc1, value1, date1, rate1, _) = rows[0]
-                (j, account2, desc2, value2, date2, rate2, _) = rows[1]
-                if account1 == account2 or desc1 != desc2 or abs(value1) != abs(value2) or date1 != date2:
+                (i, account1, desc1, unscaled_value1, date1, rate1, _) = rows[0]
+                (j, account2, desc2, unscaled_value2, date2, rate2, _) = rows[1]
+                if account1 == account2 or desc1 != desc2 or abs(unscaled_value1) != abs(unscaled_value2) or date1 != date2:
                     raise Exception('invalid transfer')
                 if rate1 > 0:
                     self.exchange(account1, created=date1, rate=rate1)
                 if rate2 > 0:
                     self.exchange(account2, created=date2, rate=rate2)
+                value1 = self.unscale(unscaled_value1, decimal_places=scale_decimal_places) if scale_decimal_places > 0 else unscaled_value1
+                value2 = self.unscale(unscaled_value2, decimal_places=scale_decimal_places) if scale_decimal_places > 0 else unscaled_value2
                 values = {
                     value1: account1,
                     value2: account2,
