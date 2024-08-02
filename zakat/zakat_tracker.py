@@ -201,7 +201,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.87'
+        return '0.2.88'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1618,12 +1618,12 @@ class ZakatTracker:
             print(f"below_nisab({below_nisab}) >= nisab({nisab})")
         return valid, brief, plan
 
-    def build_payment_parts(self, demand: float, positive_only: bool = True) -> dict:
+    def build_payment_parts(self, scaled_demand: int, positive_only: bool = True) -> dict:
         """
         Build payment parts for the Zakat distribution.
 
         Parameters:
-        demand (float): The total demand for payment in local currency.
+        scaled_demand (int): The total demand for payment in local currency.
         positive_only (bool): If True, only consider accounts with positive balance. Default is True.
 
         Returns:
@@ -1634,7 +1634,7 @@ class ZakatTracker:
                 ...
             },
             'exceed': bool,
-            'demand': float,
+            'demand': int,
             'total': float,
         }
         """
@@ -1642,7 +1642,7 @@ class ZakatTracker:
         parts = {
             'account': {},
             'exceed': False,
-            'demand': demand,
+            'demand': int(round(scaled_demand)),
         }
         for x, y in self.accounts().items():
             if positive_only and y <= 0:
@@ -1774,7 +1774,12 @@ class ZakatTracker:
                     print('zakat-part', account, part['rate'])
                 target_exchange = self.exchange(account)
                 amount = ZakatTracker.exchange_calc(part['part'], part['rate'], target_exchange['rate'])
-                self.sub(amount, desc='zakat-part-دفعة-زكاة', account=account, debug=debug)
+                self.sub(
+                    unscaled_value=self.unscale(amount),
+                    desc='zakat-part-دفعة-زكاة',
+                    account=account,
+                    debug=debug,
+                )
         if no_lock:
             self.free(self.lock())
         return True
