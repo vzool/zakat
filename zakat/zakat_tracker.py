@@ -201,7 +201,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.89'
+        return '0.2.9'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1056,6 +1056,8 @@ class ZakatTracker:
         desc (str): The description of the transaction.
         account (str): The account to log the transaction into. Default is '1'.
         created (int): The timestamp of the transaction. If not provided, it will be generated.
+        ref (int): The reference of the object.
+        debug (bool): Whether to print debug information. Default is False.
 
         Returns:
         int: The timestamp of the logged transaction.
@@ -1100,6 +1102,7 @@ class ZakatTracker:
         - created (int): The timestamp of the exchange rate. If not provided, the current timestamp will be used.
         - rate (float): The exchange rate to be recorded. If not provided, the method will retrieve the latest exchange rate.
         - description (str): A description of the exchange rate.
+        - debug (bool): Whether to print debug information. Default is False.
 
         Returns:
         - dict: A dictionary containing the latest exchange rate and its description. If no exchange rate is found,
@@ -1215,7 +1218,7 @@ class ZakatTracker:
             return self._vault['account'][account]['log']
         return {}
 
-    def daily_logs(self):
+    def daily_logs(self, debug: bool = False):
         """
         Retrieve the daily logs (transactions) from all accounts.
 
@@ -1224,7 +1227,7 @@ class ZakatTracker:
         and the values are dictionaries containing the total value and the logs for that group.
 
         Parameters:
-        None
+        debug (bool): Whether to print debug information. Default is False.
 
         Returns:
         dict: A dictionary containing the daily logs.
@@ -1237,6 +1240,7 @@ class ZakatTracker:
         {
             1632057600: {
                 'total': 151,
+                'transfer': False,
                 'rows': [
                     {'value': 51, 'account': 'account1', 'file': {}, 'ref': 1690977015000000000, 'desc': 'desc'},
                     {'value': 100, 'account': 'account2', 'file': {}, 'ref': 1690977015000000000, 'desc': 'desc'}
@@ -1244,15 +1248,18 @@ class ZakatTracker:
             }
         }
         """
-        x = {}
+        logs = {}
         for account in self.accounts():
-            logs = {}
             for k, v in self.logs(account).items():
+                v['time'] = k
                 v['account'] = account
-                logs[k] = v
-            x.update(logs)
+                if k not in logs:
+                    logs[k] = []
+                logs[k].append(v)
+        if debug:
+            print('logs', logs)
         y = {}
-        for i in sorted(x, reverse=True):
+        for i in sorted(logs, reverse=True):
             dt = self.time_to_datetime(i)
             group = self.day_to_time(dt.day, dt.month, dt.year)
             if group not in y:
@@ -1260,8 +1267,15 @@ class ZakatTracker:
                     'total': 0,
                     'rows': [],
                 }
-            y[group]['total'] += x[i]['value']
-            y[group]['rows'].append(x[i])
+            y[group]['transfer'] = len(logs[i]) > 1
+            if debug:
+                print('logs[i]', logs[i])
+            for z in logs[i]:
+                print('z', z)
+                y[group]['total'] += z['value']
+                y[group]['rows'].append(z)
+        if debug:
+            print('y', y)
         return y
 
     def add_file(self, account: str, ref: int, path: str) -> int:
