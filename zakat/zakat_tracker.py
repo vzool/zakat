@@ -1267,13 +1267,14 @@ class ZakatTracker:
                     'total': 0,
                     'rows': [],
                 }
-            y[group]['transfer'] = len(logs[i]) > 1
+            transfer = len(logs[i]) > 1
             if debug:
                 print('logs[i]', logs[i])
             for z in logs[i]:
                 if debug:
                     print('z', z)
                 y[group]['total'] += z['value']
+                z['transfer'] = transfer
                 y[group]['rows'].append(z)
         if debug:
             print('y', y)
