@@ -201,7 +201,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.88'
+        return '0.2.89'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1214,6 +1214,55 @@ class ZakatTracker:
         if self.account_exists(account):
             return self._vault['account'][account]['log']
         return {}
+
+    def daily_logs(self):
+        """
+        Retrieve the daily logs (transactions) from all accounts.
+
+        The function groups the logs by day, month, and year, and calculates the total value for each group.
+        It returns a dictionary where the keys are the timestamps of the daily groups,
+        and the values are dictionaries containing the total value and the logs for that group.
+
+        Parameters:
+        None
+
+        Returns:
+        dict: A dictionary containing the daily logs.
+
+        Example:
+        >>> tracker = ZakatTracker()
+        >>> tracker.track(51, 'desc', 'account1')
+        >>> tracker.track(100, 'desc', 'account2')
+        >>> tracker.daily_logs()
+        {
+            1632057600: {
+                'total': 151,
+                'rows': [
+                    {'value': 51, 'account': 'account1', 'file': {}, 'ref': 1690977015000000000, 'desc': 'desc'},
+                    {'value': 100, 'account': 'account2', 'file': {}, 'ref': 1690977015000000000, 'desc': 'desc'}
+                ]
+            }
+        }
+        """
+        x = {}
+        for account in self.accounts():
+            logs = {}
+            for k, v in self.logs(account).items():
+                v['account'] = account
+                logs[k] = v
+            x.update(logs)
+        y = {}
+        for i in sorted(x, reverse=True):
+            dt = self.time_to_datetime(i)
+            group = self.day_to_time(dt.day, dt.month, dt.year)
+            if group not in y:
+                y[group] = {
+                    'total': 0,
+                    'rows': [],
+                }
+            y[group]['total'] += x[i]['value']
+            y[group]['rows'].append(x[i])
+        return y
 
     def add_file(self, account: str, ref: int, path: str) -> int:
         """
