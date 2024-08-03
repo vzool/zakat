@@ -1271,7 +1271,8 @@ class ZakatTracker:
             if debug:
                 print('logs[i]', logs[i])
             for z in logs[i]:
-                print('z', z)
+                if debug:
+                    print('z', z)
                 y[group]['total'] += z['value']
                 y[group]['rows'].append(z)
         if debug:
