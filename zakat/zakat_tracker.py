@@ -70,6 +70,17 @@ from pathlib import Path
 from time import time_ns
 from camelx import Camel, CamelRegistry
 import shutil
+from datetime import timedelta
+
+
+class WeekDay(Enum):
+    Monday = 0
+    Tuesday = 1
+    Wednesday = 2
+    Thursday = 3
+    Friday = 4
+    Saturday = 5
+    Sunday = 6
 
 
 class Action(Enum):
@@ -201,7 +212,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.91'
+        return '0.2.92'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1218,7 +1229,7 @@ class ZakatTracker:
             return self._vault['account'][account]['log']
         return {}
 
-    def daily_logs(self, debug: bool = False):
+    def daily_logs(self, weekday: WeekDay = WeekDay.Friday, debug: bool = False):
         """
         Retrieve the daily logs (transactions) from all accounts.
 
@@ -1227,6 +1238,7 @@ class ZakatTracker:
         and the values are dictionaries containing the total value and the logs for that group.
 
         Parameters:
+        weekday (WeekDay): Select the weekday is collected for the week data. Default is WeekDay.Friday.
         debug (bool): Whether to print debug information. Default is False.
 
         Returns:
@@ -1234,18 +1246,58 @@ class ZakatTracker:
 
         Example:
         >>> tracker = ZakatTracker()
-        >>> tracker.track(51, 'desc', 'account1')
+        >>> tracker.sub(51, 'desc', 'account1')
         >>> tracker.track(100, 'desc', 'account2')
         >>> tracker.daily_logs()
         {
-            1632057600: {
-                'total': 151,
-                'transfer': False,
-                'rows': [
-                    {'value': 51, 'account': 'account1', 'file': {}, 'ref': 1690977015000000000, 'desc': 'desc'},
-                    {'value': 100, 'account': 'account2', 'file': {}, 'ref': 1690977015000000000, 'desc': 'desc'}
-                ]
-            }
+            'daily': {
+                '2024-06-30': {
+                    'positive': 100,
+                    'negative': 51,
+                    'total': 99,
+                    'rows': [
+                        {
+                            'account': 'account1',
+                            'desc': 'desc',
+                            'file': {},
+                            'ref': None,
+                            'value': -51,
+                            'time': 1690977015000000000,
+                            'transfer': False,
+                        },
+                        {
+                            'account': 'account2',
+                            'desc': 'desc',
+                            'file': {},
+                            'ref': None,
+                            'value': 100,
+                            'time': 1690977015000000000,
+                            'transfer': False,
+                        },
+                    ],
+                },
+            },
+            'weekly': {
+                datetime: {
+                    'positive': 100,
+                    'negative': 51,
+                    'total': 99,
+                },
+            },
+            'monthly': {
+                '2024-06': {
+                    'positive': 100,
+                    'negative': 51,
+                    'total': 99,
+                },
+            },
+            'yearly': {
+                2024: {
+                    'positive': 100,
+                    'negative': 51,
+                    'total': 99,
+                },
+            },
         }
         """
         logs = {}
@@ -1258,12 +1310,23 @@ class ZakatTracker:
                 logs[k].append(v)
         if debug:
             print('logs', logs)
-        y = {}
+        y = {
+            'daily': {},
+            'weekly': {},
+            'monthly': {},
+            'yearly': {},
+        }
         for i in sorted(logs, reverse=True):
             dt = self.time_to_datetime(i)
-            group = self.day_to_time(dt.day, dt.month, dt.year)
-            if group not in y:
-                y[group] = {
+            daily = f'{dt.year}-{dt.month:02d}-{dt.day:02d}'
+            weekly = dt - timedelta(days=weekday.value)
+            monthly = f'{dt.year}-{dt.month:02d}'
+            yearly = dt.year
+            # daily
+            if daily not in y['daily']:
+                y['daily'][daily] = {
+                    'positive': 0,
+                    'negative': 0,
                     'total': 0,
                     'rows': [],
                 }
@@ -1273,9 +1336,51 @@ class ZakatTracker:
             for z in logs[i]:
                 if debug:
                     print('z', z)
-                y[group]['total'] += z['value']
+                # daily
+                value = z['value']
+                if value > 0:
+                    y['daily'][daily]['positive'] += value
+                else:
+                    y['daily'][daily]['negative'] += -value
+                y['daily'][daily]['total'] += value
                 z['transfer'] = transfer
-                y[group]['rows'].append(z)
+                y['daily'][daily]['rows'].append(z)
+                # weekly
+                if weekly not in y['weekly']:
+                    y['weekly'][weekly] = {
+                        'positive': 0,
+                        'negative': 0,
+                        'total': 0,
+                    }
+                if value > 0:
+                    y['weekly'][weekly]['positive'] += value
+                else:
+                    y['weekly'][weekly]['negative'] += -value
+                y['weekly'][weekly]['total'] += value
+                # monthly
+                if monthly not in y['monthly']:
+                    y['monthly'][monthly] = {
+                        'positive': 0,
+                        'negative': 0,
+                        'total': 0,
+                    }
+                if value > 0:
+                    y['monthly'][monthly]['positive'] += value
+                else:
+                    y['monthly'][monthly]['negative'] += -value
+                y['monthly'][monthly]['total'] += value
+                # yearly
+                if yearly not in y['yearly']:
+                    y['yearly'][yearly] = {
+                        'positive': 0,
+                        'negative': 0,
+                        'total': 0,
+                    }
+                if value > 0:
+                    y['yearly'][yearly]['positive'] += value
+                else:
+                    y['yearly'][yearly]['negative'] += -value
+                y['yearly'][yearly]['total'] += value
         if debug:
             print('y', y)
         return y
@@ -1840,7 +1945,7 @@ class ZakatTracker:
                 target_exchange = self.exchange(account)
                 amount = ZakatTracker.exchange_calc(part['part'], part['rate'], target_exchange['rate'])
                 self.sub(
-                    unscaled_value=self.unscale(amount),
+                    unscaled_value=self.unscale(int(amount)),
                     desc='zakat-part-دفعة-زكاة',
                     account=account,
                     debug=debug,

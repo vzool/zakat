@@ -18,6 +18,7 @@ from zakat.zakat_tracker import (
     Action,
     JSONEncoder,
     MathOperation,
+    WeekDay,
 )
 
 from zakat.file_server import (
@@ -34,6 +35,7 @@ __all__ = [
     "Action",
     "JSONEncoder",
     "MathOperation",
+    "WeekDay",
     "start_file_server",
     "find_available_port",
     "FileType",
