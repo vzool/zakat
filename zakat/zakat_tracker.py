@@ -113,21 +113,29 @@ class MathOperation(Enum):
 
 reg = CamelRegistry()
 
+
 @reg.dumper(Action, u'action', version=None)
 def _dump_action(data):
     return u"{}".format(data.value)
+
+
 @reg.loader(u'action', version=None)
 def _load_action(data, version):
     return Action(int(data))
-    
+
+
 @reg.dumper(MathOperation, u'math', version=None)
 def _dump_math(data):
     return u"{}".format(data.value)
+
+
 @reg.loader(u'math', version=None)
 def _load_math(data, version):
     return MathOperation(int(data))
 
+
 camel = Camel([reg])
+
 
 class ZakatTracker:
     """
@@ -733,7 +741,7 @@ class ZakatTracker:
         ext = self.ext()
         ext_len = len(ext)
         if path.endswith(f'.{ext}'):
-            path = path[:-ext_len-1]
+            path = path[:-ext_len - 1]
         _, filename = os.path.split(path + f'.snapshots.{ext}')
         return self.base_path(filename)
 
@@ -1523,11 +1531,11 @@ class ZakatTracker:
     def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: str = 1, created: int = None,
             debug: bool = False) \
             -> tuple[
-                int,
-                list[
-                    tuple[int, int],
-                ],
-            ] | tuple:
+                   int,
+                   list[
+                       tuple[int, int],
+                   ],
+               ] | tuple:
         """
         Subtracts a specified value from an account's balance.
 
@@ -1675,7 +1683,11 @@ class ZakatTracker:
             times.append(y)
         return times
 
-    def check(self, silver_gram_price: float, unscaled_nisab: float | int | Decimal = None, debug: bool = False, now: int = None,
+    def check(self,
+              silver_gram_price: float,
+              unscaled_nisab: float | int | Decimal = None,
+              debug: bool = False,
+              now: int = None,
               cycle: float = None) -> tuple:
         """
         Check the eligibility for Zakat based on the given parameters.
@@ -2030,7 +2042,7 @@ class ZakatTracker:
         ext = self.ext()
         ext_len = len(ext)
         if path.endswith(f'.{ext}'):
-            path = path[:-ext_len-1]
+            path = path[:-ext_len - 1]
         _, filename = os.path.split(path + f'.import_csv.{ext}')
         return self.base_path(filename)
 
@@ -2120,7 +2132,10 @@ class ZakatTracker:
                 len_rows = len(rows)
                 if len_rows == 1:
                     (_, account, desc, unscaled_value, date, rate, hashed) = rows[0]
-                    value = self.unscale(unscaled_value, decimal_places=scale_decimal_places) if scale_decimal_places > 0 else unscaled_value
+                    value = self.unscale(
+                        unscaled_value,
+                        decimal_places=scale_decimal_places,
+                    ) if scale_decimal_places > 0 else unscaled_value
                     if rate > 0:
                         self.exchange(account=account, created=date, rate=rate)
                     if value > 0:
@@ -2140,14 +2155,21 @@ class ZakatTracker:
                     raise Exception(f'more than two transactions({len_rows}) at the same time')
                 (i, account1, desc1, unscaled_value1, date1, rate1, _) = rows[0]
                 (j, account2, desc2, unscaled_value2, date2, rate2, _) = rows[1]
-                if account1 == account2 or desc1 != desc2 or abs(unscaled_value1) != abs(unscaled_value2) or date1 != date2:
+                if account1 == account2 or desc1 != desc2 or abs(unscaled_value1) != abs(
+                        unscaled_value2) or date1 != date2:
                     raise Exception('invalid transfer')
                 if rate1 > 0:
                     self.exchange(account1, created=date1, rate=rate1)
                 if rate2 > 0:
                     self.exchange(account2, created=date2, rate=rate2)
-                value1 = self.unscale(unscaled_value1, decimal_places=scale_decimal_places) if scale_decimal_places > 0 else unscaled_value1
-                value2 = self.unscale(unscaled_value2, decimal_places=scale_decimal_places) if scale_decimal_places > 0 else unscaled_value2
+                value1 = self.unscale(
+                    unscaled_value1,
+                    decimal_places=scale_decimal_places,
+                ) if scale_decimal_places > 0 else unscaled_value1
+                value2 = self.unscale(
+                    unscaled_value2,
+                    decimal_places=scale_decimal_places,
+                ) if scale_decimal_places > 0 else unscaled_value2
                 values = {
                     value1: account1,
                     value2: account2,
@@ -3174,7 +3196,12 @@ class ZakatTracker:
                         cached_value = self.balance(a, cached=True)
                         fresh_value = self.balance(a, cached=False)
                         if debug:
-                            print('account', a, 'cached_value', cached_value, 'fresh_value', fresh_value, 'a_balance', a_balance)
+                            print(
+                                'account', a,
+                                'cached_value', cached_value,
+                                'fresh_value', fresh_value,
+                                'a_balance', a_balance,
+                            )
                         assert cached_value == a_balance
                         assert fresh_value == a_balance
 
@@ -3297,7 +3324,13 @@ class ZakatTracker:
                         print('case', case)
                     self.reset()
                     self.exchange(account=case[1], created=case[2], rate=rate)
-                    self.track(unscaled_value=case[0], desc='test-check', account=case[1], logging=True, created=case[2])
+                    self.track(
+                        unscaled_value=case[0],
+                        desc='test-check',
+                        account=case[1],
+                        logging=True,
+                        created=case[2],
+                    )
                     assert self.snapshot()
 
                     # assert self.nolock()
