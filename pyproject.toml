@@ -1,6 +1,6 @@
 [project]
 name = 'zakat'
-version = '0.2.92'
+version = '0.2.93'
 authors = [
   { name='Abdelaziz Elrashed Elshaikh Mohamed', email='aeemh.sdn@gmail.com' },
 ]

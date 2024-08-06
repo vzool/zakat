@@ -220,7 +220,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.92'
+        return '0.2.93'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1237,6 +1237,21 @@ class ZakatTracker:
             return self._vault['account'][account]['log']
         return {}
 
+    def daily_logs_init(self) -> dict[str, dict]:
+        """
+        Initialize a dictionary to store daily, weekly, monthly, and yearly logs.
+
+        Returns:
+        dict: A dictionary with keys 'daily', 'weekly', 'monthly', and 'yearly', each containing an empty dictionary.
+            Later each key maps to another dictionary, which will store the logs for the corresponding time period.
+        """
+        return {
+            'daily': {},
+            'weekly': {},
+            'monthly': {},
+            'yearly': {},
+        }
+
     def daily_logs(self, weekday: WeekDay = WeekDay.Friday, debug: bool = False):
         """
         Retrieve the daily logs (transactions) from all accounts.
@@ -1255,7 +1270,10 @@ class ZakatTracker:
         Example:
         >>> tracker = ZakatTracker()
         >>> tracker.sub(51, 'desc', 'account1')
-        >>> tracker.track(100, 'desc', 'account2')
+        >>> ref = tracker.track(100, 'desc', 'account2')
+        >>> tracker.add_file('account2', ref, 'file_0')
+        >>> tracker.add_file('account2', ref, 'file_1')
+        >>> tracker.add_file('account2', ref, 'file_2')
         >>> tracker.daily_logs()
         {
             'daily': {
@@ -1276,7 +1294,11 @@ class ZakatTracker:
                         {
                             'account': 'account2',
                             'desc': 'desc',
-                            'file': {},
+                            'file': {
+                                1722919011626770944: 'file_0',
+                                1722919011626812928: 'file_1',
+                                1722919011626846976: 'file_2',
+                            },
                             'ref': None,
                             'value': 100,
                             'time': 1690977015000000000,
@@ -1318,12 +1340,7 @@ class ZakatTracker:
                 logs[k].append(v)
         if debug:
             print('logs', logs)
-        y = {
-            'daily': {},
-            'weekly': {},
-            'monthly': {},
-            'yearly': {},
-        }
+        y = self.daily_logs_init()
         for i in sorted(logs, reverse=True):
             dt = self.time_to_datetime(i)
             daily = f'{dt.year}-{dt.month:02d}-{dt.day:02d}'
@@ -2605,6 +2622,12 @@ class ZakatTracker:
                     assert len(self._vault['account'][x]['log'][ref]['file']) == i + 1
                 file_ref = self.add_file(x, ref, 'file_' + str(3))
                 assert self.remove_file(x, ref, file_ref)
+                daily_logs = self.daily_logs(debug=debug)
+                if debug:
+                    print('daily_logs', daily_logs)
+                for k, v in daily_logs.items():
+                    assert k
+                    assert v
                 z = self.balance(x)
                 if debug:
                     print("debug-0", z, y)
