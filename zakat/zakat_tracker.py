@@ -220,7 +220,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.93'
+        return '0.2.94'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -563,7 +563,23 @@ class ZakatTracker:
         """
         return self._vault.copy()
 
-    def stats(self) -> dict[str, tuple]:
+    def stats_init(self) -> dict[str, tuple[int, str]]:
+        """
+        Initialize and return a dictionary containing initial statistics for the ZakatTracker instance.
+
+        The dictionary contains two keys: 'database' and 'ram'. Each key maps to a tuple containing two elements:
+        - The initial size of the respective statistic in bytes (int).
+        - The initial size of the respective statistic in a human-readable format (str).
+
+        Returns:
+        dict[str, tuple]: A dictionary with initial statistics for the ZakatTracker instance.
+        """
+        return {
+            'database': (0, '0'),
+            'ram': (0, '0'),
+        }
+
+    def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
         """
         Calculates and returns statistics about the object's data storage.
 
@@ -571,6 +587,9 @@ class ZakatTracker:
         size of the data currently held in RAM (likely within a dictionary).
         Both sizes are reported in bytes and in a human-readable format
         (e.g., KB, MB).
+
+        Parameters:
+        ignore_ram (bool): Whether to ignore the RAM size. Default is True
 
         Returns:
         dict[str, tuple]: A dictionary containing the following statistics:
@@ -589,7 +608,7 @@ class ZakatTracker:
         >>> print(stats['ram'])
         (12345, '12.1 KB')
         """
-        ram_size = self.get_dict_size(self.vault())
+        ram_size = 0.0 if ignore_ram else self.get_dict_size(self.vault())
         file_size = os.path.getsize(self.path())
         return {
             'database': (file_size, self.human_readable_size(file_size)),
