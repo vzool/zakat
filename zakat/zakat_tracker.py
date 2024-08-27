@@ -10,7 +10,9 @@
 
 This module provides a ZakatTracker class for tracking and calculating Zakat.
 
-The ZakatTracker class allows users to record financial transactions, and calculate Zakat due based on the Nisab (the minimum threshold for Zakat) and Haul (after completing one year since every transaction received in the same account).
+The ZakatTracker class allows users to record financial transactions, and calculate Zakat due based on the Nisab
+(the minimum threshold for Zakat) and
+Haul (after completing one year since every transaction received in the same account).
 We use the current silver price and manage account balances.
 It supports importing transactions from CSV files, exporting data to JSON format, and saving/loading the tracker state.
 
@@ -29,7 +31,7 @@ The module also includes a few helper functions and classes:
 *   `Action` (Enum): An enumeration representing different actions in the tracker.
 *   `MathOperation` (Enum): An enumeration representing mathematical operations in the tracker.
 
-The ZakatTracker class is designed to be flexible and extensible, allowing users to customize it to their specific needs.
+The ZakatTracker class is designed to be flexible & extensible, allowing users to customize it to their specific needs.
 
 Example usage:
 
@@ -94,6 +96,7 @@ class Action(Enum):
     EXCHANGE = auto()
     REPORT = auto()
     ZAKAT = auto()
+    NAME_ACCOUNT = auto()
 
 
 class JSONEncoder(json.JSONEncoder):
@@ -147,8 +150,8 @@ class ZakatTracker:
 
     The `ZakatTracker` class is designed to handle both positive and negative transactions,
     allowing for flexible tracking of financial activities related to Zakat. It also supports
-    the concept of a "Nisab" (minimum threshold for Zakat) and a "haul" (complete one year for Transaction) can calculate Zakat due
-    based on the current silver price.
+    the concept of a "Nisab" (minimum threshold for Zakat) and a "haul" (complete one year for Transaction)
+    can calculate Zakat due based on the current silver price.
 
     The class uses a camel file as its database to persist the tracker state,
     ensuring data integrity across sessions. It also provides options for enabling or
@@ -186,6 +189,7 @@ class ZakatTracker:
                             - desc (str): The description of the transaction.
                             - ref (int): The box reference (positive or None).
                             - file (dict): A dictionary storing file references associated with the transaction.
+                    - name (str): The current name of the account.
                     - hide (bool): Indicates whether the account is hidden or not.
                     - zakatable (bool): Indicates whether the account is subject to Zakat.
             - exchange (dict):
@@ -196,7 +200,8 @@ class ZakatTracker:
             - history (dict):
                 - {timestamp} (list): A list of dictionaries storing the history of actions performed.
                     - {action_dict} (dict):
-                        - action (Action): The type of action (CREATE, TRACK, LOG, SUB, ADD_FILE, REMOVE_FILE, BOX_TRANSFER, EXCHANGE, REPORT, ZAKAT).
+                        - action (Action): The type of action (CREATE, TRACK, LOG, SUB, ADD_FILE, REMOVE_FILE,
+                                                               BOX_TRANSFER, EXCHANGE, REPORT, ZAKAT).
                         - account (str): The account number associated with the action.
                         - ref (int): The reference number of the transaction.
                         - file (int): The reference number of the file (if applicable).
@@ -220,7 +225,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.93'
+        return '0.2.95'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -259,7 +264,7 @@ class ZakatTracker:
     @staticmethod
     def Nisab(gram_price: float, gram_quantity: float = 595) -> float:
         """
-        Calculate the total value of Nisab (a unit of weight in Islamic jurisprudence) based on the given price per gram.
+        Calculate the total value of Nisab(a unit of weight in Islamic jurisprudence) based on the given price per gram.
 
         This function calculates the Nisab value, which is the minimum threshold of wealth,
         that makes an individual liable for paying Zakat.
@@ -563,7 +568,24 @@ class ZakatTracker:
         """
         return self._vault.copy()
 
-    def stats(self) -> dict[str, tuple]:
+    @staticmethod
+    def stats_init() -> dict[str, tuple[int, str]]:
+        """
+        Initialize and return a dictionary containing initial statistics for the ZakatTracker instance.
+
+        The dictionary contains two keys: 'database' and 'ram'. Each key maps to a tuple containing two elements:
+        - The initial size of the respective statistic in bytes (int).
+        - The initial size of the respective statistic in a human-readable format (str).
+
+        Returns:
+        dict[str, tuple]: A dictionary with initial statistics for the ZakatTracker instance.
+        """
+        return {
+            'database': (0, '0'),
+            'ram': (0, '0'),
+        }
+
+    def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
         """
         Calculates and returns statistics about the object's data storage.
 
@@ -571,6 +593,9 @@ class ZakatTracker:
         size of the data currently held in RAM (likely within a dictionary).
         Both sizes are reported in bytes and in a human-readable format
         (e.g., KB, MB).
+
+        Parameters:
+        ignore_ram (bool): Whether to ignore the RAM size. Default is True
 
         Returns:
         dict[str, tuple]: A dictionary containing the following statistics:
@@ -589,7 +614,7 @@ class ZakatTracker:
         >>> print(stats['ram'])
         (12345, '12.1 KB')
         """
-        ram_size = self.get_dict_size(self.vault())
+        ram_size = 0.0 if ignore_ram else self.get_dict_size(self.vault())
         file_size = os.path.getsize(self.path())
         return {
             'database': (file_size, self.human_readable_size(file_size)),
@@ -669,24 +694,26 @@ class ZakatTracker:
             return True
         return False
 
-    def account_exists(self, account) -> bool:
+    def account_exists(self, account: int) -> bool:
         """
         Check if the given account exists in the vault.
 
         Parameters:
-        account (str): The account number to check.
+        account (int): The account number to check.
 
         Returns:
         bool: True if the account exists, False otherwise.
         """
+        if not isinstance(account, int):
+            raise ValueError(f'The account must be an integer, {type(account)} was provided.')
         return account in self._vault['account']
 
-    def box_size(self, account) -> int:
+    def box_size(self, account: int) -> int:
         """
         Calculate the size of the box for a specific account.
 
         Parameters:
-        account (str): The account number for which the box size needs to be calculated.
+        account (int): The account number for which the box size needs to be calculated.
 
         Returns:
         int: The size of the box for the given account. If the account does not exist, -1 is returned.
@@ -695,12 +722,12 @@ class ZakatTracker:
             return len(self._vault['account'][account]['box'])
         return -1
 
-    def log_size(self, account) -> int:
+    def log_size(self, account: int) -> int:
         """
         Get the size of the log for a specific account.
 
         Parameters:
-        account (str): The account number for which the log size needs to be calculated.
+        account (int): The account number for which the log size needs to be calculated.
 
         Returns:
         int: The size of the log for the given account. If the account does not exist, -1 is returned.
@@ -732,7 +759,8 @@ class ZakatTracker:
         Generate the path for the cache file used to store snapshots.
 
         The cache file is a camel file that stores the timestamps of the snapshots.
-        The file name is derived from the main database file name by replacing the ".camel" extension with ".snapshots.camel".
+        The file name is derived from the main database file name by replacing the ".camel" extension
+        with ".snapshots.camel".
 
         Returns:
         str: The path to the cache file.
@@ -749,16 +777,20 @@ class ZakatTracker:
         """
         This function creates a snapshot of the current database state.
 
-        The function calculates the hash of the current database file and checks if a snapshot with the same hash already exists.
+        The function calculates the hash of the current database file and checks if a snapshot with the same
+        hash already exists.
         If a snapshot with the same hash exists, the function returns True without creating a new snapshot.
-        If a snapshot with the same hash does not exist, the function creates a new snapshot by saving the current database state
-        in a new camel file with a unique timestamp as the file name. The function also updates the snapshot cache file with the new snapshot's hash and timestamp.
+        If a snapshot with the same hash does not exist, the function creates a new snapshot by saving
+        the current database state.
+        in a new camel file with a unique timestamp as the file name. The function also updates the snapshot cache file
+        with the new snapshot's hash and timestamp.
 
         Parameters:
         None
 
         Returns:
-        bool: True if a snapshot with the same hash already exists or if the snapshot is successfully created. False if the snapshot creation fails.
+        bool: True if a snapshot with the same hash already exists or if the snapshot is successfully created.
+              False if the snapshot creation fails.
         """
         current_hash = self.file_hash(self.path())
         cache: dict[str, int] = {}  # hash: time_ns
@@ -953,32 +985,43 @@ class ZakatTracker:
                                             self._vault['account'][x['account']]['box'][x['ref']][x['key']] += x[
                                                 'value']
 
+                case Action.NAME_ACCOUNT:
+                    if x['account'] is not None:
+                        if self.account_exists(x['account']):
+                            if dry:
+                                continue
+                            match x['math']:
+                                case MathOperation.EQUAL:
+                                    self._vault['account'][x['account']][x['key']] = x['value']
+
         if not dry:
             del self._vault['history'][ref]
         return True
 
-    def ref_exists(self, account: str, ref_type: str, ref: int) -> bool:
+    def ref_exists(self, account: int, ref_type: str, ref: int) -> bool:
         """
         Check if a specific reference (transaction) exists in the vault for a given account and reference type.
 
         Parameters:
-        account (str): The account number for which to check the existence of the reference.
+        account (int): The account number for which to check the existence of the reference.
         ref_type (str): The type of reference (e.g., 'box', 'log', etc.).
         ref (int): The reference (transaction) number to check for existence.
 
         Returns:
         bool: True if the reference exists for the given account and reference type, False otherwise.
         """
+        if not isinstance(account, int):
+            raise ValueError(f'The account must be an integer, {type(account)} was provided.')
         if account in self._vault['account']:
             return ref in self._vault['account'][account][ref_type]
         return False
 
-    def box_exists(self, account: str, ref: int) -> bool:
+    def box_exists(self, account: int, ref: int) -> bool:
         """
         Check if a specific box (transaction) exists in the vault for a given account and reference.
 
         Parameters:
-        - account (str): The account number for which to check the existence of the box.
+        - account (int): The account number for which to check the existence of the box.
         - ref (int): The reference (transaction) number to check for existence.
 
         Returns:
@@ -986,7 +1029,7 @@ class ZakatTracker:
         """
         return self.ref_exists(account, 'box', ref)
 
-    def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: str = 1, logging: bool = True,
+    def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
               created: int = None,
               debug: bool = False) -> int:
         """
@@ -995,7 +1038,7 @@ class ZakatTracker:
         Parameters:
         unscaled_value (float | int | Decimal): The value of the transaction. Default is 0.
         desc (str): The description of the transaction. Default is an empty string.
-        account (str): The account for which the transaction is being tracked. Default is '1'.
+        account (int): The account for which the transaction is being tracked. Default is '1'.
         logging (bool): Whether to log the transaction. Default is True.
         created (int): The timestamp of the transaction. If not provided, it will be generated. Default is None.
         debug (bool): Whether to print debug information. Default is False.
@@ -1052,12 +1095,12 @@ class ZakatTracker:
             self.free(self.lock())
         return created
 
-    def log_exists(self, account: str, ref: int) -> bool:
+    def log_exists(self, account: int, ref: int) -> bool:
         """
         Checks if a specific transaction log entry exists for a given account.
 
         Parameters:
-        account (str): The account number associated with the transaction log.
+        account (int): The account number associated with the transaction log.
         ref (int): The reference to the transaction log entry.
 
         Returns:
@@ -1065,7 +1108,7 @@ class ZakatTracker:
         """
         return self.ref_exists(account, 'log', ref)
 
-    def _log(self, value: float, desc: str = '', account: str = 1, created: int = None, ref: int = None,
+    def _log(self, value: float, desc: str = '', account: int = 1, created: int = None, ref: int = None,
              debug: bool = False) -> int:
         """
         Log a transaction into the account's log.
@@ -1073,7 +1116,7 @@ class ZakatTracker:
         Parameters:
         value (float): The value of the transaction.
         desc (str): The description of the transaction.
-        account (str): The account to log the transaction into. Default is '1'.
+        account (int): The account to log the transaction into. Default is 1.
         created (int): The timestamp of the transaction. If not provided, it will be generated.
         ref (int): The reference of the object.
         debug (bool): Whether to print debug information. Default is False.
@@ -1111,13 +1154,13 @@ class ZakatTracker:
         self._step(Action.LOG, account, ref=created, value=value)
         return created
 
-    def exchange(self, account, created: int = None, rate: float = None, description: str = None,
+    def exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
                  debug: bool = False) -> dict:
         """
         This method is used to record or retrieve exchange rates for a specific account.
 
         Parameters:
-        - account (str): The account number for which the exchange rate is being recorded or retrieved.
+        - account (int): The account number for which the exchange rate is being recorded or retrieved.
         - created (int): The timestamp of the exchange rate. If not provided, the current timestamp will be used.
         - rate (float): The exchange rate to be recorded. If not provided, the method will retrieve the latest exchange rate.
         - description (str): A description of the exchange rate.
@@ -1133,6 +1176,8 @@ class ZakatTracker:
             created = self.time()
         no_lock = self.nolock()
         self.lock()
+        if not isinstance(account, int):
+            raise ValueError(f'The account must be an integer, {type(account)} was provided.')
         if rate is not None:
             if rate <= 0:
                 return dict()
@@ -1207,12 +1252,12 @@ class ZakatTracker:
             result[i] = self._vault['account'][i]['balance']
         return result
 
-    def boxes(self, account) -> dict:
+    def boxes(self, account: int) -> dict:
         """
         Retrieve the boxes (transactions) associated with a specific account.
 
         Parameters:
-        account (str): The account number for which to retrieve the boxes.
+        account (int): The account number for which to retrieve the boxes.
 
         Returns:
         dict: A dictionary containing the boxes associated with the given account.
@@ -1222,12 +1267,12 @@ class ZakatTracker:
             return self._vault['account'][account]['box']
         return {}
 
-    def logs(self, account) -> dict:
+    def logs(self, account: int) -> dict:
         """
         Retrieve the logs (transactions) associated with a specific account.
 
         Parameters:
-        account (str): The account number for which to retrieve the logs.
+        account (int): The account number for which to retrieve the logs.
 
         Returns:
         dict: A dictionary containing the logs associated with the given account.
@@ -1237,7 +1282,8 @@ class ZakatTracker:
             return self._vault['account'][account]['log']
         return {}
 
-    def daily_logs_init(self) -> dict[str, dict]:
+    @staticmethod
+    def daily_logs_init() -> dict[str, dict]:
         """
         Initialize a dictionary to store daily, weekly, monthly, and yearly logs.
 
@@ -1269,11 +1315,11 @@ class ZakatTracker:
 
         Example:
         >>> tracker = ZakatTracker()
-        >>> tracker.sub(51, 'desc', 'account1')
-        >>> ref = tracker.track(100, 'desc', 'account2')
-        >>> tracker.add_file('account2', ref, 'file_0')
-        >>> tracker.add_file('account2', ref, 'file_1')
-        >>> tracker.add_file('account2', ref, 'file_2')
+        >>> tracker.sub(51, 'desc', 1) # account1
+        >>> ref = tracker.track(100, 'desc', 2) # account2
+        >>> tracker.add_file(2, ref, 'file_0')
+        >>> tracker.add_file(2, ref, 'file_1')
+        >>> tracker.add_file(2, ref, 'file_2')
         >>> tracker.daily_logs()
         {
             'daily': {
@@ -1410,12 +1456,12 @@ class ZakatTracker:
             print('y', y)
         return y
 
-    def add_file(self, account: str, ref: int, path: str) -> int:
+    def add_file(self, account: int, ref: int, path: str) -> int:
         """
         Adds a file reference to a specific transaction log entry in the vault.
 
         Parameters:
-        account (str): The account number associated with the transaction log.
+        account (int): The account number associated with the transaction log.
         ref (int): The reference to the transaction log entry.
         path (str): The path of the file to be added.
 
@@ -1434,12 +1480,12 @@ class ZakatTracker:
                 return file_ref
         return 0
 
-    def remove_file(self, account: str, ref: int, file_ref: int) -> bool:
+    def remove_file(self, account: int, ref: int, file_ref: int) -> bool:
         """
         Removes a file reference from a specific transaction log entry in the vault.
 
         Parameters:
-        account (str): The account number associated with the transaction log.
+        account (int): The account number associated with the transaction log.
         ref (int): The reference to the transaction log entry.
         file_ref (int): The reference of the file to be removed.
 
@@ -1459,12 +1505,12 @@ class ZakatTracker:
                     return True
         return False
 
-    def balance(self, account: str = 1, cached: bool = True) -> int:
+    def balance(self, account: int = 1, cached: bool = True) -> int:
         """
         Calculate and return the balance of a specific account.
 
         Parameters:
-        account (str): The account number. Default is '1'.
+        account (int): The account number. Default is '1'.
         cached (bool): If True, use the cached balance. If False, calculate the balance from the box. Default is True.
 
         Returns:
@@ -1474,17 +1520,19 @@ class ZakatTracker:
         If cached is True, the function returns the cached balance.
         If cached is False, the function calculates the balance from the box by summing up the 'rest' values of all box items.
         """
+        if not isinstance(account, int):
+            raise ValueError(f'The account must be an integer, {type(account)} was provided.')
         if cached:
             return self._vault['account'][account]['balance']
         x = 0
         return [x := x + y['rest'] for y in self._vault['account'][account]['box'].values()][-1]
 
-    def hide(self, account, status: bool = None) -> bool:
+    def hide(self, account: int, status: bool = None) -> bool:
         """
         Check or set the hide status of a specific account.
 
         Parameters:
-        account (str): The account number.
+        account (int): The account number.
         status (bool, optional): The new hide status. If not provided, the function will return the current status.
 
         Returns:
@@ -1495,14 +1543,14 @@ class ZakatTracker:
 
         Example:
         >>> tracker = ZakatTracker()
-        >>> ref = tracker.track(51, 'desc', 'account1')
-        >>> tracker.hide('account1')  # Set the hide status of 'account1' to True
+        >>> ref = tracker.track(51, 'desc', 1) # 'account1'
+        >>> tracker.hide(1)  # Set the hide status of 'account1' to True
         False
-        >>> tracker.hide('account1', True)  # Set the hide status of 'account1' to True
+        >>> tracker.hide(1, True)  # Set the hide status of 'account1' to True
         True
-        >>> tracker.hide('account1')  # Get the hide status of 'account1' by default
+        >>> tracker.hide(1)  # Get the hide status of 'account1' by default
         True
-        >>> tracker.hide('account1', False)
+        >>> tracker.hide(1, False)
         False
         """
         if self.account_exists(account):
@@ -1512,12 +1560,12 @@ class ZakatTracker:
             return status
         return False
 
-    def zakatable(self, account, status: bool = None) -> bool:
+    def zakatable(self, account: int, status: bool = None) -> bool:
         """
         Check or set the zakatable status of a specific account.
 
         Parameters:
-        account (str): The account number.
+        account (int): The account number.
         status (bool, optional): The new zakatable status. If not provided, the function will return the current status.
 
         Returns:
@@ -1528,14 +1576,14 @@ class ZakatTracker:
 
         Example:
         >>> tracker = ZakatTracker()
-        >>> ref = tracker.track(51, 'desc', 'account1')
-        >>> tracker.zakatable('account1')  # Set the zakatable status of 'account1' to True
+        >>> ref = tracker.track(51, 'desc', 1) # 'account1'
+        >>> tracker.zakatable(1)  # Set the zakatable status of 'account1' to True
         True
-        >>> tracker.zakatable('account1', True)  # Set the zakatable status of 'account1' to True
+        >>> tracker.zakatable(1, True)  # Set the zakatable status of 'account1' to True
         True
-        >>> tracker.zakatable('account1')  # Get the zakatable status of 'account1' by default
+        >>> tracker.zakatable(1)  # Get the zakatable status of 'account1' by default
         True
-        >>> tracker.zakatable('account1', False)
+        >>> tracker.zakatable(1, False)
         False
         """
         if self.account_exists(account):
@@ -1545,7 +1593,93 @@ class ZakatTracker:
             return status
         return False
 
-    def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: str = 1, created: int = None,
+    def name(self, account: int) -> str | None:
+        """
+        Retrieves the name associated with a given account number.
+
+        Parameters:
+        account (int): The account number to look up.
+
+        Returns:
+        str | None: The name associated with the account, or None if not found.
+        """
+        if account in self._vault['account']:
+            if 'name' in self._vault['account'][account]:
+                return self._vault['account'][account]['name']
+        return None
+
+    def account(self, name: str, ref: int = None) -> tuple[int, str]:
+        """
+        Associates a name with an account number and tracks the relationship.
+
+        Parameters:
+        name (str): The name to associate with the account.
+        ref (int, optional): The optional reference number for the account.
+
+        Returns:
+        tuple[int, str]: A tuple containing the account number and the associated name.
+
+        This function manages the association between names and account numbers. It creates new accounts if necessary,
+        and updates existing associations based on the provided name and reference.
+        The function also tracks the relationship between names and accounts in a dictionary for future reference.
+
+        The following actions are performed:
+
+        1. If the 'name' key doesn't exist in the `self._vault` dictionary, it creates a new entry with 'last_account'
+           set to 0 and 'account' set to an empty dictionary.
+        2. If both `name` and `ref` are provided, the function checks if either the name or reference already exists in
+           the 'account' dictionary. If so, it removes the existing association and creates a new one with the provided
+           name and reference.
+        3. If only `name` is provided, the function checks if the name already exists in the 'account' dictionary.
+           If not, it creates a new account number and associates it with the name.
+        4. In all cases, the function updates the 'account' dictionary with the new association and calls the `set_name`
+           function to update the 'name' field in the corresponding account entry.
+        5. Finally, the function returns a tuple containing the account number and the associated name.
+        """
+        if 'name' not in self._vault:
+            self._vault['name'] = {
+                'last_account': 0,
+                'account': {},
+            }
+
+        def set_name(_account: int, _name: str):
+            if not self.account_exists(_account):
+                self.track(account=_account)
+                self._step(
+                    action=Action.NAME_ACCOUNT,
+                    account=_account,
+                    value=self._vault['account'][_account]['name'] if 'name' in self._vault['account'][
+                        _account] else None,
+                    key='name',
+                    math_operation=MathOperation.EQUAL,
+                )
+                self._vault['account'][_account]['name'] = _name
+
+        if name and ref:
+            if name in self._vault['name']['account']:
+                old_ref = self._vault['name']['account'][name]
+                del self._vault['name']['account'][name]
+                if old_ref in self._vault['name']['account']:
+                    del self._vault['name']['account'][old_ref]
+            if ref in self._vault['name']['account']:
+                old_name = self._vault['name']['account'][ref]
+                del self._vault['name']['account'][ref]
+                if old_name in self._vault['name']['account']:
+                    del self._vault['name']['account'][old_name]
+            self._vault['name']['account'][name] = ref
+            self._vault['name']['account'][ref] = name
+            set_name(ref, name)
+            return ref, name
+        if name not in self._vault['name']['account']:
+            account = self._vault['name']['last_account']
+            account += 1
+            self._vault['name']['last_account'] = account
+            self._vault['name']['account'][name] = account
+            self._vault['name']['account'][account] = name
+            set_name(account, name)
+        return self._vault['name']['account'][name], name
+
+    def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: int = None,
             debug: bool = False) \
             -> tuple[
                    int,
@@ -1559,7 +1693,7 @@ class ZakatTracker:
         Parameters:
         unscaled_value (float | int | Decimal): The amount to be subtracted.
         desc (str): A description for the transaction. Defaults to an empty string.
-        account (str): The account from which the value will be subtracted. Defaults to '1'.
+        account (int): The account number from which the value will be subtracted. Defaults to '1'.
         created (int): The timestamp of the transaction. If not provided, the current timestamp will be used.
         debug (bool): A flag indicating whether to print debug information. Defaults to False.
 
@@ -1577,6 +1711,8 @@ class ZakatTracker:
             print('sub', f'debug={debug}')
         if unscaled_value < 0:
             return tuple()
+        if not isinstance(account, int):
+            raise ValueError(f'The account must be an integer, {type(account)} was provided.')
         if unscaled_value == 0:
             ref = self.track(unscaled_value, '', account)
             return ref, ref
@@ -1625,7 +1761,7 @@ class ZakatTracker:
             self.free(self.lock())
         return created, ages
 
-    def transfer(self, unscaled_amount: float | int | Decimal, from_account: str, to_account: str, desc: str = '',
+    def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
                  created: int = None,
                  debug: bool = False) -> list[int]:
         """
@@ -1633,8 +1769,8 @@ class ZakatTracker:
 
         Parameters:
         unscaled_amount (float | int | Decimal): The amount to be transferred.
-        from_account (str): The account from which the value will be transferred.
-        to_account (str): The account to which the value will be transferred.
+        from_account (int): The account number from which the value will be transferred.
+        to_account (int): The account number to which the value will be transferred.
         desc (str, optional): A description for the transaction. Defaults to an empty string.
         created (int, optional): The timestamp of the transaction. If not provided, the current timestamp will be used.
         debug (bool): A flag indicating whether to print debug information. Defaults to False.
@@ -1653,6 +1789,10 @@ class ZakatTracker:
             raise ValueError(f'Transfer to the same account is forbidden. {to_account}')
         if unscaled_amount <= 0:
             return []
+        if not isinstance(to_account, int):
+            raise ValueError(f'The to_account must be an integer, {type(to_account)} was provided.')
+        if not isinstance(from_account, int):
+            raise ValueError(f'The from_account must be an integer, {type(from_account)} was provided.')
         if created is None:
             created = self.time()
         (_, ages) = self.sub(unscaled_amount, desc, from_account, created, debug=debug)
@@ -2119,7 +2259,7 @@ class ZakatTracker:
                 desc = row[1]
                 value = float(row[2])
                 rate = 1.0
-                if row[4:5]:  # Empty list if index is out of range
+                if row[4:5]:  # Empty list if index is out of range[]
                     rate = float(row[4])
                 date: int = 0
                 for time_format in date_formats:
@@ -2199,8 +2339,8 @@ class ZakatTracker:
                     created=date1,
                 )
             except Exception as e:
-                for (i, account, desc, value, date, rate, _) in rows:
-                    bad[i] = (account, desc, value, date, rate, e)
+                for (i, account, desc, value, row_date, rate, _) in rows:
+                    bad[i] = (account, desc, value, row_date, rate, e)
                 break
         with open(self.import_csv_cache_path(), 'w') as stream:
             stream.write(camel.dump(cache))
@@ -2233,7 +2373,7 @@ class ZakatTracker:
         """
         if type(size) not in (float, int):
             raise TypeError("size must be a float or integer")
-        if type(decimal_places) != int:
+        if type(decimal_places) is not int:
             raise TypeError("decimal_places must be an integer")
         for unit in ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']:
             if size < 1024.0:
@@ -2321,7 +2461,8 @@ class ZakatTracker:
 
         Example  Input: duration_from_nanoseconds(ns)
         **"Millennium:Century:Years:Days:Hours:Minutes:Seconds:MilliSeconds:MicroSeconds:NanoSeconds"**
-        Example Output: ('039:0001:047:325:05:02:03:456:789:012', ' 39 Millennia,    1 Century,  47 Years,  325 Days,  5 Hours,  2 Minutes,  3 Seconds,  456 MilliSeconds,  789 MicroSeconds,  12 NanoSeconds')
+        Example Output: ('039:0001:047:325:05:02:03:456:789:012', ' 39 Millennia,    1 Century,  47 Years,  325 Days,
+        5 Hours,  2 Minutes,  3 Seconds,  456 MilliSeconds,  789 MicroSeconds,  12 NanoSeconds')
         duration_from_nanoseconds(1234567890123456789012)
         """
         us, ns = divmod(ns, 1000)
@@ -2333,7 +2474,8 @@ class ZakatTracker:
         y, d = divmod(d, 365)
         c, y = divmod(y, 100)
         n, c = divmod(c, 10)
-        time_lapsed = f"{n:03.0f}:{c:04.0f}:{y:03.0f}:{d:03.0f}:{h:02.0f}:{m:02.0f}:{s:02.0f}::{ms:03.0f}::{us:03.0f}::{ns:03.0f}"
+        time_lapsed =\
+            f"{n:03.0f}:{c:04.0f}:{y:03.0f}:{d:03.0f}:{h:02.0f}:{m:02.0f}:{s:02.0f}::{ms:03.0f}::{us:03.0f}::{ns:03.0f}"
         spoken_time_part = []
         if n > 0 or show_zeros_in_spoken_time:
             spoken_time_part.append(f"{n: 3d} {millennia}")
@@ -2574,8 +2716,48 @@ class ZakatTracker:
         assert self.nolock()
         assert self._history() is True
 
+        # account numbers & names
+        for index, letter in enumerate('abcdefghijklmnopqrstuvwxyz'):
+            ref, name = self.account(name=letter)
+            if debug:
+                print(f'letter = "{letter}", name = "{name}"')
+            assert letter == name
+            if debug:
+                print(f'index = {index + 1}, ref = {ref}')
+            assert index + 1 == ref
+            assert index + 1 in self._vault['account']
+            assert name == self._vault['account'][index + 1]['name']
+        account_z_ref, account_z_name = self.account(name='z')
+        assert account_z_ref == 26
+        assert account_z_name == 'z'
+        account_xz_ref, account_xz_name = self.account(name='xz')
+        assert account_xz_ref == 27
+        assert account_xz_name == 'xz'
+        account_z_ref_new, account_z_name_new = self.account(name='z', ref=321)
+        assert self.account_exists(account_z_ref_new)
+        assert account_z_ref_new == 321
+        assert account_z_name_new == 'z'
+        assert account_z_ref not in self._vault['name']['account']
+        assert self.account_exists(account_z_ref)
+        account_zz_ref, account_zz_name = self.account(name='zz', ref=321)
+        assert self.account_exists(account_zz_ref)
+        assert account_zz_ref == 321
+        assert account_zz_name == 'zz'
+        assert account_z_name not in self._vault['name']['account']
+        account_xx_ref, account_xx_name = self.account(name='xx', ref=333)
+        assert self.account_exists(account_xx_ref)
+        assert account_xx_ref == 333
+        assert account_xx_name == 'xx'
+        assert self.account_exists(account_xx_ref)
+
+        self.reset()
+
+        names = {
+            102: 'bank',
+            201: 'wallet',
+        }
         table = {
-            1: [
+            102: [
                 (0, 10, 1000, 1000, 1000, 1, 1),
                 (0, 20, 3000, 3000, 3000, 2, 2),
                 (0, 30, 6000, 6000, 6000, 3, 3),
@@ -2583,7 +2765,7 @@ class ZakatTracker:
                 (1, 50, -500, -500, -500, 4, 5),
                 (1, 100, -10500, -10500, -10500, 5, 6),
             ],
-            'wallet': [
+            201: [
                 (1, 90, -9000, -9000, -9000, 1, 1),
                 (0, 100, 1000, 1000, 1000, 2, 2),
                 (1, 190, -18000, -18000, -18000, 3, 3),
@@ -2591,6 +2773,9 @@ class ZakatTracker:
             ],
         }
         for x in table:
+            assert self.name(account=x) is None
+            self.account(name=names[x], ref=x)
+            assert self.name(account=x) == names[x]
             for y in table[x]:
                 self.lock()
                 if y[0] == 0:
@@ -2670,14 +2855,14 @@ class ZakatTracker:
             count = len(self._vault['history'])
             if debug:
                 print('history-count', count)
-            assert count == 10
+            assert count == 12
             # try mode
             for _ in range(count):
                 assert self.recall(True, debug)
             count = len(self._vault['history'])
             if debug:
                 print('history-count', count)
-            assert count == 10
+            assert count == 12
             _accounts = list(table.keys())
             accounts_limit = len(_accounts) + 1
             for i in range(-1, -accounts_limit, -1):
@@ -2688,7 +2873,7 @@ class ZakatTracker:
                 for j in range(-1, -transaction_limit, -1):
                     row = table[account][j]
                     if debug:
-                        print(row, self.balance(account), self.balance(account, False))
+                        print(row, self.balance(account), self.balance(account, False), row[2])
                     assert self.balance(account) == self.balance(account, False)
                     assert self.balance(account) == row[2]
                     assert self.recall(False, debug)
@@ -2704,8 +2889,9 @@ class ZakatTracker:
             print('test', f'debug={debug}')
         try:
 
-            self._test_core(True, debug)
             self._test_core(False, debug)
+            self._test_core(True, debug)
+            raise Exception('test not completed')
 
             assert self._history()
 
