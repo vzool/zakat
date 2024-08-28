@@ -184,9 +184,9 @@ class ZakatTracker:
                             - total (int): The total Zakat deducted from this transaction.
                     - count (int): The total number of transactions for the account.
                     - exchange (dict):
-	                    - {timestamps} (dict):
-	                        - rate (float): Exchange rate when compared to local currency.
-	                        - description (str): The description of the exchange rate.
+                        - {timestamps} (dict):
+                            - rate (float): Exchange rate when compared to local currency.
+                            - description (str): The description of the exchange rate.
                     - log (dict): A dictionary storing transaction logs.
                         - {timestamp} (dict):
                             - value (int): The transaction amount (positive or negative).
