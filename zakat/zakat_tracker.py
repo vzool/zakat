@@ -183,6 +183,10 @@ class ZakatTracker:
                             - rest (int): The remaining amount after Zakat deductions and withdrawal.
                             - total (int): The total Zakat deducted from this transaction.
                     - count (int): The total number of transactions for the account.
+                    - exchange (dict):
+	                    - {timestamps} (dict):
+	                        - rate (float): Exchange rate when compared to local currency.
+	                        - description (str): The description of the exchange rate.
                     - log (dict): A dictionary storing transaction logs.
                         - {timestamp} (dict):
                             - value (int): The transaction amount (positive or negative).
@@ -192,11 +196,6 @@ class ZakatTracker:
                     - name (str): The current name of the account.
                     - hide (bool): Indicates whether the account is hidden or not.
                     - zakatable (bool): Indicates whether the account is subject to Zakat.
-            - exchange (dict):
-                - account (dict):
-                    - {timestamps} (dict):
-                        - rate (float): Exchange rate when compared to local currency.
-                        - description (str): The description of the exchange rate.
             - history (dict):
                 - {timestamp} (list): A list of dictionaries storing the history of actions performed.
                     - {action_dict} (dict):
@@ -861,13 +860,13 @@ class ZakatTracker:
             print('recall', ref)
         memory = self._vault['history'][ref]
         if debug:
-            print(type(memory), 'memory', memory)
+            print('memories', type(memory), memory)
         limit = len(memory) + 1
         sub_positive_log_negative = 0
         for i in range(-1, -limit, -1):
             x = memory[i]
             if debug:
-                print(type(x), x)
+                print('memory', type(x), x)
             match x['action']:
                 case Action.CREATE:
                     if x['account'] is not None:
@@ -956,11 +955,11 @@ class ZakatTracker:
 
                 case Action.EXCHANGE:
                     if x['account'] is not None:
-                        if x['account'] in self._vault['exchange']:
-                            if x['ref'] in self._vault['exchange'][x['account']]:
+                        if self.account_exists(x['account']):
+                            if x['ref'] in self._vault['account'][x['account']]['exchange']:
                                 if dry:
                                     continue
-                                del self._vault['exchange'][x['account']][x['ref']]
+                                del self._vault['account'][x['account']]['exchange'][x['ref']]
 
                 case Action.REPORT:
                     if x['ref'] in self._vault['report']:
@@ -1065,6 +1064,7 @@ class ZakatTracker:
                 'balance': 0,
                 'box': {},
                 'count': 0,
+                'exchange': {},
                 'log': {},
                 'hide': False,
                 'zakatable': True,
@@ -1181,11 +1181,11 @@ class ZakatTracker:
         if rate is not None:
             if rate <= 0:
                 return dict()
-            if account not in self._vault['exchange']:
-                self._vault['exchange'][account] = {}
-            if len(self._vault['exchange'][account]) == 0 and rate <= 1:
+            if not self.account_exists(account):
+                self.track(account=account, debug=debug)
+            if len(self._vault['account'][account]['exchange']) == 0 and rate <= 1:
                 return {"time": created, "rate": 1, "description": None}
-            self._vault['exchange'][account][created] = {"rate": rate, "description": description}
+            self._vault['account'][account]['exchange'][created] = {"rate": rate, "description": description}
             self._step(Action.EXCHANGE, account, ref=created, value=rate)
             if no_lock:
                 self.free(self.lock())
@@ -1193,8 +1193,8 @@ class ZakatTracker:
                 print("exchange-created-1",
                       f'account: {account}, created: {created}, rate:{rate}, description:{description}')
 
-        if account in self._vault['exchange']:
-            valid_rates = [(ts, r) for ts, r in self._vault['exchange'][account].items() if ts <= created]
+        if self.account_exists(account):
+            valid_rates = [(ts, r) for ts, r in self._vault['account'][account]['exchange'].items() if ts <= created]
             if valid_rates:
                 latest_rate = max(valid_rates, key=lambda x: x[0])
                 if debug:
@@ -1223,19 +1223,19 @@ class ZakatTracker:
         """
         return (x * x_rate) / y_rate
 
-    def exchanges(self) -> dict:
+    def exchanges(self, account: int) -> dict | None:
         """
-        Retrieve the recorded exchange rates for all accounts.
+        Retrieves the exchange information associated with a given account.
 
         Parameters:
-        None
+        account (int): The account ID to query.
 
         Returns:
-        dict: A dictionary containing all recorded exchange rates.
-        The keys are account names or numbers, and the values are dictionaries containing the exchange rates.
-        Each exchange rate dictionary has timestamps as keys and exchange rate details as values.
+        dict | None: A dictionary containing the exchange information if the account exists, otherwise None.
         """
-        return self._vault['exchange'].copy()
+        if self.account_exists(account):
+            return self._vault['account'][account]['exchange'].copy()
+        return None
 
     def accounts(self) -> dict:
         """
@@ -1874,9 +1874,9 @@ class ZakatTracker:
         below_nisab = 0
         brief = [0, 0, 0]
         valid = False
-        if debug:
-            print('exchanges', self.exchanges())
         for x in self._vault['account']:
+            if debug:
+                print(f'exchanges({x})', self.exchanges(x))
             if not self.zakatable(x):
                 continue
             _box = self._vault['account'][x]['box']
@@ -1969,7 +1969,7 @@ class ZakatTracker:
         dict: A dictionary containing the payment parts for each account. The dictionary has the following structure:
         {
             'account': {
-                'account_id': {'balance': float, 'rate': float, 'part': float},
+                account_id: {'balance': float, 'rate': float, 'part': float},
                 ...
             },
             'exceed': bool,
@@ -1987,7 +1987,7 @@ class ZakatTracker:
             if positive_only and y <= 0:
                 continue
             total += float(y)
-            exchange = self.exchange(x)
+            exchange = self.exchange(account=x)
             parts['account'][x] = {'balance': y, 'rate': exchange['rate'], 'part': 0}
         parts['total'] = total
         return parts
@@ -2289,16 +2289,17 @@ class ZakatTracker:
                 len_rows = len(rows)
                 if len_rows == 1:
                     (_, account, desc, unscaled_value, date, rate, hashed) = rows[0]
+                    account_ref, _ = self.account(name=account)
                     value = self.unscale(
                         unscaled_value,
                         decimal_places=scale_decimal_places,
                     ) if scale_decimal_places > 0 else unscaled_value
                     if rate > 0:
-                        self.exchange(account=account, created=date, rate=rate)
+                        self.exchange(account=account_ref, created=date, rate=rate)
                     if value > 0:
-                        self.track(unscaled_value=value, desc=desc, account=account, logging=True, created=date)
+                        self.track(unscaled_value=value, desc=desc, account=account_ref, logging=True, created=date)
                     elif value < 0:
-                        self.sub(unscaled_value=-value, desc=desc, account=account, created=date)
+                        self.sub(unscaled_value=-value, desc=desc, account=account_ref, created=date)
                     created += 1
                     cache.append(hashed)
                     continue
@@ -2315,10 +2316,12 @@ class ZakatTracker:
                 if account1 == account2 or desc1 != desc2 or abs(unscaled_value1) != abs(
                         unscaled_value2) or date1 != date2:
                     raise Exception('invalid transfer')
+                account1_ref, _ = self.account(name=account1)
+                account2_ref, _ = self.account(name=account2)
                 if rate1 > 0:
-                    self.exchange(account1, created=date1, rate=rate1)
+                    self.exchange(account1_ref, created=date1, rate=rate1)
                 if rate2 > 0:
-                    self.exchange(account2, created=date2, rate=rate2)
+                    self.exchange(account2_ref, created=date2, rate=rate2)
                 value1 = self.unscale(
                     unscaled_value1,
                     decimal_places=scale_decimal_places,
@@ -2328,8 +2331,8 @@ class ZakatTracker:
                     decimal_places=scale_decimal_places,
                 ) if scale_decimal_places > 0 else unscaled_value2
                 values = {
-                    value1: account1,
-                    value2: account2,
+                    value1: account1_ref,
+                    value2: account2_ref,
                 }
                 self.transfer(
                     unscaled_amount=abs(value1),
@@ -2474,7 +2477,7 @@ class ZakatTracker:
         y, d = divmod(d, 365)
         c, y = divmod(y, 100)
         n, c = divmod(c, 10)
-        time_lapsed =\
+        time_lapsed = \
             f"{n:03.0f}:{c:04.0f}:{y:03.0f}:{d:03.0f}:{h:02.0f}:{m:02.0f}:{s:02.0f}::{ms:03.0f}::{us:03.0f}::{ns:03.0f}"
         spoken_time_part = []
         if n > 0 or show_zeros_in_spoken_time:
@@ -2752,10 +2755,6 @@ class ZakatTracker:
 
         self.reset()
 
-        names = {
-            102: 'bank',
-            201: 'wallet',
-        }
         table = {
             102: [
                 (0, 10, 1000, 1000, 1000, 1, 1),
@@ -2773,9 +2772,6 @@ class ZakatTracker:
             ],
         }
         for x in table:
-            assert self.name(account=x) is None
-            self.account(name=names[x], ref=x)
-            assert self.name(account=x) == names[x]
             for y in table[x]:
                 self.lock()
                 if y[0] == 0:
@@ -2855,14 +2851,14 @@ class ZakatTracker:
             count = len(self._vault['history'])
             if debug:
                 print('history-count', count)
-            assert count == 12
+            assert count == 10
             # try mode
             for _ in range(count):
                 assert self.recall(True, debug)
             count = len(self._vault['history'])
             if debug:
                 print('history-count', count)
-            assert count == 12
+            assert count == 10
             _accounts = list(table.keys())
             accounts_limit = len(_accounts) + 1
             for i in range(-1, -accounts_limit, -1):
@@ -2891,17 +2887,29 @@ class ZakatTracker:
 
             self._test_core(False, debug)
             self._test_core(True, debug)
-            raise Exception('test not completed')
 
             assert self._history()
 
             # Not allowed for duplicate transactions in the same account and time
 
             created = ZakatTracker.time()
-            self.track(100, 'test-1', 'same', True, created)
+            ref, _ = self.account(name='same')
+            self.track(
+                unscaled_value=100,
+                desc='test-1',
+                account=ref,
+                logging=True,
+                created=created,
+            )
             failed = False
             try:
-                self.track(50, 'test-1', 'same', True, created)
+                self.track(
+                    unscaled_value=50,
+                    desc='test-1',
+                    account=ref,
+                    logging=True,
+                    created=created,
+                )
             except:
                 failed = True
             assert failed is True
@@ -2912,7 +2920,13 @@ class ZakatTracker:
             for x in [1, 'a', True, 1.8, None]:
                 failed = False
                 try:
-                    self.transfer(1, x, x, 'same-account', debug=debug)
+                    self.transfer(
+                        unscaled_amount=1,
+                        from_account=x,
+                        to_account=x,
+                        desc='same-account',
+                        debug=debug,
+                    )
                 except:
                     failed = True
                 assert failed is True
@@ -2952,6 +2966,8 @@ class ZakatTracker:
             }
 
             selected_time = ZakatTracker.time() - ZakatTracker.TimeCycle()
+            account_ages_ref, _ = self.account(name='ages')
+            account_future_ref, _ = self.account(name='future')
 
             for total in case:
                 if debug:
@@ -2961,7 +2977,7 @@ class ZakatTracker:
                     self.track(
                         unscaled_value=x[0],
                         desc=f"test-{x} ages",
-                        account='ages',
+                        account=account_ages_ref,
                         logging=True,
                         created=selected_time * x[1],
                     )
@@ -2971,8 +2987,8 @@ class ZakatTracker:
                     print('unscaled_total', unscaled_total)
                 refs = self.transfer(
                     unscaled_amount=unscaled_total,
-                    from_account='ages',
-                    to_account='future',
+                    from_account=account_ages_ref,
+                    to_account=account_future_ref,
                     desc='Zakat Movement',
                     debug=debug,
                 )
@@ -2980,16 +2996,16 @@ class ZakatTracker:
                 if debug:
                     print('refs', refs)
 
-                ages_cache_balance = self.balance('ages')
-                ages_fresh_balance = self.balance('ages', False)
+                ages_cache_balance = self.balance(account_ages_ref)
+                ages_fresh_balance = self.balance(account_ages_ref, False)
                 rest = case[total]['rest']
                 if debug:
                     print('source', ages_cache_balance, ages_fresh_balance, rest)
                 assert ages_cache_balance == rest
                 assert ages_fresh_balance == rest
 
-                future_cache_balance = self.balance('future')
-                future_fresh_balance = self.balance('future', False)
+                future_cache_balance = self.balance(account_future_ref)
+                future_fresh_balance = self.balance(account_future_ref, False)
                 if debug:
                     print('target', future_cache_balance, future_fresh_balance, total)
                     print('refs', refs)
@@ -2997,15 +3013,15 @@ class ZakatTracker:
                 assert future_fresh_balance == total
 
                 # TODO: check boxes times for `ages` should equal box times in `future`
-                for ref in self._vault['account']['ages']['box']:
-                    ages_capital = self._vault['account']['ages']['box'][ref]['capital']
-                    ages_rest = self._vault['account']['ages']['box'][ref]['rest']
+                for ref in self._vault['account'][account_ages_ref]['box']:
+                    ages_capital = self._vault['account'][account_ages_ref]['box'][ref]['capital']
+                    ages_rest = self._vault['account'][account_ages_ref]['box'][ref]['rest']
                     future_capital = 0
-                    if ref in self._vault['account']['future']['box']:
-                        future_capital = self._vault['account']['future']['box'][ref]['capital']
+                    if ref in self._vault['account'][account_future_ref]['box']:
+                        future_capital = self._vault['account'][account_future_ref]['box'][ref]['capital']
                     future_rest = 0
-                    if ref in self._vault['account']['future']['box']:
-                        future_rest = self._vault['account']['future']['box'][ref]['rest']
+                    if ref in self._vault['account'][account_future_ref]['box']:
+                        future_rest = self._vault['account'][account_future_ref]['box'][ref]['rest']
                     if ages_capital != 0 and future_capital != 0 and future_rest != 0:
                         if debug:
                             print('================================================================')
@@ -3028,17 +3044,21 @@ class ZakatTracker:
             if debug:
                 print('####################################################################')
 
+            account_wallet_ref, _ = self.account(name='wallet')
+            account_safe_ref, _ = self.account(name='safe')
+            account_bank_ref, _ = self.account(name='bank')
+
             transaction = [
                 (
-                    20, 'wallet', 1, -2000, -2000, -2000, 1, 1,
+                    20, account_wallet_ref, 12, -2000, -2000, -2000, 1, 1,
                     2000, 2000, 2000, 1, 1,
                 ),
                 (
-                    750, 'wallet', 'safe', -77000, -77000, -77000, 2, 2,
+                    750, account_wallet_ref, account_safe_ref, -77000, -77000, -77000, 2, 2,
                     75000, 75000, 75000, 1, 1,
                 ),
                 (
-                    600, 'safe', 'bank', 15000, 15000, 15000, 1, 2,
+                    600, account_safe_ref, account_bank_ref, 15000, 15000, 15000, 1, 2,
                     60000, 60000, 60000, 1, 1,
                 ),
             ]
@@ -3096,11 +3116,14 @@ class ZakatTracker:
             history_count = len(self._vault['history'])
             if debug:
                 print('history-count', history_count)
-            assert history_count == 4
+            assert history_count == 5
             assert not self.free(ZakatTracker.time())
             assert self.free(self.lock())
             assert self.nolock()
-            assert len(self._vault['history']) == 3
+            history_count = len(self._vault['history'])
+            if debug:
+                print('history-count', history_count)
+            assert len(self._vault['history']) == 4
 
             # storage
 
@@ -3117,6 +3140,11 @@ class ZakatTracker:
             # recall
 
             assert self.nolock()
+            history_count = len(self._vault['history'])
+            if debug:
+                print('history-count', history_count)
+            assert len(self._vault['history']) == 4
+            assert self.recall(False, debug) is True
             assert len(self._vault['history']) == 3
             assert self.recall(False, debug) is True
             assert len(self._vault['history']) == 2
@@ -3129,13 +3157,16 @@ class ZakatTracker:
 
             # exchange
 
-            self.exchange("cash", 25, 3.75, "2024-06-25")
-            self.exchange("cash", 22, 3.73, "2024-06-22")
-            self.exchange("cash", 15, 3.69, "2024-06-15")
-            self.exchange("cash", 10, 3.66)
+            account_cash_ref, _ = self.account(name='cash')
+            account_bank_ref, _ = self.account(name='bank')
+
+            self.exchange(account_cash_ref, 25, 3.75, "2024-06-25")
+            self.exchange(account_cash_ref, 22, 3.73, "2024-06-22")
+            self.exchange(account_cash_ref, 15, 3.69, "2024-06-15")
+            self.exchange(account_cash_ref, 10, 3.66)
 
             for i in range(1, 30):
-                exchange = self.exchange("cash", i)
+                exchange = self.exchange(account_cash_ref, i)
                 rate, description, created = exchange['rate'], exchange['description'], exchange['time']
                 if debug:
                     print(i, rate, description, created)
@@ -3161,7 +3192,7 @@ class ZakatTracker:
                 elif i >= 25:
                     assert rate == 3.75
                     assert description is not None
-                exchange = self.exchange("bank", i)
+                exchange = self.exchange(account_bank_ref, i)
                 rate, description, created = exchange['rate'], exchange['description'], exchange['time']
                 if debug:
                     print(i, rate, description, created)
@@ -3169,28 +3200,29 @@ class ZakatTracker:
                 assert rate == 1
                 assert description is None
 
-            assert len(self._vault['exchange']) > 0
-            assert len(self.exchanges()) > 0
-            self._vault['exchange'].clear()
-            assert len(self._vault['exchange']) == 0
-            assert len(self.exchanges()) == 0
+            assert len(self._vault['account'][account_cash_ref]['exchange']) > 0
+            assert len(self.exchanges(account_cash_ref)) > 0
+            self._vault['account'][account_cash_ref]['exchange'].clear()
+            assert len(self.exchanges(account_cash_ref)) == 0
 
             # حفظ أسعار الصرف باستخدام التواريخ بالنانو ثانية
-            self.exchange("cash", ZakatTracker.day_to_time(25), 3.75, "2024-06-25")
-            self.exchange("cash", ZakatTracker.day_to_time(22), 3.73, "2024-06-22")
-            self.exchange("cash", ZakatTracker.day_to_time(15), 3.69, "2024-06-15")
-            self.exchange("cash", ZakatTracker.day_to_time(10), 3.66)
+            self.exchange(account_cash_ref, ZakatTracker.day_to_time(25), 3.75, "2024-06-25")
+            self.exchange(account_cash_ref, ZakatTracker.day_to_time(22), 3.73, "2024-06-22")
+            self.exchange(account_cash_ref, ZakatTracker.day_to_time(15), 3.69, "2024-06-15")
+            self.exchange(account_cash_ref, ZakatTracker.day_to_time(10), 3.66)
+
+            account_test_ref, _ = self.account(name='test')
 
             for i in [x * 0.12 for x in range(-15, 21)]:
                 if i <= 0:
-                    assert len(self.exchange("test", ZakatTracker.time(), i, f"range({i})")) == 0
+                    assert len(self.exchange(account_test_ref, ZakatTracker.time(), i, f"range({i})")) == 0
                 else:
-                    assert len(self.exchange("test", ZakatTracker.time(), i, f"range({i})")) > 0
+                    assert len(self.exchange(account_test_ref, ZakatTracker.time(), i, f"range({i})")) > 0
 
             # اختبار النتائج باستخدام التواريخ بالنانو ثانية
             for i in range(1, 31):
                 timestamp_ns = ZakatTracker.day_to_time(i)
-                exchange = self.exchange("cash", timestamp_ns)
+                exchange = self.exchange(account_cash_ref, timestamp_ns)
                 rate, description, created = exchange['rate'], exchange['description'], exchange['time']
                 if debug:
                     print(i, rate, description, created)
@@ -3216,7 +3248,7 @@ class ZakatTracker:
                 elif i >= 25:
                     assert rate == 3.75
                     assert description is not None
-                exchange = self.exchange("bank", i)
+                exchange = self.exchange(account_bank_ref, i)
                 rate, description, created = exchange['rate'], exchange['description'], exchange['time']
                 if debug:
                     print(i, rate, description, created)
@@ -3310,7 +3342,7 @@ class ZakatTracker:
                                 i += 1
                                 y['part'] = zz
                                 if debug:
-                                    print(exceed, y)
+                                    print(f'exceed={exceed}, y={y}')
                                 cp['account'][x] = y
                                 case.append(y)
                             elif not exceed and y['balance'] >= zz:
@@ -3323,6 +3355,8 @@ class ZakatTracker:
                             j = x
                             if i >= count:
                                 break
+                        if debug:
+                            print(f'x={x}, j={j}')
                         if len(cp['account'][j]) > 0:
                             suite.append(cp)
                 if debug:
@@ -3359,18 +3393,23 @@ class ZakatTracker:
             a_SAR = "Bank (SAR)"
             b_USD = "Bank (USD)"
             c_SAR = "Safe (SAR)"
+
+            account_a_SAR_ref, _ = self.account(name=a_SAR)
+            account_b_USD_ref, _ = self.account(name=b_USD)
+            account_c_SAR_ref, _ = self.account(name=c_SAR)
+
             # 0: track, 1: check-exchange, 2: do-exchange, 3: transfer
             for case in [
-                (0, a_SAR, "SAR Gift", 1000, 100000),
-                (1, a_SAR, 1),
-                (0, b_USD, "USD Gift", 500, 50000),
-                (1, b_USD, 1),
-                (2, b_USD, 3.75),
-                (1, b_USD, 3.75),
-                (3, 100, b_USD, a_SAR, "100 USD -> SAR", 40000, 137500),
-                (0, c_SAR, "Salary", 750, 75000),
-                (3, 375, c_SAR, b_USD, "375 SAR -> USD", 37500, 50000),
-                (3, 3.75, a_SAR, b_USD, "3.75 SAR -> USD", 137125, 50100),
+                (0, account_a_SAR_ref, "SAR Gift", 1000, 100000),
+                (1, account_a_SAR_ref, 1),
+                (0, account_b_USD_ref, "USD Gift", 500, 50000),
+                (1, account_b_USD_ref, 1),
+                (2, account_b_USD_ref, 3.75),
+                (1, account_b_USD_ref, 3.75),
+                (3, 100, account_b_USD_ref, account_a_SAR_ref, "100 USD -> SAR", 40000, 137500),
+                (0, account_c_SAR_ref, "Salary", 750, 75000),
+                (3, 375, account_c_SAR_ref, account_b_USD_ref, "375 SAR -> USD", 37500, 50000),
+                (3, 3.75, account_a_SAR_ref, account_b_USD_ref, "3.75 SAR -> USD", 137125, 50100),
             ]:
                 if debug:
                     print('case', case)
@@ -3424,7 +3463,7 @@ class ZakatTracker:
             # Transfer all in many chunks randomly from B to A
             a_SAR_balance = 137125
             b_USD_balance = 50100
-            b_USD_exchange = self.exchange(b_USD)
+            b_USD_exchange = self.exchange(account_b_USD_ref)
             amounts = ZakatTracker.create_random_list(b_USD_balance, max_value=1000)
             if debug:
                 print('amounts', amounts)
@@ -3434,15 +3473,15 @@ class ZakatTracker:
                     print(f'{i} - transfer-with-exchange({x})')
                 self.transfer(
                     unscaled_amount=self.unscale(x),
-                    from_account=b_USD,
-                    to_account=a_SAR,
+                    from_account=account_b_USD_ref,
+                    to_account=account_a_SAR_ref,
                     desc=f"{x} USD -> SAR",
                     debug=debug,
                 )
 
                 b_USD_balance -= x
-                cached_value = self.balance(b_USD, cached=True)
-                fresh_value = self.balance(b_USD, cached=False)
+                cached_value = self.balance(account_b_USD_ref, cached=True)
+                fresh_value = self.balance(account_b_USD_ref, cached=False)
                 if debug:
                     print('account', b_USD, 'cached_value', cached_value, 'fresh_value', fresh_value, 'excepted',
                           b_USD_balance)
@@ -3450,8 +3489,8 @@ class ZakatTracker:
                 assert fresh_value == b_USD_balance
 
                 a_SAR_balance += int(x * b_USD_exchange['rate'])
-                cached_value = self.balance(a_SAR, cached=True)
-                fresh_value = self.balance(a_SAR, cached=False)
+                cached_value = self.balance(account_a_SAR_ref, cached=True)
+                fresh_value = self.balance(account_a_SAR_ref, cached=False)
                 if debug:
                     print('account', a_SAR, 'cached_value', cached_value, 'fresh_value', fresh_value, 'expected',
                           a_SAR_balance, 'rate', b_USD_exchange['rate'])
@@ -3470,15 +3509,15 @@ class ZakatTracker:
                     print(f'{i} - transfer-with-exchange({x})')
                 self.transfer(
                     unscaled_amount=self.unscale(x),
-                    from_account=c_SAR,
-                    to_account=a_SAR,
+                    from_account=account_c_SAR_ref,
+                    to_account=account_a_SAR_ref,
                     desc=f"{x} SAR -> a_SAR",
                     debug=debug,
                 )
 
                 c_SAR_balance -= x
-                cached_value = self.balance(c_SAR, cached=True)
-                fresh_value = self.balance(c_SAR, cached=False)
+                cached_value = self.balance(account_c_SAR_ref, cached=True)
+                fresh_value = self.balance(account_c_SAR_ref, cached=False)
                 if debug:
                     print('account', c_SAR, 'cached_value', cached_value, 'fresh_value', fresh_value, 'excepted',
                           c_SAR_balance)
@@ -3486,8 +3525,8 @@ class ZakatTracker:
                 assert fresh_value == c_SAR_balance
 
                 a_SAR_balance += x
-                cached_value = self.balance(a_SAR, cached=True)
-                fresh_value = self.balance(a_SAR, cached=False)
+                cached_value = self.balance(account_a_SAR_ref, cached=True)
+                fresh_value = self.balance(account_a_SAR_ref, cached=False)
                 if debug:
                     print('account', a_SAR, 'cached_value', cached_value, 'fresh_value', fresh_value, 'expected',
                           a_SAR_balance)
@@ -3515,17 +3554,19 @@ class ZakatTracker:
                 a, b, c = values['in']
                 m, n, o = values['exchanged']
                 x, y, z = values['out']
+                account_safe_ref, _ = self.account(name='safe')
+                account_cave_ref, _ = self.account(name='cave')
                 if debug:
                     print('rate', rate, 'values', values)
                 for case in [
-                    (a, 'safe', ZakatTracker.time() - ZakatTracker.TimeCycle(), [
-                        {'safe': {0: {'below_nisab': x}}},
+                    (a, account_safe_ref, ZakatTracker.time() - ZakatTracker.TimeCycle(), [
+                        {account_safe_ref: {0: {'below_nisab': x}}},
                     ], False, m),
-                    (b, 'safe', ZakatTracker.time() - ZakatTracker.TimeCycle(), [
-                        {'safe': {0: {'count': 1, 'total': y}}},
+                    (b, account_safe_ref, ZakatTracker.time() - ZakatTracker.TimeCycle(), [
+                        {account_safe_ref: {0: {'count': 1, 'total': y}}},
                     ], True, n),
-                    (c, 'cave', ZakatTracker.time() - (ZakatTracker.TimeCycle() * 3), [
-                        {'cave': {0: {'count': 3, 'total': z}}},
+                    (c, account_cave_ref, ZakatTracker.time() - (ZakatTracker.TimeCycle() * 3), [
+                        {account_cave_ref: {0: {'count': 3, 'total': z}}},
                     ], True, o),
                 ]:
                     if debug:
