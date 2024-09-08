@@ -142,6 +142,7 @@ camel = Camel([reg])
 
 
 class Model(ABC):
+
     @staticmethod
     def Version() -> str:
         """
@@ -157,6 +158,19 @@ class Model(ABC):
 
     @abstractmethod
     def path(self, path: str = None) -> str:
+        """
+        Set or get the path to the database file.
+
+        If no path is provided, the current path is returned.
+        If a path is provided, it is set as the new path.
+        The function also creates the necessary directories if the provided path is a file.
+
+        Parameters:
+        path (str): The new path to the database file. If not provided, the current path is returned.
+
+        Returns:
+        str: The current or new path to the database file.
+        """
         pass
 
     @abstractmethod
@@ -168,123 +182,513 @@ class Model(ABC):
                        tuple[int, int],
                    ],
                ] | tuple:
+        """
+        Subtracts a specified value from an account's balance.
+
+        Parameters:
+        unscaled_value (float | int | Decimal): The amount to be subtracted.
+        desc (str): A description for the transaction. Defaults to an empty string.
+        account (int): The account number from which the value will be subtracted. Defaults to '1'.
+        created (int): The timestamp of the transaction. If not provided, the current timestamp will be used.
+        debug (bool): A flag indicating whether to print debug information. Defaults to False.
+
+        Returns:
+        tuple: A tuple containing the timestamp of the transaction and a list of tuples representing the age of each transaction.
+
+        If the amount to subtract is greater than the account's balance,
+        the remaining amount will be transferred to a new transaction with a negative value.
+
+        Raises:
+        ValueError: The box transaction happened again in the same nanosecond time.
+        ValueError: The log transaction happened again in the same nanosecond time.
+        """
         pass
 
     @abstractmethod
     def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
               created: int = None,
               debug: bool = False) -> int:
+        """
+        This function tracks a transaction for a specific account.
+
+        Parameters:
+        unscaled_value (float | int | Decimal): The value of the transaction. Default is 0.
+        desc (str): The description of the transaction. Default is an empty string.
+        account (int): The account for which the transaction is being tracked. Default is '1'.
+        logging (bool): Whether to log the transaction. Default is True.
+        created (int): The timestamp of the transaction. If not provided, it will be generated. Default is None.
+        debug (bool): Whether to print debug information. Default is False.
+
+        Returns:
+        int: The timestamp of the transaction.
+
+        This function creates a new account if it doesn't exist, logs the transaction if logging is True, and updates the account's balance and box.
+
+        Raises:
+        ValueError: The log transaction happened again in the same nanosecond time.
+        ValueError: The box transaction happened again in the same nanosecond time.
+        """
         pass
 
     @abstractmethod
     def add_file(self, account: int, ref: int, path: str) -> int:
+        """
+        Adds a file reference to a specific transaction log entry in the vault.
+
+        Parameters:
+        account (int): The account number associated with the transaction log.
+        ref (int): The reference to the transaction log entry.
+        path (str): The path of the file to be added.
+
+        Returns:
+        int: The reference of the added file. If the account or transaction log entry does not exist, returns 0.
+        """
         pass
 
     @abstractmethod
     def remove_file(self, account: int, ref: int, file_ref: int) -> bool:
+        """
+        Removes a file reference from a specific transaction log entry in the vault.
+
+        Parameters:
+        account (int): The account number associated with the transaction log.
+        ref (int): The reference to the transaction log entry.
+        file_ref (int): The reference of the file to be removed.
+
+        Returns:
+        bool: True if the file reference is successfully removed, False otherwise.
+        """
         pass
 
     @abstractmethod
     def hide(self, account: int, status: bool = None) -> bool:
+        """
+        Check or set the hide status of a specific account.
+
+        Parameters:
+        account (int): The account number.
+        status (bool, optional): The new hide status. If not provided, the function will return the current status.
+
+        Returns:
+        bool: The current or updated hide status of the account.
+
+        Raises:
+        None
+
+        Example:
+        >>> tracker = ZakatTracker()
+        >>> ref = tracker.db.track(51, 'desc', 1) # 'account1'
+        >>> tracker.db.hide(1)  # Set the hide status of 'account1' to True
+        False
+        >>> tracker.db.hide(1, True)  # Set the hide status of 'account1' to True
+        True
+        >>> tracker.db.hide(1)  # Get the hide status of 'account1' by default
+        True
+        >>> tracker.db.hide(1, False)
+        False
+        """
         pass
 
     @abstractmethod
     def zakatable(self, account: int, status: bool = None) -> bool:
+        """
+        Check or set the zakatable status of a specific account.
+
+        Parameters:
+        account (int): The account number.
+        status (bool, optional): The new zakatable status. If not provided, the function will return the current status.
+
+        Returns:
+        bool: The current or updated zakatable status of the account.
+
+        Raises:
+        None
+
+        Example:
+        >>> tracker = ZakatTracker()
+        >>> ref = tracker.db.track(51, 'desc', 1) # 'account1'
+        >>> tracker.db.zakatable(1)  # Set the zakatable status of 'account1' to True
+        True
+        >>> tracker.db.zakatable(1, True)  # Set the zakatable status of 'account1' to True
+        True
+        >>> tracker.db.zakatable(1)  # Get the zakatable status of 'account1' by default
+        True
+        >>> tracker.db.zakatable(1, False)
+        False
+        """
         pass
 
     @abstractmethod
     def name(self, account: int) -> str | None:
+        """
+        Retrieves the name associated with a given account number.
+
+        Parameters:
+        account (int): The account number to look up.
+
+        Returns:
+        str | None: The name associated with the account, or None if not found.
+        """
         pass
 
     @abstractmethod
     def accounts(self) -> dict:
+        """
+        Returns a dictionary containing account numbers as keys and their respective balances as values.
+
+        Parameters:
+        None
+
+        Returns:
+        dict: A dictionary where keys are account numbers and values are their respective balances.
+        """
         pass
 
     @abstractmethod
     def exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
                  debug: bool = False) -> dict:
+        """
+        This method is used to record or retrieve exchange rates for a specific account.
+
+        Parameters:
+        - account (int): The account number for which the exchange rate is being recorded or retrieved.
+        - created (int): The timestamp of the exchange rate. If not provided, the current timestamp will be used.
+        - rate (float): The exchange rate to be recorded. If not provided, the method will retrieve the latest exchange rate.
+        - description (str): A description of the exchange rate.
+        - debug (bool): Whether to print debug information. Default is False.
+
+        Returns:
+        - dict: A dictionary containing the latest exchange rate and its description. If no exchange rate is found,
+        it returns a dictionary with default values for the rate and description.
+        """
         pass
 
     @abstractmethod
     def exchanges(self, account: int) -> dict | None:
+        """
+        Retrieves the exchange information associated with a given account.
+
+        Parameters:
+        account (int): The account ID to query.
+
+        Returns:
+        dict | None: A dictionary containing the exchange information if the account exists, otherwise None.
+        """
         pass
 
     @abstractmethod
     def account(self, name: str, ref: int = None) -> tuple[int, str]:
+        """
+        Associates a name with an account number and tracks the relationship.
+
+        Parameters:
+        name (str): The name to associate with the account.
+        ref (int, optional): The optional reference number for the account.
+
+        Returns:
+        tuple[int, str]: A tuple containing the account number and the associated name.
+
+        This function manages the association between names and account numbers. It creates new accounts if necessary,
+        and updates existing associations based on the provided name and reference.
+        The function also tracks the relationship between names and accounts in a dictionary for future reference.
+
+        The following actions are performed:
+
+        1. If the 'name' key doesn't exist in the `self._vault` dictionary, it creates a new entry with 'last_account'
+           set to 0 and 'account' set to an empty dictionary.
+        2. If both `name` and `ref` are provided, the function checks if either the name or reference already exists in
+           the 'account' dictionary. If so, it removes the existing association and creates a new one with the provided
+           name and reference.
+        3. If only `name` is provided, the function checks if the name already exists in the 'account' dictionary.
+           If not, it creates a new account number and associates it with the name.
+        4. In all cases, the function updates the 'account' dictionary with the new association and calls the `set_name`
+           function to update the 'name' field in the corresponding account entry.
+        5. Finally, the function returns a tuple containing the account number and the associated name.
+        """
         pass
 
     @abstractmethod
     def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
                  created: int = None,
                  debug: bool = False) -> list[int]:
+        """
+        Transfers a specified value from one account to another.
+
+        Parameters:
+        unscaled_amount (float | int | Decimal): The amount to be transferred.
+        from_account (int): The account number from which the value will be transferred.
+        to_account (int): The account number to which the value will be transferred.
+        desc (str, optional): A description for the transaction. Defaults to an empty string.
+        created (int, optional): The timestamp of the transaction. If not provided, the current timestamp will be used.
+        debug (bool): A flag indicating whether to print debug information. Defaults to False.
+
+        Returns:
+        list[int]: A list of timestamps corresponding to the transactions made during the transfer.
+
+        Raises:
+        ValueError: Transfer to the same account is forbidden.
+        ValueError: The box transaction happened again in the same nanosecond time.
+        ValueError: The log transaction happened again in the same nanosecond time.
+        """
         pass
 
     @abstractmethod
     def account_exists(self, account: int) -> bool:
+        """
+        Check if the given account exists in the vault.
+
+        Parameters:
+        account (int): The account number to check.
+
+        Returns:
+        bool: True if the account exists, False otherwise.
+        """
         pass
 
     @abstractmethod
     def steps(self) -> dict:
+        """
+        Returns a copy of the history of steps taken in the ZakatTracker.
+
+        The history is a dictionary where each key is a unique identifier for a step,
+        and the corresponding value is a dictionary containing information about the step.
+
+        Returns:
+        dict: A copy of the history of steps taken in the ZakatTracker.
+        """
         pass
 
     @abstractmethod
     def files(self) -> list[dict[str, str | int]]:
+        """
+        Retrieves information about files associated with this class.
+
+        This class method provides a standardized way to gather details about
+        files used by the class for storage, snapshots, and CSV imports.
+
+        Returns:
+        list[dict[str, str | int]]: A list of dictionaries, each containing information
+            about a specific file:
+
+            * type (str): The type of file ('database', 'snapshot', 'import_csv').
+            * path (str): The full file path.
+            * exists (bool): Whether the file exists on the filesystem.
+            * size (int): The file size in bytes (0 if the file doesn't exist).
+            * human_readable_size (str): A human-friendly representation of the file size (e.g., '10 KB', '2.5 MB').
+
+        Example:
+        ```
+        file_info = MyClass.files()
+        for info in file_info:
+            print(f"Type: {info['type']}, Exists: {info['exists']}, Size: {info['human_readable_size']}")
+        ```
+        """
         pass
 
     @abstractmethod
     def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
+        """
+        Calculates and returns statistics about the object's data storage.
+
+        This method determines the size of the database file on disk and the
+        size of the data currently held in RAM (likely within a dictionary).
+        Both sizes are reported in bytes and in a human-readable format
+        (e.g., KB, MB).
+
+        Parameters:
+        ignore_ram (bool): Whether to ignore the RAM size. Default is True
+
+        Returns:
+        dict[str, tuple]: A dictionary containing the following statistics:
+
+            * 'database': A tuple with two elements:
+                - The database file size in bytes (int).
+                - The database file size in human-readable format (str).
+            * 'ram': A tuple with two elements:
+                - The RAM usage (dictionary size) in bytes (int).
+                - The RAM usage in human-readable format (str).
+
+        Example:
+        >>> stats = my_object.stats()
+        >>> print(stats['database'])
+        (256000, '250.0 KB')
+        >>> print(stats['ram'])
+        (12345, '12.1 KB')
+        """
         pass
 
     @abstractmethod
     def logs(self, account: int) -> dict:
+        """
+        Retrieve the logs (transactions) associated with a specific account.
+
+        Parameters:
+        account (int): The account number for which to retrieve the logs.
+
+        Returns:
+        dict: A dictionary containing the logs associated with the given account.
+        If the account does not exist, an empty dictionary is returned.
+        """
         pass
 
     @abstractmethod
     def boxes(self, account: int) -> dict:
+        """
+        Retrieve the boxes (transactions) associated with a specific account.
+
+        Parameters:
+        account (int): The account number for which to retrieve the boxes.
+
+        Returns:
+        dict: A dictionary containing the boxes associated with the given account.
+        If the account does not exist, an empty dictionary is returned.
+        """
         pass
 
     @abstractmethod
     def balance(self, account: int = 1, cached: bool = True) -> int:
+        """
+        Calculate and return the balance of a specific account.
+
+        Parameters:
+        account (int): The account number. Default is '1'.
+        cached (bool): If True, use the cached balance. If False, calculate the balance from the box. Default is True.
+
+        Returns:
+        int: The balance of the account.
+
+        Note:
+        If cached is True, the function returns the cached balance.
+        If cached is False, the function calculates the balance from the box by summing up the 'rest' values of all box items.
+        """
         pass
 
     @abstractmethod
     def box_size(self, account: int) -> int:
+        """
+        Calculate the size of the box for a specific account.
+
+        Parameters:
+        account (int): The account number for which the box size needs to be calculated.
+
+        Returns:
+        int: The size of the box for the given account. If the account does not exist, -1 is returned.
+        """
         pass
 
     @abstractmethod
     def log_size(self, account: int) -> int:
+        """
+        Get the size of the log for a specific account.
+
+        Parameters:
+        account (int): The account number for which the log size needs to be calculated.
+
+        Returns:
+        int: The size of the log for the given account. If the account does not exist, -1 is returned.
+        """
         pass
 
     @abstractmethod
     def nolock(self) -> bool:
+        """
+        Check if the vault lock is currently not set.
+
+        Returns:
+        bool: True if the vault lock is not set, False otherwise.
+        """
         pass
 
     @abstractmethod
     def lock(self) -> int:
+        """
+        Acquires a lock on the ZakatTracker instance.
+
+        Returns:
+        int: The lock ID. This ID can be used to release the lock later.
+        """
         pass
 
     @abstractmethod
     def free(self, lock: int, auto_save: bool = True) -> bool:
+        """
+        Releases the lock on the database.
+
+        Parameters:
+        lock (int): The lock ID to be released.
+        auto_save (bool): Whether to automatically save the database after releasing the lock.
+
+        Returns:
+        bool: True if the lock is successfully released and (optionally) saved, False otherwise.
+        """
         pass
 
     @abstractmethod
     def history(self, status: bool = None) -> bool:
+        """
+        Enable or disable history tracking.
+
+        Parameters:
+        status (bool): The status of history tracking. Default is True.
+
+        Returns:
+        None
+        """
         pass
 
     @abstractmethod
     def save(self, path: str = None) -> bool:
+        """
+        Saves the ZakatTracker's current state to a camel file.
+
+        This method serializes the internal data (`_vault`).
+
+        Parameters:
+        path (str, optional): File path for saving. Defaults to a predefined location.
+
+        Returns:
+        bool: True if the save operation is successful, False otherwise.
+        """
         pass
 
     @abstractmethod
     def load(self, path: str = None) -> bool:
+        """
+        Load the current state of the ZakatTracker object from a camel file.
+
+        Parameters:
+        path (str): The path where the camel file is located. If not provided, it will use the default path.
+
+        Returns:
+        bool: True if the load operation is successful, False otherwise.
+        """
         pass
 
     @abstractmethod
     def recall(self, dry=True, debug=False) -> bool:
+        """
+        Revert the last operation.
+
+        Parameters:
+        dry (bool): If True, the function will not modify the data, but will simulate the operation. Default is True.
+        debug (bool): If True, the function will print debug information. Default is False.
+
+        Returns:
+        bool: True if the operation was successful, False otherwise.
+        """
         pass
 
     @abstractmethod
     def reset(self) -> None:
+        """
+        Reset the internal data structure to its initial state.
+
+        Parameters:
+        None
+
+        Returns:
+        None
+        """
         pass
 
     @abstractmethod
@@ -294,35 +698,283 @@ class Model(ABC):
               debug: bool = False,
               now: int = None,
               cycle: float = None) -> tuple:
+        """
+        Check the eligibility for Zakat based on the given parameters.
+
+        Parameters:
+        silver_gram_price (float): The price of a gram of silver.
+        unscaled_nisab (float | int | Decimal): The minimum amount of wealth required for Zakat. If not provided,
+                        it will be calculated based on the silver_gram_price.
+        debug (bool): Flag to enable debug mode.
+        now (int): The current timestamp. If not provided, it will be calculated using ZakatTracker.time().
+        cycle (float): The time cycle for Zakat. If not provided, it will be calculated using ZakatTracker.TimeCycle().
+
+        Returns:
+        tuple: A tuple containing a boolean indicating the eligibility for Zakat, a list of brief statistics,
+        and a dictionary containing the Zakat plan.
+        """
         pass
 
     @abstractmethod
     def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
+        """
+        Perform Zakat calculation based on the given report and optional parts.
+
+        Parameters:
+        report (tuple): A tuple containing the validity of the report, the report data, and the zakat plan.
+        parts (dict): A dictionary containing the payment parts for the zakat.
+        debug (bool): A flag indicating whether to print debug information.
+
+        Returns:
+        bool: True if the zakat calculation is successful, False otherwise.
+        """
         pass
 
     @abstractmethod
     def import_csv_cache_path(self):
+        """
+        Generates the cache file path for imported CSV data.
+
+        This function constructs the file path where cached data from CSV imports
+        will be stored. The cache file is a camel file (.camel extension) appended
+        to the base path of the object.
+
+        Returns:
+        str: The full path to the import CSV cache file.
+
+        Example:
+            >>> obj = ZakatTracker('/data/reports')
+            >>> obj.db.import_csv_cache_path()
+            '/data/reports.import_csv.camel'
+        """
         pass
 
     @abstractmethod
     def daily_logs(self, weekday: WeekDay = WeekDay.Friday, debug: bool = False):
+        """
+        Retrieve the daily logs (transactions) from all accounts.
+
+        The function groups the logs by day, month, and year, and calculates the total value for each group.
+        It returns a dictionary where the keys are the timestamps of the daily groups,
+        and the values are dictionaries containing the total value and the logs for that group.
+
+        Parameters:
+        weekday (WeekDay): Select the weekday is collected for the week data. Default is WeekDay.Friday.
+        debug (bool): Whether to print debug information. Default is False.
+
+        Returns:
+        dict: A dictionary containing the daily logs.
+
+        Example:
+        >>> tracker = ZakatTracker()
+        >>> tracker.db.sub(51, 'desc', 1) # account1
+        >>> ref = tracker.db.track(100, 'desc', 2) # account2
+        >>> tracker.db.add_file(2, ref, 'file_0')
+        >>> tracker.db.add_file(2, ref, 'file_1')
+        >>> tracker.db.add_file(2, ref, 'file_2')
+        >>> tracker.db.daily_logs()
+        {
+            'daily': {
+                '2024-06-30': {
+                    'positive': 100,
+                    'negative': 51,
+                    'total': 99,
+                    'rows': [
+                        {
+                            'account': 'account1',
+                            'desc': 'desc',
+                            'file': {},
+                            'ref': None,
+                            'value': -51,
+                            'time': 1690977015000000000,
+                            'transfer': False,
+                        },
+                        {
+                            'account': 'account2',
+                            'desc': 'desc',
+                            'file': {
+                                1722919011626770944: 'file_0',
+                                1722919011626812928: 'file_1',
+                                1722919011626846976: 'file_2',
+                            },
+                            'ref': None,
+                            'value': 100,
+                            'time': 1690977015000000000,
+                            'transfer': False,
+                        },
+                    ],
+                },
+            },
+            'weekly': {
+                datetime: {
+                    'positive': 100,
+                    'negative': 51,
+                    'total': 99,
+                },
+            },
+            'monthly': {
+                '2024-06': {
+                    'positive': 100,
+                    'negative': 51,
+                    'total': 99,
+                },
+            },
+            'yearly': {
+                2024: {
+                    'positive': 100,
+                    'negative': 51,
+                    'total': 99,
+                },
+            },
+        }
+        """
         pass
 
     @abstractmethod
     def export_json(self, path: str = "data.json") -> bool:
+        """
+        Exports the current state of the ZakatTracker object to a JSON file.
+
+        Parameters:
+        path (str): The path where the JSON file will be saved. Default is "data.json".
+
+        Returns:
+        bool: True if the export is successful, False otherwise.
+
+        Raises:
+        No specific exceptions are raised by this method.
+        """
         pass
 
     @abstractmethod
     def vault(self) -> dict:
+        """
+        Returns a copy of the internal vault dictionary.
+
+        This method is used to retrieve the current state of the ZakatTracker object.
+        It provides a snapshot of the internal data structure, allowing for further
+        processing or analysis.
+
+        Returns:
+        dict: A copy of the internal vault dictionary.
+        """
         pass
 
     @abstractmethod
     def snapshot(self) -> bool:
+        """
+        This function creates a snapshot of the current database state.
+
+        The function calculates the hash of the current database file and checks if a snapshot with the same
+        hash already exists.
+        If a snapshot with the same hash exists, the function returns True without creating a new snapshot.
+        If a snapshot with the same hash does not exist, the function creates a new snapshot by saving
+        the current database state.
+        in a new camel file with a unique timestamp as the file name. The function also updates the snapshot cache file
+        with the new snapshot's hash and timestamp.
+
+        Parameters:
+        None
+
+        Returns:
+        bool: True if a snapshot with the same hash already exists or if the snapshot is successfully created.
+              False if the snapshot creation fails.
+        """
         pass
 
     @staticmethod
     @abstractmethod
     def ext() -> str:
+        """
+        Returns the file extension used by the ZakatTracker class.
+
+        Returns:
+        str: The file extension used by the ZakatTracker class, which is 'camel' or 'sqlite'.
+        """
+        pass
+
+    @abstractmethod
+    def log(self, value: float, desc: str = '', account: int = 1, created: int = None, ref: int = None,
+            debug: bool = False) -> int:
+        """
+        Log a transaction into the account's log.
+
+        Parameters:
+        value (float): The value of the transaction.
+        desc (str): The description of the transaction.
+        account (int): The account to log the transaction into. Default is 1.
+        created (int): The timestamp of the transaction. If not provided, it will be generated.
+        ref (int): The reference of the object.
+        debug (bool): Whether to print debug information. Default is False.
+
+        Returns:
+        int: The timestamp of the logged transaction.
+
+        This method updates the account's balance, count, and log with the transaction details.
+        It also creates a step in the history of the transaction.
+
+        Raises:
+        ValueError: The log transaction happened again in the same nanosecond time.
+        """
+        pass
+
+    @abstractmethod
+    def ref_exists(self, account: int, ref_type: str, ref: int) -> bool:
+        """
+        Check if a specific reference (transaction) exists in the vault for a given account and reference type.
+
+        Parameters:
+        account (int): The account number for which to check the existence of the reference.
+        ref_type (str): The type of reference (e.g., 'box', 'log', etc.).
+        ref (int): The reference (transaction) number to check for existence.
+
+        Returns:
+        bool: True if the reference exists for the given account and reference type, False otherwise.
+        """
+        pass
+
+    @abstractmethod
+    def box_exists(self, account: int, ref: int) -> bool:
+        """
+        Check if a specific box (transaction) exists in the vault for a given account and reference.
+
+        Parameters:
+        - account (int): The account number for which to check the existence of the box.
+        - ref (int): The reference (transaction) number to check for existence.
+
+        Returns:
+        - bool: True if the box exists for the given account and reference, False otherwise.
+        """
+        pass
+
+    @abstractmethod
+    def log_exists(self, account: int, ref: int) -> bool:
+        """
+        Checks if a specific transaction log entry exists for a given account.
+
+        Parameters:
+        account (int): The account number associated with the transaction log.
+        ref (int): The reference to the transaction log entry.
+
+        Returns:
+        bool: True if the transaction log entry exists, False otherwise.
+        """
+        pass
+
+    @abstractmethod
+    def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) \
+            -> dict[int, tuple[str, str, bool]]:
+        """
+        Retrieve a dictionary of snapshots, with their respective hashes, paths, and existence status.
+
+        Parameters:
+        - hide_missing (bool): If True, only include snapshots that exist in the dictionary. Default is True.
+        - verified_hash_only (bool): If True, only include snapshots with a valid hash. Default is False.
+
+        Returns:
+        - dict[int, tuple[str, str, bool]]: A dictionary where the keys are the timestamps of the snapshots,
+        and the values are tuples containing the snapshot's hash, path, and existence status.
+        """
         pass
 
 
@@ -636,6 +1288,16 @@ class Helper:
 
 class DictModel(Model):
     def __init__(self, db_path: str = "./zakat_db/zakat.camel", history_mode: bool = True):
+        """
+        Initialize DictModel with database path and history mode.
+
+        Parameters:
+        db_path (str): The path to the database file. Default is "zakat.camel".
+        history_mode (bool): The mode for tracking history. Default is True.
+
+        Returns:
+        None
+        """
         self._base_path = None
         self._vault_path = None
         self._vault = None
@@ -644,19 +1306,6 @@ class DictModel(Model):
         self.history(history_mode)
 
     def path(self, path: str = None) -> str:
-        """
-        Set or get the path to the database file.
-
-        If no path is provided, the current path is returned.
-        If a path is provided, it is set as the new path.
-        The function also creates the necessary directories if the provided path is a file.
-
-        Parameters:
-        path (str): The new path to the database file. If not provided, the current path is returned.
-
-        Returns:
-        str: The current or new path to the database file.
-        """
         if path is None:
             return self._vault_path
         self._vault_path = Path(path).resolve()
@@ -668,15 +1317,6 @@ class DictModel(Model):
         return str(self._vault_path)
 
     def reset(self) -> None:
-        """
-        Reset the internal data structure to its initial state.
-
-        Parameters:
-        None
-
-        Returns:
-        None
-        """
         self._vault = {
             'account': {},
             'exchange': {},
@@ -687,12 +1327,6 @@ class DictModel(Model):
 
     @staticmethod
     def ext() -> str:
-        """
-        Returns the file extension used by the ZakatTracker class.
-
-        Returns:
-        str: The file extension used by the ZakatTracker class, which is 'camel'.
-        """
         return 'camel'
 
     def base_path(self, *args) -> str:
@@ -782,48 +1416,17 @@ class DictModel(Model):
         return lock
 
     def history(self, status: bool = None) -> bool:
-        """
-        Enable or disable history tracking.
-
-        Parameters:
-        status (bool): The status of history tracking. Default is True.
-
-        Returns:
-        None
-        """
         if status is not None:
             self._history_mode = status
         return self._history_mode
 
     def nolock(self) -> bool:
-        """
-        Check if the vault lock is currently not set.
-
-        Returns:
-        bool: True if the vault lock is not set, False otherwise.
-        """
         return self._vault['lock'] is None
 
     def lock(self) -> int:
-        """
-        Acquires a lock on the ZakatTracker instance.
-
-        Returns:
-        int: The lock ID. This ID can be used to release the lock later.
-        """
         return self._step()
 
     def free(self, lock: int, auto_save: bool = True) -> bool:
-        """
-        Releases the lock on the database.
-
-        Parameters:
-        lock (int): The lock ID to be released.
-        auto_save (bool): Whether to automatically save the database after releasing the lock.
-
-        Returns:
-        bool: True if the lock is successfully released and (optionally) saved, False otherwise.
-        """
         if lock == self._vault['lock']:
             self._vault['lock'] = None
             self.clean_history(lock)
@@ -833,16 +1436,6 @@ class DictModel(Model):
         return False
 
     def vault(self) -> dict:
-        """
-        Returns a copy of the internal vault dictionary.
-
-        This method is used to retrieve the current state of the ZakatTracker object.
-        It provides a snapshot of the internal data structure, allowing for further
-        processing or analysis.
-
-        Returns:
-        dict: A copy of the internal vault dictionary.
-        """
         return self._vault.copy()
 
     @staticmethod
@@ -863,34 +1456,6 @@ class DictModel(Model):
         }
 
     def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
-        """
-        Calculates and returns statistics about the object's data storage.
-
-        This method determines the size of the database file on disk and the
-        size of the data currently held in RAM (likely within a dictionary).
-        Both sizes are reported in bytes and in a human-readable format
-        (e.g., KB, MB).
-
-        Parameters:
-        ignore_ram (bool): Whether to ignore the RAM size. Default is True
-
-        Returns:
-        dict[str, tuple]: A dictionary containing the following statistics:
-
-            * 'database': A tuple with two elements:
-                - The database file size in bytes (int).
-                - The database file size in human-readable format (str).
-            * 'ram': A tuple with two elements:
-                - The RAM usage (dictionary size) in bytes (int).
-                - The RAM usage in human-readable format (str).
-
-        Example:
-        >>> stats = my_object.stats()
-        >>> print(stats['database'])
-        (256000, '250.0 KB')
-        >>> print(stats['ram'])
-        (12345, '12.1 KB')
-        """
         ram_size = 0.0 if ignore_ram else Helper.get_dict_size(self.vault())
         file_size = os.path.getsize(self.path())
         return {
@@ -899,29 +1464,6 @@ class DictModel(Model):
         }
 
     def files(self) -> list[dict[str, str | int]]:
-        """
-        Retrieves information about files associated with this class.
-
-        This class method provides a standardized way to gather details about
-        files used by the class for storage, snapshots, and CSV imports.
-
-        Returns:
-        list[dict[str, str | int]]: A list of dictionaries, each containing information
-            about a specific file:
-
-            * type (str): The type of file ('database', 'snapshot', 'import_csv').
-            * path (str): The full file path.
-            * exists (bool): Whether the file exists on the filesystem.
-            * size (int): The file size in bytes (0 if the file doesn't exist).
-            * human_readable_size (str): A human-friendly representation of the file size (e.g., '10 KB', '2.5 MB').
-
-        Example:
-        ```
-        file_info = MyClass.files()
-        for info in file_info:
-            print(f"Type: {info['type']}, Exists: {info['exists']}, Size: {info['human_readable_size']}")
-        ```
-        """
         result = []
         for file_type, path in {
             'database': self.path(),
@@ -941,55 +1483,19 @@ class DictModel(Model):
         return result
 
     def steps(self) -> dict:
-        """
-        Returns a copy of the history of steps taken in the ZakatTracker.
-
-        The history is a dictionary where each key is a unique identifier for a step,
-        and the corresponding value is a dictionary containing information about the step.
-
-        Returns:
-        dict: A copy of the history of steps taken in the ZakatTracker.
-        """
         return self._vault['history'].copy()
 
     def account_exists(self, account: int) -> bool:
-        """
-        Check if the given account exists in the vault.
-
-        Parameters:
-        account (int): The account number to check.
-
-        Returns:
-        bool: True if the account exists, False otherwise.
-        """
         if not isinstance(account, int):
             raise ValueError(f'The account must be an integer, {type(account)} was provided.')
         return account in self._vault['account']
 
     def box_size(self, account: int) -> int:
-        """
-        Calculate the size of the box for a specific account.
-
-        Parameters:
-        account (int): The account number for which the box size needs to be calculated.
-
-        Returns:
-        int: The size of the box for the given account. If the account does not exist, -1 is returned.
-        """
         if self.account_exists(account):
             return len(self._vault['account'][account]['box'])
         return -1
 
     def log_size(self, account: int) -> int:
-        """
-        Get the size of the log for a specific account.
-
-        Parameters:
-        account (int): The account number for which the log size needs to be calculated.
-
-        Returns:
-        int: The size of the log for the given account. If the account does not exist, -1 is returned.
-        """
         if self.account_exists(account):
             return len(self._vault['account'][account]['log'])
         return -1
@@ -1014,24 +1520,6 @@ class DictModel(Model):
         return self.base_path(filename)
 
     def snapshot(self) -> bool:
-        """
-        This function creates a snapshot of the current database state.
-
-        The function calculates the hash of the current database file and checks if a snapshot with the same
-        hash already exists.
-        If a snapshot with the same hash exists, the function returns True without creating a new snapshot.
-        If a snapshot with the same hash does not exist, the function creates a new snapshot by saving
-        the current database state.
-        in a new camel file with a unique timestamp as the file name. The function also updates the snapshot cache file
-        with the new snapshot's hash and timestamp.
-
-        Parameters:
-        None
-
-        Returns:
-        bool: True if a snapshot with the same hash already exists or if the snapshot is successfully created.
-              False if the snapshot creation fails.
-        """
         current_hash = Helper.file_hash(self.path())
         cache: dict[str, int] = {}  # hash: time_ns
         try:
@@ -1050,17 +1538,6 @@ class DictModel(Model):
         return True
 
     def ref_exists(self, account: int, ref_type: str, ref: int) -> bool:
-        """
-        Check if a specific reference (transaction) exists in the vault for a given account and reference type.
-
-        Parameters:
-        account (int): The account number for which to check the existence of the reference.
-        ref_type (str): The type of reference (e.g., 'box', 'log', etc.).
-        ref (int): The reference (transaction) number to check for existence.
-
-        Returns:
-        bool: True if the reference exists for the given account and reference type, False otherwise.
-        """
         if not isinstance(account, int):
             raise ValueError(f'The account must be an integer, {type(account)} was provided.')
         if account in self._vault['account']:
@@ -1068,31 +1545,10 @@ class DictModel(Model):
         return False
 
     def box_exists(self, account: int, ref: int) -> bool:
-        """
-        Check if a specific box (transaction) exists in the vault for a given account and reference.
-
-        Parameters:
-        - account (int): The account number for which to check the existence of the box.
-        - ref (int): The reference (transaction) number to check for existence.
-
-        Returns:
-        - bool: True if the box exists for the given account and reference, False otherwise.
-        """
         return self.ref_exists(account, 'box', ref)
 
     def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) \
             -> dict[int, tuple[str, str, bool]]:
-        """
-        Retrieve a dictionary of snapshots, with their respective hashes, paths, and existence status.
-
-        Parameters:
-        - hide_missing (bool): If True, only include snapshots that exist in the dictionary. Default is True.
-        - verified_hash_only (bool): If True, only include snapshots with a valid hash. Default is False.
-
-        Returns:
-        - dict[int, tuple[str, str, bool]]: A dictionary where the keys are the timestamps of the snapshots,
-        and the values are tuples containing the snapshot's hash, path, and existence status.
-        """
         cache: dict[str, int] = {}  # hash: time_ns
         try:
             with open(self.snapshot_cache_path(), 'r') as stream:
@@ -1113,40 +1569,10 @@ class DictModel(Model):
         return result
 
     def log_exists(self, account: int, ref: int) -> bool:
-        """
-        Checks if a specific transaction log entry exists for a given account.
-
-        Parameters:
-        account (int): The account number associated with the transaction log.
-        ref (int): The reference to the transaction log entry.
-
-        Returns:
-        bool: True if the transaction log entry exists, False otherwise.
-        """
         return self.ref_exists(account, 'log', ref)
 
-    def _log(self, value: float, desc: str = '', account: int = 1, created: int = None, ref: int = None,
-             debug: bool = False) -> int:
-        """
-        Log a transaction into the account's log.
-
-        Parameters:
-        value (float): The value of the transaction.
-        desc (str): The description of the transaction.
-        account (int): The account to log the transaction into. Default is 1.
-        created (int): The timestamp of the transaction. If not provided, it will be generated.
-        ref (int): The reference of the object.
-        debug (bool): Whether to print debug information. Default is False.
-
-        Returns:
-        int: The timestamp of the logged transaction.
-
-        This method updates the account's balance, count, and log with the transaction details.
-        It also creates a step in the history of the transaction.
-
-        Raises:
-        ValueError: The log transaction happened again in the same nanosecond time.
-        """
+    def log(self, value: float, desc: str = '', account: int = 1, created: int = None, ref: int = None,
+            debug: bool = False) -> int:
         if debug:
             print('_log', f'debug={debug}')
         if created is None:
@@ -1172,60 +1598,22 @@ class DictModel(Model):
         return created
 
     def exchanges(self, account: int) -> dict | None:
-        """
-        Retrieves the exchange information associated with a given account.
-
-        Parameters:
-        account (int): The account ID to query.
-
-        Returns:
-        dict | None: A dictionary containing the exchange information if the account exists, otherwise None.
-        """
         if self.account_exists(account):
             return self._vault['account'][account]['exchange'].copy()
         return None
 
     def accounts(self) -> dict:
-        """
-        Returns a dictionary containing account numbers as keys and their respective balances as values.
-
-        Parameters:
-        None
-
-        Returns:
-        dict: A dictionary where keys are account numbers and values are their respective balances.
-        """
         result = {}
         for i in self._vault['account']:
             result[i] = self._vault['account'][i]['balance']
         return result
 
     def boxes(self, account: int) -> dict:
-        """
-        Retrieve the boxes (transactions) associated with a specific account.
-
-        Parameters:
-        account (int): The account number for which to retrieve the boxes.
-
-        Returns:
-        dict: A dictionary containing the boxes associated with the given account.
-        If the account does not exist, an empty dictionary is returned.
-        """
         if self.account_exists(account):
             return self._vault['account'][account]['box']
         return {}
 
     def logs(self, account: int) -> dict:
-        """
-        Retrieve the logs (transactions) associated with a specific account.
-
-        Parameters:
-        account (int): The account number for which to retrieve the logs.
-
-        Returns:
-        dict: A dictionary containing the logs associated with the given account.
-        If the account does not exist, an empty dictionary is returned.
-        """
         if self.account_exists(account):
             return self._vault['account'][account]['log']
         return {}
@@ -1247,83 +1635,6 @@ class DictModel(Model):
         }
 
     def daily_logs(self, weekday: WeekDay = WeekDay.Friday, debug: bool = False):
-        """
-        Retrieve the daily logs (transactions) from all accounts.
-
-        The function groups the logs by day, month, and year, and calculates the total value for each group.
-        It returns a dictionary where the keys are the timestamps of the daily groups,
-        and the values are dictionaries containing the total value and the logs for that group.
-
-        Parameters:
-        weekday (WeekDay): Select the weekday is collected for the week data. Default is WeekDay.Friday.
-        debug (bool): Whether to print debug information. Default is False.
-
-        Returns:
-        dict: A dictionary containing the daily logs.
-
-        Example:
-        >>> tracker = ZakatTracker()
-        >>> tracker.db.sub(51, 'desc', 1) # account1
-        >>> ref = tracker.db.track(100, 'desc', 2) # account2
-        >>> tracker.db.add_file(2, ref, 'file_0')
-        >>> tracker.db.add_file(2, ref, 'file_1')
-        >>> tracker.db.add_file(2, ref, 'file_2')
-        >>> tracker.db.daily_logs()
-        {
-            'daily': {
-                '2024-06-30': {
-                    'positive': 100,
-                    'negative': 51,
-                    'total': 99,
-                    'rows': [
-                        {
-                            'account': 'account1',
-                            'desc': 'desc',
-                            'file': {},
-                            'ref': None,
-                            'value': -51,
-                            'time': 1690977015000000000,
-                            'transfer': False,
-                        },
-                        {
-                            'account': 'account2',
-                            'desc': 'desc',
-                            'file': {
-                                1722919011626770944: 'file_0',
-                                1722919011626812928: 'file_1',
-                                1722919011626846976: 'file_2',
-                            },
-                            'ref': None,
-                            'value': 100,
-                            'time': 1690977015000000000,
-                            'transfer': False,
-                        },
-                    ],
-                },
-            },
-            'weekly': {
-                datetime: {
-                    'positive': 100,
-                    'negative': 51,
-                    'total': 99,
-                },
-            },
-            'monthly': {
-                '2024-06': {
-                    'positive': 100,
-                    'negative': 51,
-                    'total': 99,
-                },
-            },
-            'yearly': {
-                2024: {
-                    'positive': 100,
-                    'negative': 51,
-                    'total': 99,
-                },
-            },
-        }
-        """
         logs = {}
         for account in self.accounts():
             for k, v in self.logs(account).items():
@@ -1405,16 +1716,6 @@ class DictModel(Model):
         return y
 
     def recall(self, dry=True, debug=False) -> bool:
-        """
-        Revert the last operation.
-
-        Parameters:
-        dry (bool): If True, the function will not modify the data, but will simulate the operation. Default is True.
-        debug (bool): If True, the function will print debug information. Default is False.
-
-        Returns:
-        bool: True if the operation was successful, False otherwise.
-        """
         if not self.nolock() or len(self._vault['history']) == 0:
             return False
         if len(self._vault['history']) <= 0:
@@ -1564,26 +1865,6 @@ class DictModel(Model):
     def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
               created: int = None,
               debug: bool = False) -> int:
-        """
-        This function tracks a transaction for a specific account.
-
-        Parameters:
-        unscaled_value (float | int | Decimal): The value of the transaction. Default is 0.
-        desc (str): The description of the transaction. Default is an empty string.
-        account (int): The account for which the transaction is being tracked. Default is '1'.
-        logging (bool): Whether to log the transaction. Default is True.
-        created (int): The timestamp of the transaction. If not provided, it will be generated. Default is None.
-        debug (bool): Whether to print debug information. Default is False.
-
-        Returns:
-        int: The timestamp of the transaction.
-
-        This function creates a new account if it doesn't exist, logs the transaction if logging is True, and updates the account's balance and box.
-
-        Raises:
-        ValueError: The log transaction happened again in the same nanosecond time.
-        ValueError: The box transaction happened again in the same nanosecond time.
-        """
         if debug:
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
         if created is None:
@@ -1609,7 +1890,7 @@ class DictModel(Model):
             return 0
         value = Helper.scale(unscaled_value)
         if logging:
-            self._log(value=value, desc=desc, account=account, created=created, ref=None, debug=debug)
+            self.log(value=value, desc=desc, account=account, created=created, ref=None, debug=debug)
         if debug:
             print('create-box', created)
         if self.box_exists(account, created):
@@ -1630,20 +1911,6 @@ class DictModel(Model):
 
     def exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
                  debug: bool = False) -> dict:
-        """
-        This method is used to record or retrieve exchange rates for a specific account.
-
-        Parameters:
-        - account (int): The account number for which the exchange rate is being recorded or retrieved.
-        - created (int): The timestamp of the exchange rate. If not provided, the current timestamp will be used.
-        - rate (float): The exchange rate to be recorded. If not provided, the method will retrieve the latest exchange rate.
-        - description (str): A description of the exchange rate.
-        - debug (bool): Whether to print debug information. Default is False.
-
-        Returns:
-        - dict: A dictionary containing the latest exchange rate and its description. If no exchange rate is found,
-        it returns a dictionary with default values for the rate and description.
-        """
         if debug:
             print('exchange', f'debug={debug}')
         if created is None:
@@ -1683,17 +1950,6 @@ class DictModel(Model):
         return {"time": created, "rate": 1, "description": None}  # إرجاع القيمة الافتراضية مع وصف فارغ
 
     def add_file(self, account: int, ref: int, path: str) -> int:
-        """
-        Adds a file reference to a specific transaction log entry in the vault.
-
-        Parameters:
-        account (int): The account number associated with the transaction log.
-        ref (int): The reference to the transaction log entry.
-        path (str): The path of the file to be added.
-
-        Returns:
-        int: The reference of the added file. If the account or transaction log entry does not exist, returns 0.
-        """
         if self.account_exists(account):
             if ref in self._vault['account'][account]['log']:
                 file_ref = Helper.time()
@@ -1707,17 +1963,6 @@ class DictModel(Model):
         return 0
 
     def remove_file(self, account: int, ref: int, file_ref: int) -> bool:
-        """
-        Removes a file reference from a specific transaction log entry in the vault.
-
-        Parameters:
-        account (int): The account number associated with the transaction log.
-        ref (int): The reference to the transaction log entry.
-        file_ref (int): The reference of the file to be removed.
-
-        Returns:
-        bool: True if the file reference is successfully removed, False otherwise.
-        """
         if self.account_exists(account):
             if ref in self._vault['account'][account]['log']:
                 if file_ref in self._vault['account'][account]['log'][ref]['file']:
@@ -1732,20 +1977,6 @@ class DictModel(Model):
         return False
 
     def balance(self, account: int = 1, cached: bool = True) -> int:
-        """
-        Calculate and return the balance of a specific account.
-
-        Parameters:
-        account (int): The account number. Default is '1'.
-        cached (bool): If True, use the cached balance. If False, calculate the balance from the box. Default is True.
-
-        Returns:
-        int: The balance of the account.
-
-        Note:
-        If cached is True, the function returns the cached balance.
-        If cached is False, the function calculates the balance from the box by summing up the 'rest' values of all box items.
-        """
         if not isinstance(account, int):
             raise ValueError(f'The account must be an integer, {type(account)} was provided.')
         if cached:
@@ -1754,31 +1985,6 @@ class DictModel(Model):
         return [x := x + y['rest'] for y in self._vault['account'][account]['box'].values()][-1]
 
     def hide(self, account: int, status: bool = None) -> bool:
-        """
-        Check or set the hide status of a specific account.
-
-        Parameters:
-        account (int): The account number.
-        status (bool, optional): The new hide status. If not provided, the function will return the current status.
-
-        Returns:
-        bool: The current or updated hide status of the account.
-
-        Raises:
-        None
-
-        Example:
-        >>> tracker = ZakatTracker()
-        >>> ref = tracker.db.track(51, 'desc', 1) # 'account1'
-        >>> tracker.db.hide(1)  # Set the hide status of 'account1' to True
-        False
-        >>> tracker.db.hide(1, True)  # Set the hide status of 'account1' to True
-        True
-        >>> tracker.db.hide(1)  # Get the hide status of 'account1' by default
-        True
-        >>> tracker.db.hide(1, False)
-        False
-        """
         if self.account_exists(account):
             if status is None:
                 return self._vault['account'][account]['hide']
@@ -1787,31 +1993,6 @@ class DictModel(Model):
         return False
 
     def zakatable(self, account: int, status: bool = None) -> bool:
-        """
-        Check or set the zakatable status of a specific account.
-
-        Parameters:
-        account (int): The account number.
-        status (bool, optional): The new zakatable status. If not provided, the function will return the current status.
-
-        Returns:
-        bool: The current or updated zakatable status of the account.
-
-        Raises:
-        None
-
-        Example:
-        >>> tracker = ZakatTracker()
-        >>> ref = tracker.db.track(51, 'desc', 1) # 'account1'
-        >>> tracker.db.zakatable(1)  # Set the zakatable status of 'account1' to True
-        True
-        >>> tracker.db.zakatable(1, True)  # Set the zakatable status of 'account1' to True
-        True
-        >>> tracker.db.zakatable(1)  # Get the zakatable status of 'account1' by default
-        True
-        >>> tracker.db.zakatable(1, False)
-        False
-        """
         if self.account_exists(account):
             if status is None:
                 return self._vault['account'][account]['zakatable']
@@ -1820,48 +2001,12 @@ class DictModel(Model):
         return False
 
     def name(self, account: int) -> str | None:
-        """
-        Retrieves the name associated with a given account number.
-
-        Parameters:
-        account (int): The account number to look up.
-
-        Returns:
-        str | None: The name associated with the account, or None if not found.
-        """
         if account in self._vault['account']:
             if 'name' in self._vault['account'][account]:
                 return self._vault['account'][account]['name']
         return None
 
     def account(self, name: str, ref: int = None) -> tuple[int, str]:
-        """
-        Associates a name with an account number and tracks the relationship.
-
-        Parameters:
-        name (str): The name to associate with the account.
-        ref (int, optional): The optional reference number for the account.
-
-        Returns:
-        tuple[int, str]: A tuple containing the account number and the associated name.
-
-        This function manages the association between names and account numbers. It creates new accounts if necessary,
-        and updates existing associations based on the provided name and reference.
-        The function also tracks the relationship between names and accounts in a dictionary for future reference.
-
-        The following actions are performed:
-
-        1. If the 'name' key doesn't exist in the `self._vault` dictionary, it creates a new entry with 'last_account'
-           set to 0 and 'account' set to an empty dictionary.
-        2. If both `name` and `ref` are provided, the function checks if either the name or reference already exists in
-           the 'account' dictionary. If so, it removes the existing association and creates a new one with the provided
-           name and reference.
-        3. If only `name` is provided, the function checks if the name already exists in the 'account' dictionary.
-           If not, it creates a new account number and associates it with the name.
-        4. In all cases, the function updates the 'account' dictionary with the new association and calls the `set_name`
-           function to update the 'name' field in the corresponding account entry.
-        5. Finally, the function returns a tuple containing the account number and the associated name.
-        """
         if 'name' not in self._vault:
             self._vault['name'] = {
                 'last_account': 0,
@@ -1913,26 +2058,6 @@ class DictModel(Model):
                        tuple[int, int],
                    ],
                ] | tuple:
-        """
-        Subtracts a specified value from an account's balance.
-
-        Parameters:
-        unscaled_value (float | int | Decimal): The amount to be subtracted.
-        desc (str): A description for the transaction. Defaults to an empty string.
-        account (int): The account number from which the value will be subtracted. Defaults to '1'.
-        created (int): The timestamp of the transaction. If not provided, the current timestamp will be used.
-        debug (bool): A flag indicating whether to print debug information. Defaults to False.
-
-        Returns:
-        tuple: A tuple containing the timestamp of the transaction and a list of tuples representing the age of each transaction.
-
-        If the amount to subtract is greater than the account's balance,
-        the remaining amount will be transferred to a new transaction with a negative value.
-
-        Raises:
-        ValueError: The box transaction happened again in the same nanosecond time.
-        ValueError: The log transaction happened again in the same nanosecond time.
-        """
         if debug:
             print('sub', f'debug={debug}')
         if unscaled_value < 0:
@@ -1948,7 +2073,7 @@ class DictModel(Model):
         self.lock()
         self.track(0, '', account)
         value = Helper.scale(unscaled_value)
-        self._log(value=-value, desc=desc, account=account, created=created, ref=None, debug=debug)
+        self.log(value=-value, desc=desc, account=account, created=created, ref=None, debug=debug)
         ids = sorted(self._vault['account'][account]['box'].keys())
         limit = len(ids) + 1
         target = value
@@ -1990,25 +2115,6 @@ class DictModel(Model):
     def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
                  created: int = None,
                  debug: bool = False) -> list[int]:
-        """
-        Transfers a specified value from one account to another.
-
-        Parameters:
-        unscaled_amount (float | int | Decimal): The amount to be transferred.
-        from_account (int): The account number from which the value will be transferred.
-        to_account (int): The account number to which the value will be transferred.
-        desc (str, optional): A description for the transaction. Defaults to an empty string.
-        created (int, optional): The timestamp of the transaction. If not provided, the current timestamp will be used.
-        debug (bool): A flag indicating whether to print debug information. Defaults to False.
-
-        Returns:
-        list[int]: A list of timestamps corresponding to the transactions made during the transfer.
-
-        Raises:
-        ValueError: Transfer to the same account is forbidden.
-        ValueError: The box transaction happened again in the same nanosecond time.
-        ValueError: The log transaction happened again in the same nanosecond time.
-        """
         if debug:
             print('transfer', f'debug={debug}')
         if from_account == to_account:
@@ -2048,7 +2154,7 @@ class DictModel(Model):
                     selected_age = Helper.time()
                 self._vault['account'][to_account]['box'][age]['rest'] += target_amount
                 self._step(Action.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
-                y = self._log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account,
+                y = self.log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account,
                               created=None, ref=None, debug=debug)
                 times.append((age, y))
                 continue
@@ -2072,21 +2178,6 @@ class DictModel(Model):
               debug: bool = False,
               now: int = None,
               cycle: float = None) -> tuple:
-        """
-        Check the eligibility for Zakat based on the given parameters.
-
-        Parameters:
-        silver_gram_price (float): The price of a gram of silver.
-        unscaled_nisab (float | int | Decimal): The minimum amount of wealth required for Zakat. If not provided,
-                        it will be calculated based on the silver_gram_price.
-        debug (bool): Flag to enable debug mode.
-        now (int): The current timestamp. If not provided, it will be calculated using ZakatTracker.time().
-        cycle (float): The time cycle for Zakat. If not provided, it will be calculated using ZakatTracker.TimeCycle().
-
-        Returns:
-        tuple: A tuple containing a boolean indicating the eligibility for Zakat, a list of brief statistics,
-        and a dictionary containing the Zakat plan.
-        """
         if debug:
             print('check', f'debug={debug}')
         if now is None:
@@ -2184,17 +2275,6 @@ class DictModel(Model):
         return valid, brief, plan
 
     def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
-        """
-        Perform Zakat calculation based on the given report and optional parts.
-
-        Parameters:
-        report (tuple): A tuple containing the validity of the report, the report data, and the zakat plan.
-        parts (dict): A dictionary containing the payment parts for the zakat.
-        debug (bool): A flag indicating whether to print debug information.
-
-        Returns:
-        bool: True if the zakat calculation is successful, False otherwise.
-        """
         if debug:
             print('zakat', f'debug={debug}')
         valid, _, plan = report
@@ -2244,7 +2324,7 @@ class DictModel(Model):
                         self._vault['account'][x]['box'][j]['rest'] -= Decimal(amount)
                     # self._step(Action.ZAKAT, account=x, ref=j, value=amount, key='rest',
                     #            math_operation=MathOperation.SUBTRACTION)
-                    self._log(-float(amount), desc='zakat-زكاة', account=x, created=None, ref=j, debug=debug)
+                    self.log(-float(amount), desc='zakat-زكاة', account=x, created=None, ref=j, debug=debug)
         if parts_exist:
             for account, part in parts['account'].items():
                 if part['part'] == 0:
@@ -2264,34 +2344,11 @@ class DictModel(Model):
         return True
 
     def export_json(self, path: str = "data.json") -> bool:
-        """
-        Exports the current state of the ZakatTracker object to a JSON file.
-
-        Parameters:
-        path (str): The path where the JSON file will be saved. Default is "data.json".
-
-        Returns:
-        bool: True if the export is successful, False otherwise.
-
-        Raises:
-        No specific exceptions are raised by this method.
-        """
         with open(path, "w") as file:
             json.dump(self._vault, file, indent=4, cls=JSONEncoder)
             return True
 
     def save(self, path: str = None) -> bool:
-        """
-        Saves the ZakatTracker's current state to a camel file.
-
-        This method serializes the internal data (`_vault`).
-
-        Parameters:
-        path (str, optional): File path for saving. Defaults to a predefined location.
-
-        Returns:
-        bool: True if the save operation is successful, False otherwise.
-        """
         if path is None:
             path = self.path()
         with open(f'{path}.tmp', 'w') as stream:
@@ -2302,15 +2359,6 @@ class DictModel(Model):
             return True
 
     def load(self, path: str = None) -> bool:
-        """
-        Load the current state of the ZakatTracker object from a camel file.
-
-        Parameters:
-        path (str): The path where the camel file is located. If not provided, it will use the default path.
-
-        Returns:
-        bool: True if the load operation is successful, False otherwise.
-        """
         if path is None:
             path = self.path()
         if os.path.exists(path):
@@ -2320,21 +2368,6 @@ class DictModel(Model):
         return False
 
     def import_csv_cache_path(self):
-        """
-        Generates the cache file path for imported CSV data.
-
-        This function constructs the file path where cached data from CSV imports
-        will be stored. The cache file is a camel file (.camel extension) appended
-        to the base path of the object.
-
-        Returns:
-        str: The full path to the import CSV cache file.
-
-        Example:
-            >>> obj = ZakatTracker('/data/reports')
-            >>> obj.db.import_csv_cache_path()
-            '/data/reports.import_csv.camel'
-        """
         path = str(self.path())
         ext = self.ext()
         ext_len = len(ext)
@@ -2419,11 +2452,10 @@ class ZakatTracker:
 
     def __init__(self, model: Model):
         """
-        Initialize ZakatTracker with database path and history mode.
+        Initialize ZakatTracker with selected model.
 
         Parameters:
-        db_path (str): The path to the database file. Default is "zakat.camel".
-        history_mode (bool): The mode for tracking history. Default is True.
+        model (Model): The model is used to handle the algorithm.
 
         Returns:
         None
@@ -3842,7 +3874,12 @@ class ZakatTracker:
 
 
 def test(debug: bool = False):
-    ledger = ZakatTracker(model=DictModel("./zakat_test_db/zakat.camel"))
+    ledger = ZakatTracker(
+        model=DictModel(
+            db_path="./zakat_test_db/zakat.camel",
+            history_mode=True,
+        ),
+    )
     start = Helper.time()
     assert ledger.test(debug=debug)
     if debug:
