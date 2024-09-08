@@ -155,6 +155,178 @@ class Model(ABC):
         """
         return '0.2.95'
 
+    @abstractmethod
+    def path(self, path: str = None) -> str:
+        pass
+
+    @abstractmethod
+    def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: int = None,
+            debug: bool = False) \
+            -> tuple[
+                   int,
+                   list[
+                       tuple[int, int],
+                   ],
+               ] | tuple:
+        pass
+
+    @abstractmethod
+    def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
+              created: int = None,
+              debug: bool = False) -> int:
+        pass
+
+    @abstractmethod
+    def add_file(self, account: int, ref: int, path: str) -> int:
+        pass
+
+    @abstractmethod
+    def remove_file(self, account: int, ref: int, file_ref: int) -> bool:
+        pass
+
+    @abstractmethod
+    def hide(self, account: int, status: bool = None) -> bool:
+        pass
+
+    @abstractmethod
+    def zakatable(self, account: int, status: bool = None) -> bool:
+        pass
+
+    @abstractmethod
+    def name(self, account: int) -> str | None:
+        pass
+
+    @abstractmethod
+    def accounts(self) -> dict:
+        pass
+
+    @abstractmethod
+    def exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
+                 debug: bool = False) -> dict:
+        pass
+
+    @abstractmethod
+    def exchanges(self, account: int) -> dict | None:
+        pass
+
+    @abstractmethod
+    def account(self, name: str, ref: int = None) -> tuple[int, str]:
+        pass
+
+    @abstractmethod
+    def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
+                 created: int = None,
+                 debug: bool = False) -> list[int]:
+        pass
+
+    @abstractmethod
+    def account_exists(self, account: int) -> bool:
+        pass
+
+    @abstractmethod
+    def steps(self) -> dict:
+        pass
+
+    @abstractmethod
+    def files(self) -> list[dict[str, str | int]]:
+        pass
+
+    @abstractmethod
+    def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
+        pass
+
+    @abstractmethod
+    def logs(self, account: int) -> dict:
+        pass
+
+    @abstractmethod
+    def boxes(self, account: int) -> dict:
+        pass
+
+    @abstractmethod
+    def balance(self, account: int = 1, cached: bool = True) -> int:
+        pass
+
+    @abstractmethod
+    def box_size(self, account: int) -> int:
+        pass
+
+    @abstractmethod
+    def log_size(self, account: int) -> int:
+        pass
+
+    @abstractmethod
+    def nolock(self) -> bool:
+        pass
+
+    @abstractmethod
+    def lock(self) -> int:
+        pass
+
+    @abstractmethod
+    def free(self, lock: int, auto_save: bool = True) -> bool:
+        pass
+
+    @abstractmethod
+    def history(self, status: bool = None) -> bool:
+        pass
+
+    @abstractmethod
+    def save(self, path: str = None) -> bool:
+        pass
+
+    @abstractmethod
+    def load(self, path: str = None) -> bool:
+        pass
+
+    @abstractmethod
+    def recall(self, dry=True, debug=False) -> bool:
+        pass
+
+    @abstractmethod
+    def reset(self) -> None:
+        pass
+
+    @abstractmethod
+    def check(self,
+              silver_gram_price: float,
+              unscaled_nisab: float | int | Decimal = None,
+              debug: bool = False,
+              now: int = None,
+              cycle: float = None) -> tuple:
+        pass
+
+    @abstractmethod
+    def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
+        pass
+
+    @abstractmethod
+    def import_csv_cache_path(self):
+        pass
+
+    @abstractmethod
+    def daily_logs(self, weekday: WeekDay = WeekDay.Friday, debug: bool = False):
+        pass
+
+    @abstractmethod
+    def export_json(self, path: str = "data.json") -> bool:
+        pass
+
+    @abstractmethod
+    def vault(self) -> dict:
+        pass
+
+    @abstractmethod
+    def snapshot(self) -> bool:
+        pass
+
+    @staticmethod
+    @abstractmethod
+    def ext() -> str:
+        pass
+
+
+class Helper:
     @staticmethod
     def ZakatCut(x: float) -> float:
         """
@@ -171,55 +343,6 @@ class Model(ABC):
         The amount of Zakat due on the asset, calculated as 2.5% of the asset's value.
         """
         return 0.025 * x  # Zakat Cut in one Lunar Year
-
-    @staticmethod
-    def human_readable_size(size: float, decimal_places: int = 2) -> str:
-        """
-        Converts a size in bytes to a human-readable format (e.g., KB, MB, GB).
-
-        This function iterates through progressively larger units of information
-        (B, KB, MB, GB, etc.) and divides the input size until it fits within a
-        range that can be expressed with a reasonable number before the unit.
-
-        Parameters:
-        size (float): The size in bytes to convert.
-        decimal_places (int, optional): The number of decimal places to display
-            in the result. Defaults to 2.
-
-        Returns:
-        str: A string representation of the size in a human-readable format,
-            rounded to the specified number of decimal places. For example:
-                - "1.50 KB" (1536 bytes)
-                - "23.00 MB" (24117248 bytes)
-                - "1.23 GB" (1325899906 bytes)
-        """
-        if type(size) not in (float, int):
-            raise TypeError("size must be a float or integer")
-        if type(decimal_places) is not int:
-            raise TypeError("decimal_places must be an integer")
-        for unit in ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']:
-            if size < 1024.0:
-                break
-            size /= 1024.0
-        return f"{size:.{decimal_places}f} {unit}"
-
-    @staticmethod
-    def file_hash(file_path: str, algorithm: str = "blake2b") -> str:
-        """
-        Calculates the hash of a file using the specified algorithm.
-
-        Parameters:
-        file_path (str): The path to the file.
-        algorithm (str, optional): The hashing algorithm to use. Defaults to "blake2b".
-
-        Returns:
-        str: The hexadecimal representation of the file's hash.
-        """
-        hash_obj = hashlib.new(algorithm)  # Create the hash object
-        with open(file_path, "rb") as f:  # Open file in binary mode for reading
-            for chunk in iter(lambda: f.read(4096), b""):  # Read file in chunks
-                hash_obj.update(chunk)
-        return hash_obj.hexdigest()  # Return the hash as a hexadecimal string
 
     @staticmethod
     def exchange_calc(x: float, x_rate: float, y_rate: float) -> float:
@@ -273,6 +396,108 @@ class Model(ABC):
         return gram_price * gram_quantity
 
     @staticmethod
+    def check_payment_parts(parts: dict, debug: bool = False) -> int:
+        """
+        Checks the validity of payment parts.
+
+        Parameters:
+        parts (dict): A dictionary containing payment parts information.
+        debug (bool): Flag to enable debug mode.
+
+        Returns:
+        int: Returns 0 if the payment parts are valid, otherwise returns the error code.
+
+        Error Codes:
+        1: 'demand', 'account', 'total', or 'exceed' key is missing in parts.
+        2: 'balance', 'rate' or 'part' key is missing in parts['account'][x].
+        3: 'part' value in parts['account'][x] is less than 0.
+        4: If 'exceed' is False, 'balance' value in parts['account'][x] is less than or equal to 0.
+        5: If 'exceed' is False, 'part' value in parts['account'][x] is greater than 'balance' value.
+        6: The sum of 'part' values in parts['account'] does not match with 'demand' value.
+        """
+        if debug:
+            print('check_payment_parts', f'debug={debug}')
+        for i in ['demand', 'account', 'total', 'exceed']:
+            if i not in parts:
+                return 1
+        exceed = parts['exceed']
+        for x in parts['account']:
+            for j in ['balance', 'rate', 'part']:
+                if j not in parts['account'][x]:
+                    return 2
+                if parts['account'][x]['part'] < 0:
+                    return 3
+                if not exceed and parts['account'][x]['balance'] <= 0:
+                    return 4
+        demand = parts['demand']
+        z = 0
+        for _, y in parts['account'].items():
+            if not exceed and y['part'] > y['balance']:
+                return 5
+            z += Helper.exchange_calc(y['part'], y['rate'], 1)
+        z = round(z, 2)
+        demand = round(demand, 2)
+        if debug:
+            print('check_payment_parts', f'z = {z}, demand = {demand}')
+            print('check_payment_parts', type(z), type(demand))
+            print('check_payment_parts', z != demand)
+            print('check_payment_parts', str(z) != str(demand))
+        if z != demand and str(z) != str(demand):
+            return 6
+        return 0
+
+    @staticmethod
+    def get_dict_size(obj: dict, seen: set = None) -> float:
+        """
+        Recursively calculates the approximate memory size of a dictionary and its contents in bytes.
+
+        This function traverses the dictionary structure, accounting for the size of keys, values,
+        and any nested objects. It handles various data types commonly found in dictionaries
+        (e.g., lists, tuples, sets, numbers, strings) and prevents infinite recursion in case
+        of circular references.
+
+        Parameters:
+        obj (dict): The dictionary whose size is to be calculated.
+        seen (set, optional): A set used internally to track visited objects
+                             and avoid circular references. Defaults to None.
+
+        Returns:
+            float: An approximate size of the dictionary and its contents in bytes.
+
+        Note:
+        - This function is a method of the `ZakatTracker` class and is likely used to
+          estimate the memory footprint of data structures relevant to Zakat calculations.
+        - The size calculation is approximate as it relies on `sys.getsizeof()`, which might
+          not account for all memory overhead depending on the Python implementation.
+        - Circular references are handled to prevent infinite recursion.
+        - Basic numeric types (int, float, complex) are assumed to have fixed sizes.
+        - String sizes are estimated based on character length and encoding.
+        """
+        size = 0
+        if seen is None:
+            seen = set()
+
+        obj_id = id(obj)
+        if obj_id in seen:
+            return 0
+
+        seen.add(obj_id)
+        size += sys.getsizeof(obj)
+
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                size += Helper.get_dict_size(k, seen)
+                size += Helper.get_dict_size(v, seen)
+        elif isinstance(obj, (list, tuple, set, frozenset)):
+            for item in obj:
+                size += Helper.get_dict_size(item, seen)
+        elif isinstance(obj, (int, float, complex)):  # Handle numbers
+            pass  # Basic numbers have a fixed size, so nothing to add here
+        elif isinstance(obj, str):  # Handle strings
+            size += len(obj) * sys.getsizeof(str().encode())  # Size per character in bytes
+        return size
+
+    @staticmethod
     def scale(x: float | int | Decimal, decimal_places: int = 2) -> int:
         """
         Scales a numerical value by a specified power of 10, returning an integer.
@@ -292,11 +517,11 @@ class Model(ABC):
         TypeError: If the input `x` is not a valid numeric type.
 
         Examples:
-        >>> Model.scale(3.14159)
+        >>> Helper.scale(3.14159)
         314
-        >>> Model.scale(1234, decimal_places=3)
+        >>> Helper.scale(1234, decimal_places=3)
         1234000
-        >>> Model.scale(Decimal("0.005"), decimal_places=4)
+        >>> Helper.scale(Decimal("0.005"), decimal_places=4)
         50
         """
         if not isinstance(x, (float, int, Decimal)):
@@ -360,115 +585,63 @@ class Model(ABC):
         return datetime.datetime.combine(d, datetime.time()) + t
 
     @staticmethod
-    def check_payment_parts(parts: dict, debug: bool = False) -> int:
+    def human_readable_size(size: float, decimal_places: int = 2) -> str:
         """
-        Checks the validity of payment parts.
+        Converts a size in bytes to a human-readable format (e.g., KB, MB, GB).
+
+        This function iterates through progressively larger units of information
+        (B, KB, MB, GB, etc.) and divides the input size until it fits within a
+        range that can be expressed with a reasonable number before the unit.
 
         Parameters:
-        parts (dict): A dictionary containing payment parts information.
-        debug (bool): Flag to enable debug mode.
+        size (float): The size in bytes to convert.
+        decimal_places (int, optional): The number of decimal places to display
+            in the result. Defaults to 2.
 
         Returns:
-        int: Returns 0 if the payment parts are valid, otherwise returns the error code.
-
-        Error Codes:
-        1: 'demand', 'account', 'total', or 'exceed' key is missing in parts.
-        2: 'balance', 'rate' or 'part' key is missing in parts['account'][x].
-        3: 'part' value in parts['account'][x] is less than 0.
-        4: If 'exceed' is False, 'balance' value in parts['account'][x] is less than or equal to 0.
-        5: If 'exceed' is False, 'part' value in parts['account'][x] is greater than 'balance' value.
-        6: The sum of 'part' values in parts['account'] does not match with 'demand' value.
+        str: A string representation of the size in a human-readable format,
+            rounded to the specified number of decimal places. For example:
+                - "1.50 KB" (1536 bytes)
+                - "23.00 MB" (24117248 bytes)
+                - "1.23 GB" (1325899906 bytes)
         """
-        if debug:
-            print('check_payment_parts', f'debug={debug}')
-        for i in ['demand', 'account', 'total', 'exceed']:
-            if i not in parts:
-                return 1
-        exceed = parts['exceed']
-        for x in parts['account']:
-            for j in ['balance', 'rate', 'part']:
-                if j not in parts['account'][x]:
-                    return 2
-                if parts['account'][x]['part'] < 0:
-                    return 3
-                if not exceed and parts['account'][x]['balance'] <= 0:
-                    return 4
-        demand = parts['demand']
-        z = 0
-        for _, y in parts['account'].items():
-            if not exceed and y['part'] > y['balance']:
-                return 5
-            z += Model.exchange_calc(y['part'], y['rate'], 1)
-        z = round(z, 2)
-        demand = round(demand, 2)
-        if debug:
-            print('check_payment_parts', f'z = {z}, demand = {demand}')
-            print('check_payment_parts', type(z), type(demand))
-            print('check_payment_parts', z != demand)
-            print('check_payment_parts', str(z) != str(demand))
-        if z != demand and str(z) != str(demand):
-            return 6
-        return 0
+        if type(size) not in (float, int):
+            raise TypeError("size must be a float or integer")
+        if type(decimal_places) is not int:
+            raise TypeError("decimal_places must be an integer")
+        for unit in ['B', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB']:
+            if size < 1024.0:
+                break
+            size /= 1024.0
+        return f"{size:.{decimal_places}f} {unit}"
 
     @staticmethod
-    def get_dict_size(obj: dict, seen: set = None) -> float:
+    def file_hash(file_path: str, algorithm: str = "blake2b") -> str:
         """
-        Recursively calculates the approximate memory size of a dictionary and its contents in bytes.
-
-        This function traverses the dictionary structure, accounting for the size of keys, values,
-        and any nested objects. It handles various data types commonly found in dictionaries
-        (e.g., lists, tuples, sets, numbers, strings) and prevents infinite recursion in case
-        of circular references.
+        Calculates the hash of a file using the specified algorithm.
 
         Parameters:
-        obj (dict): The dictionary whose size is to be calculated.
-        seen (set, optional): A set used internally to track visited objects
-                             and avoid circular references. Defaults to None.
+        file_path (str): The path to the file.
+        algorithm (str, optional): The hashing algorithm to use. Defaults to "blake2b".
 
         Returns:
-            float: An approximate size of the dictionary and its contents in bytes.
-
-        Note:
-        - This function is a method of the `ZakatTracker` class and is likely used to
-          estimate the memory footprint of data structures relevant to Zakat calculations.
-        - The size calculation is approximate as it relies on `sys.getsizeof()`, which might
-          not account for all memory overhead depending on the Python implementation.
-        - Circular references are handled to prevent infinite recursion.
-        - Basic numeric types (int, float, complex) are assumed to have fixed sizes.
-        - String sizes are estimated based on character length and encoding.
+        str: The hexadecimal representation of the file's hash.
         """
-        size = 0
-        if seen is None:
-            seen = set()
-
-        obj_id = id(obj)
-        if obj_id in seen:
-            return 0
-
-        seen.add(obj_id)
-        size += sys.getsizeof(obj)
-
-        if isinstance(obj, dict):
-            for k, v in obj.items():
-                size += Model.get_dict_size(k, seen)
-                size += Model.get_dict_size(v, seen)
-        elif isinstance(obj, (list, tuple, set, frozenset)):
-            for item in obj:
-                size += Model.get_dict_size(item, seen)
-        elif isinstance(obj, (int, float, complex)):  # Handle numbers
-            pass  # Basic numbers have a fixed size, so nothing to add here
-        elif isinstance(obj, str):  # Handle strings
-            size += len(obj) * sys.getsizeof(str().encode())  # Size per character in bytes
-        return size
+        hash_obj = hashlib.new(algorithm)  # Create the hash object
+        with open(file_path, "rb") as f:  # Open file in binary mode for reading
+            for chunk in iter(lambda: f.read(4096), b""):  # Read file in chunks
+                hash_obj.update(chunk)
+        return hash_obj.hexdigest()  # Return the hash as a hexadecimal string
 
 
 class DictModel(Model):
-    def __init__(self, db_path: str = "./zakat_db/zakat.camel"):
+    def __init__(self, db_path: str = "./zakat_db/zakat.camel", history_mode: bool = True):
         self._base_path = None
         self._vault_path = None
         self._vault = None
         self.reset()
         self.path(db_path)
+        self.history(history_mode)
 
     def path(self, path: str = None) -> str:
         """
@@ -593,7 +766,7 @@ class DictModel(Model):
             return 0
         lock = self._vault['lock']
         if self.nolock():
-            lock = self._vault['lock'] = self.time()
+            lock = self._vault['lock'] = Helper.time()
             self._vault['history'][lock] = []
         if action is None:
             return lock
@@ -718,11 +891,11 @@ class DictModel(Model):
         >>> print(stats['ram'])
         (12345, '12.1 KB')
         """
-        ram_size = 0.0 if ignore_ram else self.get_dict_size(self.vault())
+        ram_size = 0.0 if ignore_ram else Helper.get_dict_size(self.vault())
         file_size = os.path.getsize(self.path())
         return {
-            'database': (file_size, self.human_readable_size(file_size)),
-            'ram': (ram_size, self.human_readable_size(ram_size)),
+            'database': (file_size, Helper.human_readable_size(file_size)),
+            'ram': (ram_size, Helper.human_readable_size(ram_size)),
         }
 
     def files(self) -> list[dict[str, str | int]]:
@@ -757,7 +930,7 @@ class DictModel(Model):
         }.items():
             exists = os.path.exists(path)
             size = os.path.getsize(path) if exists else 0
-            human_readable_size = self.human_readable_size(size) if exists else 0
+            human_readable_size = Helper.human_readable_size(size) if exists else 0
             result.append({
                 'type': file_type,
                 'path': path,
@@ -859,7 +1032,7 @@ class DictModel(Model):
         bool: True if a snapshot with the same hash already exists or if the snapshot is successfully created.
               False if the snapshot creation fails.
         """
-        current_hash = self.file_hash(self.path())
+        current_hash = Helper.file_hash(self.path())
         cache: dict[str, int] = {}  # hash: time_ns
         try:
             with open(self.snapshot_cache_path(), 'r') as stream:
@@ -932,7 +1105,7 @@ class DictModel(Model):
         for file_hash, ref in cache.items():
             path = self.base_path('snapshots', f'{ref}.{self.ext()}')
             exists = os.path.exists(path)
-            valid_hash = self.file_hash(path) == file_hash if verified_hash_only else True
+            valid_hash = Helper.file_hash(path) == file_hash if verified_hash_only else True
             if (verified_hash_only and not valid_hash) or (verified_hash_only and not exists):
                 continue
             if exists or not hide_missing:
@@ -977,7 +1150,7 @@ class DictModel(Model):
         if debug:
             print('_log', f'debug={debug}')
         if created is None:
-            created = self.time()
+            created = Helper.time()
         try:
             self._vault['account'][account]['balance'] += value
         except TypeError:
@@ -1163,7 +1336,7 @@ class DictModel(Model):
             print('logs', logs)
         y = self.daily_logs_init()
         for i in sorted(logs, reverse=True):
-            dt = self.time_to_datetime(i)
+            dt = Helper.time_to_datetime(i)
             daily = f'{dt.year}-{dt.month:02d}-{dt.day:02d}'
             weekly = dt - timedelta(days=weekday.value)
             monthly = f'{dt.year}-{dt.month:02d}'
@@ -1414,7 +1587,7 @@ class DictModel(Model):
         if debug:
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
         if created is None:
-            created = self.time()
+            created = Helper.time()
         no_lock = self.nolock()
         self.lock()
         if not self.account_exists(account):
@@ -1434,7 +1607,7 @@ class DictModel(Model):
             if no_lock:
                 self.free(self.lock())
             return 0
-        value = self.scale(unscaled_value)
+        value = Helper.scale(unscaled_value)
         if logging:
             self._log(value=value, desc=desc, account=account, created=created, ref=None, debug=debug)
         if debug:
@@ -1474,7 +1647,7 @@ class DictModel(Model):
         if debug:
             print('exchange', f'debug={debug}')
         if created is None:
-            created = self.time()
+            created = Helper.time()
         no_lock = self.nolock()
         self.lock()
         if not isinstance(account, int):
@@ -1523,7 +1696,7 @@ class DictModel(Model):
         """
         if self.account_exists(account):
             if ref in self._vault['account'][account]['log']:
-                file_ref = self.time()
+                file_ref = Helper.time()
                 self._vault['account'][account]['log'][ref]['file'][file_ref] = path
                 no_lock = self.nolock()
                 self.lock()
@@ -1770,11 +1943,11 @@ class DictModel(Model):
             ref = self.track(unscaled_value, '', account)
             return ref, ref
         if created is None:
-            created = self.time()
+            created = Helper.time()
         no_lock = self.nolock()
         self.lock()
         self.track(0, '', account)
-        value = self.scale(unscaled_value)
+        value = Helper.scale(unscaled_value)
         self._log(value=-value, desc=desc, account=account, created=created, ref=None, debug=debug)
         ids = sorted(self._vault['account'][account]['box'].keys())
         limit = len(ids) + 1
@@ -1803,7 +1976,7 @@ class DictModel(Model):
                 self._vault['account'][account]['box'][j]['rest'] = 0
         if target > 0:
             self.track(
-                unscaled_value=self.unscale(-target),
+                unscaled_value=Helper.unscale(-target),
                 desc=desc,
                 account=account,
                 logging=False,
@@ -1847,7 +2020,7 @@ class DictModel(Model):
         if not isinstance(from_account, int):
             raise ValueError(f'The from_account must be an integer, {type(from_account)} was provided.')
         if created is None:
-            created = self.time()
+            created = Helper.time()
         (_, ages) = self.sub(unscaled_amount, desc, from_account, created, debug=debug)
         times = []
         source_exchange = self.exchange(from_account, created)
@@ -1857,7 +2030,7 @@ class DictModel(Model):
             print('ages', ages)
 
         for age, value in ages:
-            target_amount = int(self.exchange_calc(value, source_exchange['rate'], target_exchange['rate']))
+            target_amount = int(Helper.exchange_calc(value, source_exchange['rate'], target_exchange['rate']))
             if debug:
                 print('target_amount', target_amount)
             # Perform the transfer
@@ -1872,7 +2045,7 @@ class DictModel(Model):
                 selected_age = age
                 if rest + target_amount > capital:
                     self._vault['account'][to_account]['box'][age]['capital'] += target_amount
-                    selected_age = Model.time()
+                    selected_age = Helper.time()
                 self._vault['account'][to_account]['box'][age]['rest'] += target_amount
                 self._step(Action.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
                 y = self._log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account,
@@ -1883,7 +2056,7 @@ class DictModel(Model):
                 print(
                     f"Transfer(func) {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).")
             y = self.track(
-                unscaled_value=self.unscale(int(target_amount)),
+                unscaled_value=Helper.unscale(int(target_amount)),
                 desc=desc,
                 account=to_account,
                 logging=True,
@@ -1917,12 +2090,12 @@ class DictModel(Model):
         if debug:
             print('check', f'debug={debug}')
         if now is None:
-            now = self.time()
+            now = Helper.time()
         if cycle is None:
-            cycle = Model.TimeCycle()
+            cycle = Helper.TimeCycle()
         if unscaled_nisab is None:
-            unscaled_nisab = Model.Nisab(silver_gram_price)
-        nisab = self.scale(unscaled_nisab)
+            unscaled_nisab = Helper.Nisab(silver_gram_price)
+        nisab = Helper.scale(unscaled_nisab)
         plan = {}
         below_nisab = 0
         brief = [0, 0, 0]
@@ -1941,8 +2114,8 @@ class DictModel(Model):
                 rest = float(_box[j]['rest'])
                 if rest <= 0:
                     continue
-                exchange = self.exchange(x, created=self.time())
-                rest = Model.exchange_calc(rest, float(exchange['rate']), 1)
+                exchange = self.exchange(x, created=Helper.time())
+                rest = Helper.exchange_calc(rest, float(exchange['rate']), 1)
                 brief[0] += rest
                 index = limit + i - 1
                 epoch = (now - j) / cycle
@@ -1963,7 +2136,7 @@ class DictModel(Model):
                 if rest >= nisab:
                     total = 0
                     for _ in range(epoch):
-                        total += Model.ZakatCut(float(rest) - float(total))
+                        total += Helper.ZakatCut(float(rest) - float(total))
                     if total > 0:
                         if x not in plan:
                             plan[x] = {}
@@ -1984,7 +2157,7 @@ class DictModel(Model):
                             'exchange_desc': exchange['description'],
                         }
                 else:
-                    chunk = Model.ZakatCut(float(rest))
+                    chunk = Helper.ZakatCut(float(rest))
                     if chunk > 0:
                         if x not in plan:
                             plan[x] = {}
@@ -2029,17 +2202,17 @@ class DictModel(Model):
             return valid
         parts_exist = parts is not None
         if parts_exist:
-            if self.check_payment_parts(parts, debug=debug) != 0:
+            if Helper.check_payment_parts(parts, debug=debug) != 0:
                 return False
         if debug:
             print('######### zakat #######')
             print('parts_exist', parts_exist)
         no_lock = self.nolock()
         self.lock()
-        report_time = self.time()
+        report_time = Helper.time()
         self._vault['report'][report_time] = report
         self._step(Action.REPORT, ref=report_time)
-        created = self.time()
+        created = Helper.time()
         for x in plan:
             target_exchange = self.exchange(x)
             if debug:
@@ -2057,7 +2230,7 @@ class DictModel(Model):
                            key='last',
                            math_operation=MathOperation.EQUAL)
                 self._vault['account'][x]['box'][j]['last'] = created
-                amount = Model.exchange_calc(float(plan[x][i]['total']), 1, float(target_exchange['rate']))
+                amount = Helper.exchange_calc(float(plan[x][i]['total']), 1, float(target_exchange['rate']))
                 self._vault['account'][x]['box'][j]['total'] += amount
                 self._step(Action.ZAKAT, account=x, ref=j, value=amount, key='total',
                            math_operation=MathOperation.ADDITION)
@@ -2079,9 +2252,9 @@ class DictModel(Model):
                 if debug:
                     print('zakat-part', account, part['rate'])
                 target_exchange = self.exchange(account)
-                amount = Model.exchange_calc(part['part'], part['rate'], target_exchange['rate'])
+                amount = Helper.exchange_calc(part['part'], part['rate'], target_exchange['rate'])
                 self.sub(
-                    unscaled_value=self.unscale(int(amount)),
+                    unscaled_value=Helper.unscale(int(amount)),
                     desc='zakat-part-دفعة-زكاة',
                     account=account,
                     debug=debug,
@@ -2244,7 +2417,7 @@ class ZakatTracker:
 
     """
 
-    def __init__(self, db_path: str = "./zakat_db/zakat.camel", history_mode: bool = True):
+    def __init__(self, model: Model):
         """
         Initialize ZakatTracker with database path and history mode.
 
@@ -2255,8 +2428,7 @@ class ZakatTracker:
         Returns:
         None
         """
-        self.db = DictModel(db_path)
-        self.db.history(history_mode)
+        self.db = model
 
     def build_payment_parts(self, scaled_demand: int, positive_only: bool = True) -> dict:
         """
@@ -2354,7 +2526,7 @@ class ZakatTracker:
                 date: int = 0
                 for time_format in date_formats:
                     try:
-                        date = Model.time(datetime.datetime.strptime(row[3], time_format))
+                        date = Helper.time(datetime.datetime.strptime(row[3], time_format))
                         break
                     except:
                         pass
@@ -2380,7 +2552,7 @@ class ZakatTracker:
                 if len_rows == 1:
                     (_, account, desc, unscaled_value, date, rate, hashed) = rows[0]
                     account_ref, _ = self.db.account(name=account)
-                    value = Model.unscale(
+                    value = Helper.unscale(
                         unscaled_value,
                         decimal_places=scale_decimal_places,
                     ) if scale_decimal_places > 0 else unscaled_value
@@ -2412,11 +2584,11 @@ class ZakatTracker:
                     self.db.exchange(account1_ref, created=date1, rate=rate1)
                 if rate2 > 0:
                     self.db.exchange(account2_ref, created=date2, rate=rate2)
-                value1 = Model.unscale(
+                value1 = Helper.unscale(
                     unscaled_value1,
                     decimal_places=scale_decimal_places,
                 ) if scale_decimal_places > 0 else unscaled_value1
-                value2 = Model.unscale(
+                value2 = Helper.unscale(
                     unscaled_value2,
                     decimal_places=scale_decimal_places,
                 ) if scale_decimal_places > 0 else unscaled_value2
@@ -2526,7 +2698,7 @@ class ZakatTracker:
         Note:
         This method assumes the default month and year if not provided.
         """
-        return Model.time(datetime.datetime(year, month, day))
+        return Helper.time(datetime.datetime(year, month, day))
 
     @staticmethod
     def generate_random_date(start_date: datetime.datetime, end_date: datetime.datetime) -> datetime.datetime:
@@ -2627,7 +2799,7 @@ class ZakatTracker:
         xlist = []
         limit = 1000
         for _ in range(limit):
-            y = Model.time()
+            y = Helper.time()
             z = '-'
             if y not in xlist:
                 xlist.append(y)
@@ -2643,8 +2815,8 @@ class ZakatTracker:
         # sanity check - convert date since 1000AD
 
         for year in range(1000, 9000):
-            ns = Model.time(datetime.datetime.strptime(f"{year}-12-30 18:30:45", "%Y-%m-%d %H:%M:%S"))
-            date = Model.time_to_datetime(ns)
+            ns = Helper.time(datetime.datetime.strptime(f"{year}-12-30 18:30:45", "%Y-%m-%d %H:%M:%S"))
+            date = Helper.time_to_datetime(ns)
             if debug:
                 print(date)
             assert date.year == year
@@ -2656,42 +2828,42 @@ class ZakatTracker:
 
         # human_readable_size
 
-        assert Model.human_readable_size(0) == "0.00 B"
-        assert Model.human_readable_size(512) == "512.00 B"
-        assert Model.human_readable_size(1023) == "1023.00 B"
+        assert Helper.human_readable_size(0) == "0.00 B"
+        assert Helper.human_readable_size(512) == "512.00 B"
+        assert Helper.human_readable_size(1023) == "1023.00 B"
 
-        assert Model.human_readable_size(1024) == "1.00 KB"
-        assert Model.human_readable_size(2048) == "2.00 KB"
-        assert Model.human_readable_size(5120) == "5.00 KB"
+        assert Helper.human_readable_size(1024) == "1.00 KB"
+        assert Helper.human_readable_size(2048) == "2.00 KB"
+        assert Helper.human_readable_size(5120) == "5.00 KB"
 
-        assert Model.human_readable_size(1024 ** 2) == "1.00 MB"
-        assert Model.human_readable_size(2.5 * 1024 ** 2) == "2.50 MB"
+        assert Helper.human_readable_size(1024 ** 2) == "1.00 MB"
+        assert Helper.human_readable_size(2.5 * 1024 ** 2) == "2.50 MB"
 
-        assert Model.human_readable_size(1024 ** 3) == "1.00 GB"
-        assert Model.human_readable_size(1024 ** 4) == "1.00 TB"
-        assert Model.human_readable_size(1024 ** 5) == "1.00 PB"
+        assert Helper.human_readable_size(1024 ** 3) == "1.00 GB"
+        assert Helper.human_readable_size(1024 ** 4) == "1.00 TB"
+        assert Helper.human_readable_size(1024 ** 5) == "1.00 PB"
 
-        assert Model.human_readable_size(1536, decimal_places=0) == "2 KB"
-        assert Model.human_readable_size(2.5 * 1024 ** 2, decimal_places=1) == "2.5 MB"
-        assert Model.human_readable_size(1234567890, decimal_places=3) == "1.150 GB"
+        assert Helper.human_readable_size(1536, decimal_places=0) == "2 KB"
+        assert Helper.human_readable_size(2.5 * 1024 ** 2, decimal_places=1) == "2.5 MB"
+        assert Helper.human_readable_size(1234567890, decimal_places=3) == "1.150 GB"
 
         try:
             # noinspection PyTypeChecker
-            Model.human_readable_size("not a number")
+            Helper.human_readable_size("not a number")
             assert False, "Expected TypeError for invalid input"
         except TypeError:
             pass
 
         try:
             # noinspection PyTypeChecker
-            Model.human_readable_size(1024, decimal_places="not an int")
+            Helper.human_readable_size(1024, decimal_places="not an int")
             assert False, "Expected TypeError for invalid decimal_places"
         except TypeError:
             pass
 
         # get_dict_size
-        assert Model.get_dict_size({}) == sys.getsizeof({}), "Empty dictionary size mismatch"
-        assert Model.get_dict_size({"a": 1, "b": 2.5, "c": True}) != sys.getsizeof({}), "Not Empty dictionary"
+        assert Helper.get_dict_size({}) == sys.getsizeof({}), "Empty dictionary size mismatch"
+        assert Helper.get_dict_size({"a": 1, "b": 2.5, "c": True}) != sys.getsizeof({}), "Not Empty dictionary"
 
         # number scale
         error = 0
@@ -2711,8 +2883,8 @@ class ZakatTracker:
                             total += 1
                             num_str = f'{sign}{i}.{j:0{decimal_places}d}'
                             num = return_type(num_str)
-                            scaled = Model.scale(num, decimal_places=decimal_places)
-                            unscaled = Model.unscale(scaled, return_type=return_type, decimal_places=decimal_places)
+                            scaled = Helper.scale(num, decimal_places=decimal_places)
+                            unscaled = Helper.unscale(scaled, return_type=return_type, decimal_places=decimal_places)
                             if debug:
                                 print(
                                     f'return_type: {return_type}, num_str: {num_str} - num: {num} - scaled: {scaled} - unscaled: {unscaled}')
@@ -2736,8 +2908,8 @@ class ZakatTracker:
             if debug:
                 print(f'index = {index + 1}, ref = {ref}')
             assert index + 1 == ref
-            assert index + 1 in self.db._vault['account']
-            assert name == self.db._vault['account'][index + 1]['name']
+            assert index + 1 in self.db.vault()['account']
+            assert name == self.db.vault()['account'][index + 1]['name']
         account_z_ref, account_z_name = self.db.account(name='z')
         assert account_z_ref == 26
         assert account_z_name == 'z'
@@ -2748,13 +2920,13 @@ class ZakatTracker:
         assert self.db.account_exists(account_z_ref_new)
         assert account_z_ref_new == 321
         assert account_z_name_new == 'z'
-        assert account_z_ref not in self.db._vault['name']['account']
+        assert account_z_ref not in self.db.vault()['name']['account']
         assert self.db.account_exists(account_z_ref)
         account_zz_ref, account_zz_name = self.db.account(name='zz', ref=321)
         assert self.db.account_exists(account_zz_ref)
         assert account_zz_ref == 321
         assert account_zz_name == 'zz'
-        assert account_z_name not in self.db._vault['name']['account']
+        assert account_z_name not in self.db.vault()['name']['account']
         account_xx_ref, account_xx_name = self.db.account(name='xx', ref=333)
         assert self.db.account_exists(account_xx_ref)
         assert account_xx_ref == 333
@@ -2788,7 +2960,7 @@ class ZakatTracker:
                         desc='test-add',
                         account=x,
                         logging=True,
-                        created=Model.time(),
+                        created=Helper.time(),
                         debug=debug,
                     )
                 else:
@@ -2796,19 +2968,19 @@ class ZakatTracker:
                         unscaled_value=y[1],
                         desc='test-sub',
                         account=x,
-                        created=Model.time(),
+                        created=Helper.time(),
                     )
                     if debug:
-                        print('_sub', z, Model.time())
+                        print('_sub', z, Helper.time())
                 assert ref != 0
-                assert len(self.db._vault['account'][x]['log'][ref]['file']) == 0
+                assert len(self.db.vault()['account'][x]['log'][ref]['file']) == 0
                 for i in range(3):
                     file_ref = self.db.add_file(x, ref, 'file_' + str(i))
                     sleep(0.0000001)
                     assert file_ref != 0
                     if debug:
                         print('ref', ref, 'file', file_ref)
-                    assert len(self.db._vault['account'][x]['log'][ref]['file']) == i + 1
+                    assert len(self.db.vault()['account'][x]['log'][ref]['file']) == i + 1
                 file_ref = self.db.add_file(x, ref, 'file_' + str(3))
                 assert self.db.remove_file(x, ref, file_ref)
                 daily_logs = self.db.daily_logs(debug=debug)
@@ -2825,7 +2997,7 @@ class ZakatTracker:
                 if debug:
                     print("debug-1", z, y[3])
                 assert z == y[3]
-                o = self.db._vault['account'][x]['log']
+                o = self.db.vault()['account'][x]['log']
                 z = 0
                 for i in o:
                     z += o[i]['value']
@@ -2856,14 +3028,14 @@ class ZakatTracker:
             assert self.db.zakatable(x)
 
         if restore is True:
-            count = len(self.db._vault['history'])
+            count = len(self.db.vault()['history'])
             if debug:
                 print('history-count', count)
             assert count == 10
             # try mode
             for _ in range(count):
                 assert self.db.recall(True, debug)
-            count = len(self.db._vault['history'])
+            count = len(self.db.vault()['history'])
             if debug:
                 print('history-count', count)
             assert count == 10
@@ -2882,7 +3054,7 @@ class ZakatTracker:
                     assert self.db.balance(account) == row[2]
                     assert self.db.recall(False, debug)
             assert self.db.recall(False, debug) is False
-            count = len(self.db._vault['history'])
+            count = len(self.db.vault()['history'])
             if debug:
                 print('history-count', count)
             assert count == 0
@@ -2900,7 +3072,7 @@ class ZakatTracker:
 
             # Not allowed for duplicate transactions in the same account and time
 
-            created = Model.time()
+            created = Helper.time()
             ref, _ = self.db.account(name='same')
             self.db.track(
                 unscaled_value=100,
@@ -2973,7 +3145,7 @@ class ZakatTracker:
                 },
             }
 
-            selected_time = Model.time() - Model.TimeCycle()
+            selected_time = Helper.time() - Helper.TimeCycle()
             account_ages_ref, _ = self.db.account(name='ages')
             account_future_ref, _ = self.db.account(name='future')
 
@@ -2990,7 +3162,7 @@ class ZakatTracker:
                         created=selected_time * x[1],
                     )
 
-                unscaled_total = Model.unscale(total)
+                unscaled_total = Helper.unscale(total)
                 if debug:
                     print('unscaled_total', unscaled_total)
                 refs = self.db.transfer(
@@ -3021,15 +3193,15 @@ class ZakatTracker:
                 assert future_fresh_balance == total
 
                 # TODO: check boxes times for `ages` should equal box times in `future`
-                for ref in self.db._vault['account'][account_ages_ref]['box']:
-                    ages_capital = self.db._vault['account'][account_ages_ref]['box'][ref]['capital']
-                    ages_rest = self.db._vault['account'][account_ages_ref]['box'][ref]['rest']
+                for ref in self.db.vault()['account'][account_ages_ref]['box']:
+                    ages_capital = self.db.vault()['account'][account_ages_ref]['box'][ref]['capital']
+                    ages_rest = self.db.vault()['account'][account_ages_ref]['box'][ref]['rest']
                     future_capital = 0
-                    if ref in self.db._vault['account'][account_future_ref]['box']:
-                        future_capital = self.db._vault['account'][account_future_ref]['box'][ref]['capital']
+                    if ref in self.db.vault()['account'][account_future_ref]['box']:
+                        future_capital = self.db.vault()['account'][account_future_ref]['box'][ref]['capital']
                     future_rest = 0
-                    if ref in self.db._vault['account'][account_future_ref]['box']:
-                        future_rest = self.db._vault['account'][account_future_ref]['box'][ref]['rest']
+                    if ref in self.db.vault()['account'][account_future_ref]['box']:
+                        future_rest = self.db.vault()['account'][account_future_ref]['box'][ref]['rest']
                     if ages_capital != 0 and future_capital != 0 and future_rest != 0:
                         if debug:
                             print('================================================================')
@@ -3042,7 +3214,7 @@ class ZakatTracker:
                         elif ages_rest > 0:
                             assert ages_capital == ages_rest + future_capital
                 self.db.reset()
-                assert len(self.db._vault['history']) == 0
+                assert len(self.db.vault()['history']) == 0
 
             assert self.db.history()
             assert self.db.history(False) is False
@@ -3091,7 +3263,7 @@ class ZakatTracker:
                 assert xx == z[4]
 
                 s = 0
-                log = self.db._vault['account'][x]['log']
+                log = self.db.vault()['account'][x]['log']
                 for i in log:
                     s += log[i]['value']
                 if debug:
@@ -3108,7 +3280,7 @@ class ZakatTracker:
                 assert yy == z[9]
 
                 s = 0
-                log = self.db._vault['account'][y]['log']
+                log = self.db.vault()['account'][y]['log']
                 for i in log:
                     s += log[i]['value']
                 assert s == z[10]
@@ -3121,17 +3293,17 @@ class ZakatTracker:
                 pp().pprint(self.db.check(2.17))
 
             assert not self.db.nolock()
-            history_count = len(self.db._vault['history'])
+            history_count = len(self.db.vault()['history'])
             if debug:
                 print('history-count', history_count)
             assert history_count == 5
-            assert not self.db.free(Model.time())
+            assert not self.db.free(Helper.time())
             assert self.db.free(self.db.lock())
             assert self.db.nolock()
-            history_count = len(self.db._vault['history'])
+            history_count = len(self.db.vault()['history'])
             if debug:
                 print('history-count', history_count)
-            assert len(self.db._vault['history']) == 4
+            assert len(self.db.vault()['history']) == 4
 
             # storage
 
@@ -3143,25 +3315,25 @@ class ZakatTracker:
             self.db.reset()
             assert self.db.recall(False, debug) is False
             self.db.load()
-            assert self.db._vault['account'] is not None
+            assert self.db.vault()['account'] is not None
 
             # recall
 
             assert self.db.nolock()
-            history_count = len(self.db._vault['history'])
+            history_count = len(self.db.vault()['history'])
             if debug:
                 print('history-count', history_count)
-            assert len(self.db._vault['history']) == 4
+            assert len(self.db.vault()['history']) == 4
             assert self.db.recall(False, debug) is True
-            assert len(self.db._vault['history']) == 3
+            assert len(self.db.vault()['history']) == 3
             assert self.db.recall(False, debug) is True
-            assert len(self.db._vault['history']) == 2
+            assert len(self.db.vault()['history']) == 2
             assert self.db.recall(False, debug) is True
-            assert len(self.db._vault['history']) == 1
+            assert len(self.db.vault()['history']) == 1
             assert self.db.recall(False, debug) is True
-            assert len(self.db._vault['history']) == 0
+            assert len(self.db.vault()['history']) == 0
             assert self.db.recall(False, debug) is False
-            assert len(self.db._vault['history']) == 0
+            assert len(self.db.vault()['history']) == 0
 
             # exchange
 
@@ -3208,9 +3380,9 @@ class ZakatTracker:
                 assert rate == 1
                 assert description is None
 
-            assert len(self.db._vault['account'][account_cash_ref]['exchange']) > 0
+            assert len(self.db.vault()['account'][account_cash_ref]['exchange']) > 0
             assert len(self.db.exchanges(account_cash_ref)) > 0
-            self.db._vault['account'][account_cash_ref]['exchange'].clear()
+            self.db.vault()['account'][account_cash_ref]['exchange'].clear()
             assert len(self.db.exchanges(account_cash_ref)) == 0
 
             # حفظ أسعار الصرف باستخدام التواريخ بالنانو ثانية
@@ -3223,9 +3395,9 @@ class ZakatTracker:
 
             for i in [x * 0.12 for x in range(-15, 21)]:
                 if i <= 0:
-                    assert len(self.db.exchange(account_test_ref, Model.time(), i, f"range({i})")) == 0
+                    assert len(self.db.exchange(account_test_ref, Helper.time(), i, f"range({i})")) == 0
                 else:
-                    assert len(self.db.exchange(account_test_ref, Model.time(), i, f"range({i})")) > 0
+                    assert len(self.db.exchange(account_test_ref, Helper.time(), i, f"range({i})")) > 0
 
             # اختبار النتائج باستخدام التواريخ بالنانو ثانية
             for i in range(1, 31):
@@ -3316,11 +3488,11 @@ class ZakatTracker:
                 # payment parts
 
                 positive_parts = self.build_payment_parts(100, positive_only=True)
-                assert Model.check_payment_parts(positive_parts) != 0
-                assert Model.check_payment_parts(positive_parts) != 0
+                assert Helper.check_payment_parts(positive_parts) != 0
+                assert Helper.check_payment_parts(positive_parts) != 0
                 all_parts = self.build_payment_parts(300, positive_only=False)
-                assert Model.check_payment_parts(all_parts) != 0
-                assert Model.check_payment_parts(all_parts) != 0
+                assert Helper.check_payment_parts(all_parts) != 0
+                assert Helper.check_payment_parts(all_parts) != 0
                 if debug:
                     pp().pprint(positive_parts)
                     pp().pprint(all_parts)
@@ -3345,7 +3517,7 @@ class ZakatTracker:
                         j = ''
                         for x, y in part['account'].items():
                             x_exchange = self.db.exchange(x)
-                            zz = Model.exchange_calc(z, 1, x_exchange['rate'])
+                            zz = Helper.exchange_calc(z, 1, x_exchange['rate'])
                             if exceed and zz <= demand:
                                 i += 1
                                 y['part'] = zz
@@ -3374,7 +3546,7 @@ class ZakatTracker:
                     # self._vault = vault.copy()
                     if debug:
                         print('case', case)
-                    result = Model.check_payment_parts(case)
+                    result = Helper.check_payment_parts(case)
                     if debug:
                         print('check_payment_parts', result, f'exceed: {exceed}')
                     assert result == 0
@@ -3434,14 +3606,14 @@ class ZakatTracker:
                         assert fresh_value == balance
                     case 1:  # check-exchange
                         _, account, expected_rate = case
-                        t_exchange = self.db.exchange(account, created=Model.time(), debug=debug)
+                        t_exchange = self.db.exchange(account, created=Helper.time(), debug=debug)
                         if debug:
                             print('t-exchange', t_exchange)
                         assert t_exchange['rate'] == expected_rate
                     case 2:  # do-exchange
                         _, account, rate = case
                         self.db.exchange(account, rate=rate, debug=debug)
-                        b_exchange = self.db.exchange(account, created=Model.time(), debug=debug)
+                        b_exchange = self.db.exchange(account, created=Helper.time(), debug=debug)
                         if debug:
                             print('b-exchange', b_exchange)
                         assert b_exchange['rate'] == rate
@@ -3480,7 +3652,7 @@ class ZakatTracker:
                 if debug:
                     print(f'{i} - transfer-with-exchange({x})')
                 self.db.transfer(
-                    unscaled_amount=Model.unscale(x),
+                    unscaled_amount=Helper.unscale(x),
                     from_account=account_b_USD_ref,
                     to_account=account_a_SAR_ref,
                     desc=f"{x} USD -> SAR",
@@ -3516,7 +3688,7 @@ class ZakatTracker:
                 if debug:
                     print(f'{i} - transfer-with-exchange({x})')
                 self.db.transfer(
-                    unscaled_amount=Model.unscale(x),
+                    unscaled_amount=Helper.unscale(x),
                     from_account=account_c_SAR_ref,
                     to_account=account_a_SAR_ref,
                     desc=f"{x} SAR -> a_SAR",
@@ -3567,13 +3739,13 @@ class ZakatTracker:
                 if debug:
                     print('rate', rate, 'values', values)
                 for case in [
-                    (a, account_safe_ref, Model.time() - Model.TimeCycle(), [
+                    (a, account_safe_ref, Helper.time() - Helper.TimeCycle(), [
                         {account_safe_ref: {0: {'below_nisab': x}}},
                     ], False, m),
-                    (b, account_safe_ref, Model.time() - Model.TimeCycle(), [
+                    (b, account_safe_ref, Helper.time() - Helper.TimeCycle(), [
                         {account_safe_ref: {0: {'count': 1, 'total': y}}},
                     ], True, n),
-                    (c, account_cave_ref, Model.time() - (Model.TimeCycle() * 3), [
+                    (c, account_cave_ref, Helper.time() - (Helper.TimeCycle() * 3), [
                         {account_cave_ref: {0: {'count': 3, 'total': z}}},
                     ], True, o),
                 ]:
@@ -3626,7 +3798,7 @@ class ZakatTracker:
                     (valid, brief, plan) = report
                     assert valid is False
 
-            history_size = len(self.db._vault['history'])
+            history_size = len(self.db.vault()['history'])
             if debug:
                 print('history_size', history_size)
             assert history_size == 3
@@ -3636,7 +3808,7 @@ class ZakatTracker:
             assert self.db.nolock()
 
             for i in range(3, 0, -1):
-                history_size = len(self.db._vault['history'])
+                history_size = len(self.db.vault()['history'])
                 if debug:
                     print('history_size', history_size)
                 assert history_size == i
@@ -3645,17 +3817,17 @@ class ZakatTracker:
             assert self.db.nolock()
             assert self.db.recall(False, debug) is False
 
-            history_size = len(self.db._vault['history'])
+            history_size = len(self.db.vault()['history'])
             if debug:
                 print('history_size', history_size)
             assert history_size == 0
 
-            account_size = len(self.db._vault['account'])
+            account_size = len(self.db.vault()['account'])
             if debug:
                 print('account_size', account_size)
             assert account_size == 0
 
-            report_size = len(self.db._vault['report'])
+            report_size = len(self.db.vault()['report'])
             if debug:
                 print('report_size', report_size)
             assert report_size == 0
@@ -3670,14 +3842,14 @@ class ZakatTracker:
 
 
 def test(debug: bool = False):
-    ledger = ZakatTracker("./zakat_test_db/zakat.camel")
-    start = Model.time()
+    ledger = ZakatTracker(model=DictModel("./zakat_test_db/zakat.camel"))
+    start = Helper.time()
     assert ledger.test(debug=debug)
     if debug:
         print("#########################")
         print("######## TEST DONE ########")
         print("#########################")
-        print(ZakatTracker.duration_from_nanoseconds(Model.time() - start))
+        print(ZakatTracker.duration_from_nanoseconds(Helper.time() - start))
         print("#########################")
 
 
