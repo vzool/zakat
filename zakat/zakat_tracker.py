@@ -919,6 +919,26 @@ class Model(ABC):
         pass
 
     @abstractmethod
+    def step(self, action: Action = None, account=None, ref: int = None, file: int = None, value: float = None,
+              key: str = None, math_operation: MathOperation = None) -> int:
+        """
+        This method is responsible for recording the actions performed on the ZakatTracker.
+
+        Parameters:
+        - action (Action): The type of action performed.
+        - account (str): The account number on which the action was performed.
+        - ref (int): The reference number of the action.
+        - file (int): The file reference number of the action.
+        - value (int): The value associated with the action.
+        - key (str): The key associated with the action.
+        - math_operation (MathOperation): The mathematical operation performed during the action.
+
+        Returns:
+        - int: The lock time of the recorded action. If no lock was performed, it returns 0.
+        """
+        pass
+
+    @abstractmethod
     def ref_exists(self, account: int, ref_type: str, ref: int) -> bool:
         """
         Check if a specific reference (transaction) exists in the vault for a given account and reference type.
@@ -974,6 +994,20 @@ class Model(ABC):
         Returns:
         - dict[int, tuple[str, str, bool]]: A dictionary where the keys are the timestamps of the snapshots,
         and the values are tuples containing the snapshot's hash, path, and existence status.
+        """
+        pass
+
+    @abstractmethod
+    def clean_history(self, lock: int | None = None) -> int:
+        """
+        Cleans up the history of actions performed on the ZakatTracker instance.
+
+        Parameters:
+        lock (int, optional): The lock ID is used to clean up the empty history.
+            If not provided, it cleans up the empty history records for all locks.
+
+        Returns:
+        int: The number of locks cleaned up.
         """
         pass
 
@@ -1356,16 +1390,6 @@ class DictModel(Model):
         return str(full_path.resolve())
 
     def clean_history(self, lock: int | None = None) -> int:
-        """
-        Cleans up the history of actions performed on the ZakatTracker instance.
-
-        Parameters:
-        lock (int, optional): The lock ID is used to clean up the empty history.
-            If not provided, it cleans up the empty history records for all locks.
-
-        Returns:
-        int: The number of locks cleaned up.
-        """
         count = 0
         if lock in self._vault['history']:
             if len(self._vault['history'][lock]) <= 0:
@@ -1379,7 +1403,7 @@ class DictModel(Model):
                 del self._vault['history'][lock]
         return count
 
-    def _step(self, action: Action = None, account=None, ref: int = None, file: int = None, value: float = None,
+    def step(self, action: Action = None, account=None, ref: int = None, file: int = None, value: float = None,
               key: str = None, math_operation: MathOperation = None) -> int:
         """
         This method is responsible for recording the actions performed on the ZakatTracker.
@@ -1424,7 +1448,7 @@ class DictModel(Model):
         return self._vault['lock'] is None
 
     def lock(self) -> int:
-        return self._step()
+        return self.step()
 
     def free(self, lock: int, auto_save: bool = True) -> bool:
         if lock == self._vault['lock']:
@@ -1594,7 +1618,7 @@ class DictModel(Model):
             'ref': ref,
             'file': {},
         }
-        self._step(Action.LOG, account, ref=created, value=value)
+        self.step(Action.LOG, account, ref=created, value=value)
         return created
 
     def exchanges(self, account: int) -> dict | None:
@@ -1883,7 +1907,7 @@ class DictModel(Model):
                 'hide': False,
                 'zakatable': True,
             }
-            self._step(Action.CREATE, account)
+            self.step(Action.CREATE, account)
         if unscaled_value == 0:
             if no_lock:
                 self.free(self.lock())
@@ -1904,7 +1928,7 @@ class DictModel(Model):
             'rest': value,
             'total': 0,
         }
-        self._step(Action.TRACK, account, ref=created, value=value)
+        self.step(Action.TRACK, account, ref=created, value=value)
         if no_lock:
             self.free(self.lock())
         return created
@@ -1927,7 +1951,7 @@ class DictModel(Model):
             if len(self._vault['account'][account]['exchange']) == 0 and rate <= 1:
                 return {"time": created, "rate": 1, "description": None}
             self._vault['account'][account]['exchange'][created] = {"rate": rate, "description": description}
-            self._step(Action.EXCHANGE, account, ref=created, value=rate)
+            self.step(Action.EXCHANGE, account, ref=created, value=rate)
             if no_lock:
                 self.free(self.lock())
             if debug:
@@ -1956,7 +1980,7 @@ class DictModel(Model):
                 self._vault['account'][account]['log'][ref]['file'][file_ref] = path
                 no_lock = self.nolock()
                 self.lock()
-                self._step(Action.ADD_FILE, account, ref=ref, file=file_ref)
+                self.step(Action.ADD_FILE, account, ref=ref, file=file_ref)
                 if no_lock:
                     self.free(self.lock())
                 return file_ref
@@ -1970,7 +1994,7 @@ class DictModel(Model):
                     del self._vault['account'][account]['log'][ref]['file'][file_ref]
                     no_lock = self.nolock()
                     self.lock()
-                    self._step(Action.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
+                    self.step(Action.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
                     if no_lock:
                         self.free(self.lock())
                     return True
@@ -2016,7 +2040,7 @@ class DictModel(Model):
         def set_name(_account: int, _name: str):
             if not self.account_exists(_account):
                 self.track(account=_account)
-                self._step(
+                self.step(
                     action=Action.NAME_ACCOUNT,
                     account=_account,
                     value=self._vault['account'][_account]['name'] if 'name' in self._vault['account'][
@@ -2089,14 +2113,14 @@ class DictModel(Model):
             rest = self._vault['account'][account]['box'][j]['rest']
             if rest >= target:
                 self._vault['account'][account]['box'][j]['rest'] -= target
-                self._step(Action.SUB, account, ref=j, value=target)
+                self.step(Action.SUB, account, ref=j, value=target)
                 ages.append((j, target))
                 target = 0
                 break
             elif target > rest > 0:
                 chunk = rest
                 target -= chunk
-                self._step(Action.SUB, account, ref=j, value=chunk)
+                self.step(Action.SUB, account, ref=j, value=chunk)
                 ages.append((j, chunk))
                 self._vault['account'][account]['box'][j]['rest'] = 0
         if target > 0:
@@ -2153,7 +2177,7 @@ class DictModel(Model):
                     self._vault['account'][to_account]['box'][age]['capital'] += target_amount
                     selected_age = Helper.time()
                 self._vault['account'][to_account]['box'][age]['rest'] += target_amount
-                self._step(Action.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
+                self.step(Action.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
                 y = self.log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account,
                               created=None, ref=None, debug=debug)
                 times.append((age, y))
@@ -2291,7 +2315,7 @@ class DictModel(Model):
         self.lock()
         report_time = Helper.time()
         self._vault['report'][report_time] = report
-        self._step(Action.REPORT, ref=report_time)
+        self.step(Action.REPORT, ref=report_time)
         created = Helper.time()
         for x in plan:
             target_exchange = self.exchange(x)
@@ -2306,23 +2330,23 @@ class DictModel(Model):
                 j = ids[i]
                 if debug:
                     print('i', i, 'j', j)
-                self._step(Action.ZAKAT, account=x, ref=j, value=self._vault['account'][x]['box'][j]['last'],
+                self.step(Action.ZAKAT, account=x, ref=j, value=self._vault['account'][x]['box'][j]['last'],
                            key='last',
                            math_operation=MathOperation.EQUAL)
                 self._vault['account'][x]['box'][j]['last'] = created
                 amount = Helper.exchange_calc(float(plan[x][i]['total']), 1, float(target_exchange['rate']))
                 self._vault['account'][x]['box'][j]['total'] += amount
-                self._step(Action.ZAKAT, account=x, ref=j, value=amount, key='total',
+                self.step(Action.ZAKAT, account=x, ref=j, value=amount, key='total',
                            math_operation=MathOperation.ADDITION)
                 self._vault['account'][x]['box'][j]['count'] += plan[x][i]['count']
-                self._step(Action.ZAKAT, account=x, ref=j, value=plan[x][i]['count'], key='count',
+                self.step(Action.ZAKAT, account=x, ref=j, value=plan[x][i]['count'], key='count',
                            math_operation=MathOperation.ADDITION)
                 if not parts_exist:
                     try:
                         self._vault['account'][x]['box'][j]['rest'] -= amount
                     except TypeError:
                         self._vault['account'][x]['box'][j]['rest'] -= Decimal(amount)
-                    # self._step(Action.ZAKAT, account=x, ref=j, value=amount, key='rest',
+                    # self.step(Action.ZAKAT, account=x, ref=j, value=amount, key='rest',
                     #            math_operation=MathOperation.SUBTRACTION)
                     self.log(-float(amount), desc='zakat-زكاة', account=x, created=None, ref=j, debug=debug)
         if parts_exist:
