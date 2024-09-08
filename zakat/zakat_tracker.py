@@ -509,7 +509,7 @@ class Model(ABC):
                 - The RAM usage in human-readable format (str).
 
         Example:
-        >>> stats = my_object.stats()
+        >>> stats = zakat_object.stats()
         >>> print(stats['database'])
         (256000, '250.0 KB')
         >>> print(stats['ram'])
@@ -743,7 +743,7 @@ class Model(ABC):
         str: The full path to the import CSV cache file.
 
         Example:
-            >>> obj = ZakatTracker('/data/reports')
+            >>> obj = ZakatTracker(model=DictModel('/data/reports'))
             >>> obj.db.import_csv_cache_path()
             '/data/reports.import_csv.camel'
         """

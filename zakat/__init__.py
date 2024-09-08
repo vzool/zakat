@@ -13,6 +13,7 @@ This file provides the ZakatLibrary classes, functions for tracking and calculat
 """
 # Importing necessary classes and functions from the main module
 from zakat.zakat_tracker import (
+    Helper,
     Model,
     DictModel,
     ZakatTracker,
@@ -32,6 +33,7 @@ from zakat.file_server import (
 # Version information for the module
 __version__ = Model.Version()
 __all__ = [
+    "Helper",
     "Model",
     "DictModel",
     "ZakatTracker",

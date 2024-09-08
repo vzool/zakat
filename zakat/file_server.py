@@ -222,15 +222,15 @@ def start_file_server(database_path: str, database_callback: callable = None, cs
 
 
 def main():
-    from zakat_tracker import ZakatTracker, Action  # SAFE Circular Imports
+    from zakat_tracker import ZakatTracker, DictModel, Action  # SAFE Circular Imports
     # Example usage (replace with your file path)
     file_to_share = f"{uuid.uuid4()}.pickle"  # Or any other file type
 
     def database_callback(file_path):
-        ZakatTracker(db_path=file_path)
+        ZakatTracker(model=DictModel(db_path=file_path))
 
     def csv_callback(file_path, database_path, debug):
-        x = ZakatTracker(db_path=database_path)
+        x = ZakatTracker(model=DictModel(db_path=file_path))
         return x.import_csv(file_path, debug=debug)
 
     file_name, download_url, upload_url, server_thread, shutdown_server = start_file_server(
