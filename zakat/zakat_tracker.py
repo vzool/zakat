@@ -115,30 +115,30 @@ class MathOperation(Enum):
     SUBTRACTION = auto()
 
 
-reg = CamelRegistry()
+camel_registry = CamelRegistry()
 
 
-@reg.dumper(Action, u'action', version=None)
+@camel_registry.dumper(Action, u'action', version=None)
 def _dump_action(data):
     return u"{}".format(data.value)
 
 
-@reg.loader(u'action', version=None)
+@camel_registry.loader(u'action', version=None)
 def _load_action(data, version):
     return Action(int(data))
 
 
-@reg.dumper(MathOperation, u'math', version=None)
+@camel_registry.dumper(MathOperation, u'math', version=None)
 def _dump_math(data):
     return u"{}".format(data.value)
 
 
-@reg.loader(u'math', version=None)
+@camel_registry.loader(u'math', version=None)
 def _load_math(data, version):
     return MathOperation(int(data))
 
 
-camel = Camel([reg])
+camel = Camel([camel_registry])
 
 
 class Model(ABC):
