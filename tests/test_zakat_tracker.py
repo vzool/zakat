@@ -14,5 +14,5 @@ def test_zakat_tracker():
     print("#########################")
     print("######## TEST DONE ########")
     print("#########################")
-    print(ZakatTracker.duration_from_nanoseconds(Helper.time() - start))
+    print(Helper.duration_from_nanoseconds(Helper.time() - start))
     print("#########################")
