@@ -1,6 +1,7 @@
 import os
 from zakat import ZakatTracker, Helper, DictModel
 
+
 def test_zakat_tracker():
     start = Helper.time()
     os.chdir('tests')
