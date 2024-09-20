@@ -171,7 +171,6 @@ class Model(ABC):
         Returns:
         str: The current or new path to the database file.
         """
-        pass
 
     @abstractmethod
     def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: int = None,
@@ -202,7 +201,6 @@ class Model(ABC):
         ValueError: The box transaction happened again in the same nanosecond time.
         ValueError: The log transaction happened again in the same nanosecond time.
         """
-        pass
 
     @abstractmethod
     def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
@@ -228,7 +226,6 @@ class Model(ABC):
         ValueError: The log transaction happened again in the same nanosecond time.
         ValueError: The box transaction happened again in the same nanosecond time.
         """
-        pass
 
     @abstractmethod
     def add_file(self, account: int, ref: int, path: str) -> int:
@@ -243,7 +240,6 @@ class Model(ABC):
         Returns:
         int: The reference of the added file. If the account or transaction log entry does not exist, returns 0.
         """
-        pass
 
     @abstractmethod
     def remove_file(self, account: int, ref: int, file_ref: int) -> bool:
@@ -258,7 +254,6 @@ class Model(ABC):
         Returns:
         bool: True if the file reference is successfully removed, False otherwise.
         """
-        pass
 
     @abstractmethod
     def hide(self, account: int, status: bool = None) -> bool:
@@ -287,7 +282,6 @@ class Model(ABC):
         >>> tracker.db.hide(1, False)
         False
         """
-        pass
 
     @abstractmethod
     def zakatable(self, account: int, status: bool = None) -> bool:
@@ -316,7 +310,6 @@ class Model(ABC):
         >>> tracker.db.zakatable(1, False)
         False
         """
-        pass
 
     @abstractmethod
     def name(self, account: int) -> str | None:
@@ -329,7 +322,6 @@ class Model(ABC):
         Returns:
         str | None: The name associated with the account, or None if not found.
         """
-        pass
 
     @abstractmethod
     def accounts(self) -> dict:
@@ -342,7 +334,6 @@ class Model(ABC):
         Returns:
         dict: A dictionary where keys are account numbers and values are their respective balances.
         """
-        pass
 
     @abstractmethod
     def exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
@@ -361,7 +352,6 @@ class Model(ABC):
         - dict: A dictionary containing the latest exchange rate and its description. If no exchange rate is found,
         it returns a dictionary with default values for the rate and description.
         """
-        pass
 
     @abstractmethod
     def exchanges(self, account: int) -> dict | None:
@@ -374,7 +364,6 @@ class Model(ABC):
         Returns:
         dict | None: A dictionary containing the exchange information if the account exists, otherwise None.
         """
-        pass
 
     @abstractmethod
     def account(self, name: str, ref: int = None) -> tuple[int, str]:
@@ -405,7 +394,6 @@ class Model(ABC):
            function to update the 'name' field in the corresponding account entry.
         5. Finally, the function returns a tuple containing the account number and the associated name.
         """
-        pass
 
     @abstractmethod
     def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
@@ -430,7 +418,6 @@ class Model(ABC):
         ValueError: The box transaction happened again in the same nanosecond time.
         ValueError: The log transaction happened again in the same nanosecond time.
         """
-        pass
 
     @abstractmethod
     def account_exists(self, account: int) -> bool:
@@ -443,7 +430,6 @@ class Model(ABC):
         Returns:
         bool: True if the account exists, False otherwise.
         """
-        pass
 
     @abstractmethod
     def steps(self) -> dict:
@@ -456,7 +442,6 @@ class Model(ABC):
         Returns:
         dict: A copy of the history of steps taken in the ZakatTracker.
         """
-        pass
 
     @abstractmethod
     def files(self) -> list[dict[str, str | int]]:
@@ -483,7 +468,6 @@ class Model(ABC):
             print(f"Type: {info['type']}, Exists: {info['exists']}, Size: {info['human_readable_size']}")
         ```
         """
-        pass
 
     @abstractmethod
     def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
@@ -515,7 +499,6 @@ class Model(ABC):
         >>> print(stats['ram'])
         (12345, '12.1 KB')
         """
-        pass
 
     @abstractmethod
     def logs(self, account: int) -> dict:
@@ -529,7 +512,6 @@ class Model(ABC):
         dict: A dictionary containing the logs associated with the given account.
         If the account does not exist, an empty dictionary is returned.
         """
-        pass
 
     @abstractmethod
     def boxes(self, account: int) -> dict:
@@ -543,7 +525,6 @@ class Model(ABC):
         dict: A dictionary containing the boxes associated with the given account.
         If the account does not exist, an empty dictionary is returned.
         """
-        pass
 
     @abstractmethod
     def balance(self, account: int = 1, cached: bool = True) -> int:
@@ -561,7 +542,6 @@ class Model(ABC):
         If cached is True, the function returns the cached balance.
         If cached is False, the function calculates the balance from the box by summing up the 'rest' values of all box items.
         """
-        pass
 
     @abstractmethod
     def box_size(self, account: int) -> int:
@@ -574,7 +554,6 @@ class Model(ABC):
         Returns:
         int: The size of the box for the given account. If the account does not exist, -1 is returned.
         """
-        pass
 
     @abstractmethod
     def log_size(self, account: int) -> int:
@@ -587,7 +566,6 @@ class Model(ABC):
         Returns:
         int: The size of the log for the given account. If the account does not exist, -1 is returned.
         """
-        pass
 
     @abstractmethod
     def nolock(self) -> bool:
@@ -597,7 +575,6 @@ class Model(ABC):
         Returns:
         bool: True if the vault lock is not set, False otherwise.
         """
-        pass
 
     @abstractmethod
     def lock(self) -> int:
@@ -607,7 +584,6 @@ class Model(ABC):
         Returns:
         int: The lock ID. This ID can be used to release the lock later.
         """
-        pass
 
     @abstractmethod
     def free(self, lock: int, auto_save: bool = True) -> bool:
@@ -621,7 +597,6 @@ class Model(ABC):
         Returns:
         bool: True if the lock is successfully released and (optionally) saved, False otherwise.
         """
-        pass
 
     @abstractmethod
     def history(self, status: bool = None) -> bool:
@@ -634,7 +609,6 @@ class Model(ABC):
         Returns:
         None
         """
-        pass
 
     @abstractmethod
     def save(self, path: str = None) -> bool:
@@ -649,7 +623,6 @@ class Model(ABC):
         Returns:
         bool: True if the save operation is successful, False otherwise.
         """
-        pass
 
     @abstractmethod
     def load(self, path: str = None) -> bool:
@@ -662,7 +635,6 @@ class Model(ABC):
         Returns:
         bool: True if the load operation is successful, False otherwise.
         """
-        pass
 
     @abstractmethod
     def recall(self, dry=True, debug=False) -> bool:
@@ -676,7 +648,6 @@ class Model(ABC):
         Returns:
         bool: True if the operation was successful, False otherwise.
         """
-        pass
 
     @abstractmethod
     def reset(self) -> None:
@@ -689,7 +660,6 @@ class Model(ABC):
         Returns:
         None
         """
-        pass
 
     @abstractmethod
     def check(self,
@@ -713,7 +683,6 @@ class Model(ABC):
         tuple: A tuple containing a boolean indicating the eligibility for Zakat, a list of brief statistics,
         and a dictionary containing the Zakat plan.
         """
-        pass
 
     @abstractmethod
     def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
@@ -728,7 +697,6 @@ class Model(ABC):
         Returns:
         bool: True if the zakat calculation is successful, False otherwise.
         """
-        pass
 
     @abstractmethod
     def import_csv_cache_path(self):
@@ -747,7 +715,6 @@ class Model(ABC):
             >>> obj.db.import_csv_cache_path()
             '/data/reports.import_csv.camel'
         """
-        pass
 
     @abstractmethod
     def daily_logs(self, weekday: WeekDay = WeekDay.Friday, debug: bool = False):
@@ -828,7 +795,6 @@ class Model(ABC):
             },
         }
         """
-        pass
 
     @abstractmethod
     def export_json(self, path: str = "data.json") -> bool:
@@ -844,7 +810,6 @@ class Model(ABC):
         Raises:
         No specific exceptions are raised by this method.
         """
-        pass
 
     @abstractmethod
     def vault(self) -> dict:
@@ -858,7 +823,6 @@ class Model(ABC):
         Returns:
         dict: A copy of the internal vault dictionary.
         """
-        pass
 
     @abstractmethod
     def snapshot(self) -> bool:
@@ -880,7 +844,6 @@ class Model(ABC):
         bool: True if a snapshot with the same hash already exists or if the snapshot is successfully created.
               False if the snapshot creation fails.
         """
-        pass
 
     @staticmethod
     @abstractmethod
@@ -891,7 +854,6 @@ class Model(ABC):
         Returns:
         str: The file extension used by the ZakatTracker class, which is 'camel' or 'sqlite'.
         """
-        pass
 
     @abstractmethod
     def log(self, value: float, desc: str = '', account: int = 1, created: int = None, ref: int = None,
@@ -916,7 +878,6 @@ class Model(ABC):
         Raises:
         ValueError: The log transaction happened again in the same nanosecond time.
         """
-        pass
 
     @abstractmethod
     def step(self, action: Action = None, account=None, ref: int = None, file: int = None, value: float = None,
@@ -936,7 +897,6 @@ class Model(ABC):
         Returns:
         - int: The lock time of the recorded action. If no lock was performed, it returns 0.
         """
-        pass
 
     @abstractmethod
     def ref_exists(self, account: int, ref_type: str, ref: int) -> bool:
@@ -951,7 +911,6 @@ class Model(ABC):
         Returns:
         bool: True if the reference exists for the given account and reference type, False otherwise.
         """
-        pass
 
     @abstractmethod
     def box_exists(self, account: int, ref: int) -> bool:
@@ -965,7 +924,6 @@ class Model(ABC):
         Returns:
         - bool: True if the box exists for the given account and reference, False otherwise.
         """
-        pass
 
     @abstractmethod
     def log_exists(self, account: int, ref: int) -> bool:
@@ -979,7 +937,6 @@ class Model(ABC):
         Returns:
         bool: True if the transaction log entry exists, False otherwise.
         """
-        pass
 
     @abstractmethod
     def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) \
@@ -995,7 +952,6 @@ class Model(ABC):
         - dict[int, tuple[str, str, bool]]: A dictionary where the keys are the timestamps of the snapshots,
         and the values are tuples containing the snapshot's hash, path, and existence status.
         """
-        pass
 
     @abstractmethod
     def clean_history(self, lock: int | None = None) -> int:
@@ -1009,7 +965,6 @@ class Model(ABC):
         Returns:
         int: The number of locks cleaned up.
         """
-        pass
 
 
 class Helper:
