@@ -74,6 +74,7 @@ from camelx import Camel, CamelRegistry
 import shutil
 from datetime import timedelta
 from abc import ABC, abstractmethod
+import sqlite3
 
 
 class WeekDay(Enum):
@@ -881,7 +882,7 @@ class Model(ABC):
 
     @abstractmethod
     def step(self, action: Action = None, account=None, ref: int = None, file: int = None, value: float = None,
-              key: str = None, math_operation: MathOperation = None) -> int:
+             key: str = None, math_operation: MathOperation = None) -> int:
         """
         This method is responsible for recording the actions performed on the ZakatTracker.
 
@@ -1444,7 +1445,7 @@ class DictModel(Model):
         return count
 
     def step(self, action: Action = None, account=None, ref: int = None, file: int = None, value: float = None,
-              key: str = None, math_operation: MathOperation = None) -> int:
+             key: str = None, math_operation: MathOperation = None) -> int:
         """
         This method is responsible for recording the actions performed on the ZakatTracker.
 
@@ -2219,7 +2220,7 @@ class DictModel(Model):
                 self._vault['account'][to_account]['box'][age]['rest'] += target_amount
                 self.step(Action.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
                 y = self.log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account,
-                              created=None, ref=None, debug=debug)
+                             created=None, ref=None, debug=debug)
                 times.append((age, y))
                 continue
             if debug:
@@ -2371,16 +2372,16 @@ class DictModel(Model):
                 if debug:
                     print('i', i, 'j', j)
                 self.step(Action.ZAKAT, account=x, ref=j, value=self._vault['account'][x]['box'][j]['last'],
-                           key='last',
-                           math_operation=MathOperation.EQUAL)
+                          key='last',
+                          math_operation=MathOperation.EQUAL)
                 self._vault['account'][x]['box'][j]['last'] = created
                 amount = Helper.exchange_calc(float(plan[x][i]['total']), 1, float(target_exchange['rate']))
                 self._vault['account'][x]['box'][j]['total'] += amount
                 self.step(Action.ZAKAT, account=x, ref=j, value=amount, key='total',
-                           math_operation=MathOperation.ADDITION)
+                          math_operation=MathOperation.ADDITION)
                 self._vault['account'][x]['box'][j]['count'] += plan[x][i]['count']
                 self.step(Action.ZAKAT, account=x, ref=j, value=plan[x][i]['count'], key='count',
-                           math_operation=MathOperation.ADDITION)
+                          math_operation=MathOperation.ADDITION)
                 if not parts_exist:
                     try:
                         self._vault['account'][x]['box'][j]['rest'] -= amount
@@ -2439,6 +2440,365 @@ class DictModel(Model):
             path = path[:-ext_len - 1]
         _, filename = os.path.split(path + f'.import_csv.{ext}')
         return self.base_path(filename)
+
+
+class SQLiteDatabase:
+    def __init__(self, db_file):
+        self.conn = sqlite3.connect(db_file)
+        self.cursor = self.conn.cursor()
+
+    def sql(self, query):
+        try:
+            self.cursor.execute(query)
+            self.conn.commit()
+        except Exception as e:
+            print(f'Exception: {e}')
+            print(f'SQL: {query}')
+
+    def create_table(self, table_name, columns):
+        """Creates a table with specified columns."""
+        column_str = ", ".join([f"{col} {data_type}" for col, data_type in columns.items()])
+        query = f"CREATE TABLE IF NOT EXISTS {table_name} ({column_str})"
+        try:
+            self.cursor.execute(query)
+            self.conn.commit()
+        except Exception as e:
+            print(f'Exception: {e}')
+            print(f'SQL: {query}')
+
+    def insert(self, table_name, data):
+        """Inserts data into a table."""
+        columns = ", ".join(data.keys())
+        values = ", ".join(["?" for _ in data.values()])
+        query = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
+        self.cursor.execute(query, tuple(data.values()))
+        self.conn.commit()
+
+    def select(self, table_name, columns=None, where=None):
+        """Selects data from a table."""
+        columns = "*" if columns is None else ", ".join(columns)
+        query = f"SELECT {columns} FROM {table_name}"
+        if where:
+            query += f" WHERE {where}"
+        self.cursor.execute(query)
+        return self.cursor.fetchall()
+
+    def update(self, table_name, data, where):
+        """Updates data in a table."""
+        set_clause = ", ".join([f"{col} = ?" for col in data])
+        query = f"UPDATE {table_name} SET {set_clause} WHERE {where}"
+        self.cursor.execute(query, tuple(data.values()) + (where,))
+        self.conn.commit()
+
+    def delete(self, table_name, where):
+        """Deletes data from a table."""
+        query = f"DELETE FROM {table_name} WHERE {where}"
+        self.cursor.execute(query)
+        self.conn.commit()
+
+    def close(self):
+        """Closes the database connection."""
+        self.conn.close()
+
+
+class SQLiteModel(Model):
+    def __init__(self, db_path: str = "./zakat_db/zakat.sqlite", history_mode: bool = True):
+        self._db = None
+        self._base_path = None
+        self._vault_path = None
+        self._history_mode = None
+        self.path(db_path)
+        self.create_db()
+        self.history(history_mode)
+
+    def create_db(self):
+        self._db = SQLiteDatabase(self.path())
+        self._db.sql("""
+            CREATE TABLE IF NOT EXISTS account(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                balance INTEGER DEFAULT 0,
+                count INTEGER DEFAULT 0,
+                hide BOOLEAN DEFAULT false,
+                zakatable BOOLEAN DEFAULT true,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT NULL,
+                CONSTRAINT account_name_uk UNIQUE(name)  
+            );
+        """)
+        self._db.sql("""
+            CREATE TABLE IF NOT EXISTS box(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                time INTEGER NOT NULL,
+                capital INTEGER NOT NULL,
+                count INTEGER DEFAULT 0,
+                last DATETIME DEFAULT NULL,
+                rest INTEGER NOT NULL,
+                total INTEGER DEFAULT 0,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT NULL,
+                CONSTRAINT box_time_uk UNIQUE(time),
+                CONSTRAINT box_account_id_fk FOREIGN KEY(account_id) REFERENCES account(id)
+            );
+        """)
+        self._db.sql("""
+            CREATE TABLE IF NOT EXISTS log(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                time INTEGER NOT NULL,
+                value INTEGER NOT NULL,
+                desc TEXT NOT NULL,
+                ref INTEGER NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT log_time_uk UNIQUE(time),
+                CONSTRAINT log_account_id_fk FOREIGN KEY(account_id) REFERENCES account(id)
+            );
+        """)
+        self._db.sql("""
+            CREATE TABLE IF NOT EXISTS file(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                log_id INTEGER NOT NULL,
+                path TEXT NOT NULL,
+                name TEXT DEFAULT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT NULL,
+                CONSTRAINT file_path_uk UNIQUE(log_id, path),
+                CONSTRAINT file_log_id_fk FOREIGN KEY(log_id) REFERENCES log(id)
+            );
+        """)
+        self._db.sql("""
+            CREATE TABLE IF NOT EXISTS exchange(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                account_id INTEGER NOT NULL,
+                time INTEGER NOT NULL,
+                rate FLOAT NOT NULL,
+                desc TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT exchange_time_uk UNIQUE(time),
+                CONSTRAINT exchange_account_id_fk FOREIGN KEY(account_id) REFERENCES account(id)
+            );
+        """)
+        self._db.sql("""
+            CREATE TABLE IF NOT EXISTS action(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT action_name_uk UNIQUE(name)
+            );
+        """)
+        actions = [(x.value, x.name) for x in Action]
+        if len(self._db.select('action')) != len(actions):
+            self._db.sql("""
+                        DELETE FROM action;
+                    """)
+            print('xxx', actions)
+            for ref, name in actions:
+                self._db.insert('action', {'id': ref, 'name': name})
+        self._db.sql("""
+            CREATE TABLE IF NOT EXISTS math(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT math_name_uk UNIQUE(name)
+            );
+        """)
+        maths = [(x.value, x.name) for x in MathOperation]
+        if len(self._db.select('math')) != len(maths):
+            self._db.sql("""
+                        DELETE FROM math;
+                    """)
+            print('xxx', maths)
+            for ref, name in maths:
+                self._db.insert('math', {'id': ref, 'name': name})
+        self._db.sql("""
+            CREATE TABLE IF NOT EXISTS history(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                time INTEGER NOT NULL,
+                action TEXT NOT NULL,
+                account_id INTEGER NOT NULL,
+                ref INTEGER DEFAULT NULL,
+                file INTEGER DEFAULT NULL,
+                key TEXT DEFAULT NULL,
+                value INTEGER DEFAULT NULL,
+                math TEXT DEFAULT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT history_action_fk FOREIGN KEY(action) REFERENCES action(id),
+                CONSTRAINT history_math_fk FOREIGN KEY(math) REFERENCES math(id),
+                CONSTRAINT history_account_id_fk FOREIGN KEY(account_id) REFERENCES account(id)
+            );
+        """)
+        self._db.sql("""
+            CREATE TABLE IF NOT EXISTS report(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                time INTEGER NOT NULL,
+                details JSON NOT NULL,
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT exchange_time_uk UNIQUE(time)
+            );
+        """)
+
+    def db(self):
+        return self._db
+
+    def path(self, path: str = None) -> str:
+        if path is None:
+            return self._vault_path
+        self._vault_path = Path(path).resolve()
+        base_path = Path(path).resolve()
+        if base_path.is_file() or base_path.suffix:
+            base_path = base_path.parent
+        base_path.mkdir(parents=True, exist_ok=True)
+        self._base_path = base_path
+        return str(self._vault_path)
+
+    def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: int = None,
+            debug: bool = False) -> tuple[
+                                        int,
+                                        list[
+                                            tuple[int, int],
+                                        ],
+                                    ] | tuple:
+        pass
+
+    def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
+              created: int = None, debug: bool = False) -> int:
+        pass
+
+    def add_file(self, account: int, ref: int, path: str) -> int:
+        pass
+
+    def remove_file(self, account: int, ref: int, file_ref: int) -> bool:
+        pass
+
+    def hide(self, account: int, status: bool = None) -> bool:
+        pass
+
+    def zakatable(self, account: int, status: bool = None) -> bool:
+        pass
+
+    def name(self, account: int) -> str | None:
+        pass
+
+    def accounts(self) -> dict:
+        pass
+
+    def exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
+                 debug: bool = False) -> dict:
+        pass
+
+    def exchanges(self, account: int) -> dict | None:
+        pass
+
+    def account(self, name: str, ref: int = None) -> tuple[int, str]:
+        pass
+
+    def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
+                 created: int = None, debug: bool = False) -> list[int]:
+        pass
+
+    def account_exists(self, account: int) -> bool:
+        pass
+
+    def steps(self) -> dict:
+        pass
+
+    def files(self) -> list[dict[str, str | int]]:
+        pass
+
+    def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
+        pass
+
+    def logs(self, account: int) -> dict:
+        pass
+
+    def boxes(self, account: int) -> dict:
+        pass
+
+    def balance(self, account: int = 1, cached: bool = True) -> int:
+        pass
+
+    def box_size(self, account: int) -> int:
+        pass
+
+    def log_size(self, account: int) -> int:
+        pass
+
+    def nolock(self) -> bool:
+        pass
+
+    def lock(self) -> int:
+        pass
+
+    def free(self, lock: int, auto_save: bool = True) -> bool:
+        pass
+
+    def history(self, status: bool = None) -> bool:
+        if status is not None:
+            self._history_mode = status
+        return self._history_mode
+
+    def save(self, path: str = None) -> bool:
+        pass
+
+    def load(self, path: str = None) -> bool:
+        pass
+
+    def recall(self, dry=True, debug=False) -> bool:
+        pass
+
+    def reset(self) -> None:
+        pass
+
+    def check(self, silver_gram_price: float, unscaled_nisab: float | int | Decimal = None, debug: bool = False,
+              now: int = None, cycle: float = None) -> tuple:
+        pass
+
+    def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
+        pass
+
+    def import_csv_cache_path(self):
+        pass
+
+    def daily_logs(self, weekday: WeekDay = WeekDay.Friday, debug: bool = False):
+        pass
+
+    def export_json(self, path: str = "data.json") -> bool:
+        pass
+
+    def vault(self) -> dict:
+        pass
+
+    def snapshot(self) -> bool:
+        pass
+
+    @staticmethod
+    def ext() -> str:
+        pass
+
+    def log(self, value: float, desc: str = '', account: int = 1, created: int = None, ref: int = None,
+            debug: bool = False) -> int:
+        pass
+
+    def step(self, action: Action = None, account=None, ref: int = None, file: int = None, value: float = None,
+             key: str = None, math_operation: MathOperation = None) -> int:
+        pass
+
+    def ref_exists(self, account: int, ref_type: str, ref: int) -> bool:
+        pass
+
+    def box_exists(self, account: int, ref: int) -> bool:
+        pass
+
+    def log_exists(self, account: int, ref: int) -> bool:
+        pass
+
+    def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) -> dict[
+        int, tuple[str, str, bool]]:
+        pass
+
+    def clean_history(self, lock: int | None = None) -> int:
+        pass
 
 
 class ZakatTracker:
@@ -3853,19 +4213,22 @@ class ZakatTracker:
 
 
 def test(debug: bool = False):
-    ledger = ZakatTracker(
-        model=DictModel(
-            db_path="./zakat_test_db/zakat.camel",
-            history_mode=True,
-        ),
-    )
-    start = Helper.time()
-    assert ledger.test(debug=debug)
+    durations = {}
+    for model in [
+        DictModel(db_path="./zakat_test_db/zakat.camel", history_mode=True),
+        #SQLiteModel(db_path="./zakat_test_db/zakat.sqlite", history_mode=True),
+    ]:
+        ledger = ZakatTracker(model=model)
+        start = Helper.time()
+        assert ledger.test(debug=debug)
+        durations[model.__class__.__name__] = Helper.time() - start
     if debug:
         print("#########################")
         print("######## TEST DONE ########")
         print("#########################")
-        print(Helper.duration_from_nanoseconds(Helper.time() - start))
+        for model_name, duration in durations.items():
+            print("------------- Model: [" + model_name + "] -------------")
+            print(Helper.duration_from_nanoseconds(duration))
         print("#########################")
 
 

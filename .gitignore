@@ -6,6 +6,7 @@ build
 *.csv
 *.pickle
 *.camel
+*.sqlite
 tmp
 *.json
 *.pyc
