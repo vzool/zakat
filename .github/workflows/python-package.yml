@@ -45,6 +45,7 @@ jobs:
         pip install twine
         pip install camelx
         pip install pyyaml
+        pip install vzool-config
         pip install pytest==8.2.2
         pip install pytest-runner==6.0.1
     - name: Test with pytest
