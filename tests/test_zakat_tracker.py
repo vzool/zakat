@@ -8,6 +8,7 @@ def test_zakat_tracker():
         DictModel(db_path="./zakat_test_db/zakat.camel", history_mode=True),
         # SQLiteModel(db_path="./zakat_test_db/zakat.sqlite", history_mode=True),
     ]:
+        assert model.test(debug=True)
         ledger = ZakatTracker(model=model)
         start = Helper.time()
         assert ledger.test(debug=True)

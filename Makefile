@@ -8,14 +8,19 @@ init:
 clean:
 	rm -rf *.csv
 	rm -rf *.camel
+	rm -rf *.sqlite
 	rm -rf *.json
 	rm -rf *.txt
+	rm -rf zakat_test_db
 	rm -rf zakat/*.csv
 	rm -rf zakat/*.camel
 	rm -rf zakat/*.json
+	rm -rf zakat/zakat_test_db
 	rm -rf tests/*.csv
 	rm -rf tests/*.camel
+	rm -rf tests/*.sqlite
 	rm -rf tests/*.json
+	rm -rf tests/zakat_test_db
 	rm -rf snapshots
 
 .PHONY: dev-build
@@ -32,6 +37,7 @@ deps:
 	python3 -m pip install --upgrade twine
 	python3 -m pip install --upgrade pyyaml
 	python3 -m pip install --upgrade camelx
+	python3 -m pip install --upgrade vzool-config
 	python3 -m pip install --upgrade pytest==8.2.2
 	python3 -m pip install --upgrade pytest-runner==6.0.1
 	python3 -m pip install --upgrade twine

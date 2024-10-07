@@ -75,6 +75,7 @@ import shutil
 from datetime import timedelta
 from abc import ABC, abstractmethod
 import sqlite3
+from vzool_config import ConfigManager
 
 
 class WeekDay(Enum):
@@ -967,6 +968,19 @@ class Model(ABC):
         int: The number of locks cleaned up.
         """
 
+    @staticmethod
+    @abstractmethod
+    def test(debug: bool = False) -> bool:
+        """
+        Performs a test operation for the model if required.
+
+        Parameters:
+        debug (bool, optional): If True, enables debug mode. Defaults to False.
+
+        Returns:
+        bool: The result of the test operation.
+        """
+
 
 class Helper:
     @staticmethod
@@ -1362,6 +1376,13 @@ class Helper:
 
 
 class DictModel(Model):
+    """
+    A dictionary-based model.
+
+    This class provides a convenient way to represent data as a dictionary.
+    It may offer additional features like validation, serialization, or deserialization.
+    """
+
     def __init__(self, db_path: str = "./zakat_db/zakat.camel", history_mode: bool = True):
         """
         Initialize DictModel with database path and history mode.
@@ -2441,6 +2462,10 @@ class DictModel(Model):
         _, filename = os.path.split(path + f'.import_csv.{ext}')
         return self.base_path(filename)
 
+    @staticmethod
+    def test(debug: bool = False) -> bool:
+        return True
+
 
 class SQLiteDatabase:
     def __init__(self, db_file):
@@ -2502,6 +2527,13 @@ class SQLiteDatabase:
 
 
 class SQLiteModel(Model):
+    """
+    A model that maps to a SQLite database tables.
+
+    This class provides a convenient way to interact with SQLite data, encapsulating database operations.
+    It may offer features like automatic mapping to database columns, validation, and query building.
+    """
+
     def __init__(self, db_path: str = "./zakat_db/zakat.sqlite", history_mode: bool = True):
         self._db = None
         self._base_path = None
@@ -2509,6 +2541,7 @@ class SQLiteModel(Model):
         self._history_mode = None
         self.path(db_path)
         self.create_db()
+        self.config = ConfigManager(self.path())
         self.history(history_mode)
 
     def create_db(self):
@@ -2725,10 +2758,10 @@ class SQLiteModel(Model):
         pass
 
     def nolock(self) -> bool:
-        pass
+        return self.config.get(key='nolock', default=True)
 
     def lock(self) -> int:
-        pass
+        return self.config.get(key='lock')
 
     def free(self, lock: int, auto_save: bool = True) -> bool:
         pass
@@ -2799,6 +2832,11 @@ class SQLiteModel(Model):
 
     def clean_history(self, lock: int | None = None) -> int:
         pass
+
+    @staticmethod
+    def test(debug: bool = False) -> bool:
+        ConfigManager.test(debug=debug)
+        return True
 
 
 class ZakatTracker:
@@ -4216,8 +4254,9 @@ def test(debug: bool = False):
     durations = {}
     for model in [
         DictModel(db_path="./zakat_test_db/zakat.camel", history_mode=True),
-        #SQLiteModel(db_path="./zakat_test_db/zakat.sqlite", history_mode=True),
+        SQLiteModel(db_path="./zakat_test_db/zakat.sqlite", history_mode=True),
     ]:
+        assert model.test(debug=debug)
         ledger = ZakatTracker(model=model)
         start = Helper.time()
         assert ledger.test(debug=debug)
