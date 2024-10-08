@@ -222,7 +222,7 @@ def start_file_server(database_path: str, database_callback: callable = None, cs
 
 
 def main():
-    from zakat_tracker import ZakatTracker, DictModel, Action  # SAFE Circular Imports
+    from zakat_tracker import ZakatTracker, DictModel, ActionEnum  # SAFE Circular Imports
     # Example usage (replace with your file path)
     file_to_share = f"{uuid.uuid4()}.pickle"  # Or any other file type
 

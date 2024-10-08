@@ -18,9 +18,9 @@ from zakat.zakat_tracker import (
     DictModel,
     ZakatTracker,
     test,
-    Action,
+    ActionEnum,
     JSONEncoder,
-    MathOperation,
+    MathOperationEnum,
     WeekDay,
 )
 
@@ -38,9 +38,9 @@ __all__ = [
     "DictModel",
     "ZakatTracker",
     "test",
-    "Action",
+    "ActionEnum",
     "JSONEncoder",
-    "MathOperation",
+    "MathOperationEnum",
     "WeekDay",
     "start_file_server",
     "find_available_port",

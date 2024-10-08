@@ -88,7 +88,7 @@ class WeekDay(Enum):
     Sunday = 6
 
 
-class Action(Enum):
+class ActionEnum(Enum):
     CREATE = auto()
     TRACK = auto()
     LOG = auto()
@@ -102,7 +102,7 @@ class Action(Enum):
     NAME_ACCOUNT = auto()
 
 
-class MathOperation(Enum):
+class MathOperationEnum(Enum):
     ADDITION = auto()
     EQUAL = auto()
     SUBTRACTION = auto()
@@ -118,7 +118,7 @@ class Vault(Enum):
 
 class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, Action) or isinstance(obj, MathOperation):
+        if isinstance(obj, ActionEnum) or isinstance(obj, MathOperationEnum):
             return obj.name  # Serialize as the enum member's name
         elif isinstance(obj, Decimal):
             return float(obj)
@@ -128,24 +128,24 @@ class JSONEncoder(json.JSONEncoder):
 camel_registry = CamelRegistry()
 
 
-@camel_registry.dumper(Action, u'action', version=None)
+@camel_registry.dumper(ActionEnum, u'action', version=None)
 def _dump_action(data):
     return u"{}".format(data.value)
 
 
 @camel_registry.loader(u'action', version=None)
 def _load_action(data, version):
-    return Action(int(data))
+    return ActionEnum(int(data))
 
 
-@camel_registry.dumper(MathOperation, u'math', version=None)
+@camel_registry.dumper(MathOperationEnum, u'math', version=None)
 def _dump_math(data):
     return u"{}".format(data.value)
 
 
 @camel_registry.loader(u'math', version=None)
 def _load_math(data, version):
-    return MathOperation(int(data))
+    return MathOperationEnum(int(data))
 
 
 camel = Camel([camel_registry])
@@ -890,8 +890,8 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def step(self, action: Action = None, account=None, ref: int = None, file: int = None, value: float = None,
-             key: str = None, math_operation: MathOperation = None) -> int:
+    def step(self, action: ActionEnum = None, account=None, ref: int = None, file: int = None, value: float = None,
+             key: str = None, math_operation: MathOperationEnum = None) -> int:
         """
         This method is responsible for recording the actions performed on the ZakatTracker.
 
@@ -1473,8 +1473,8 @@ class DictModel(Model):
                 del self._vault['history'][lock]
         return count
 
-    def step(self, action: Action = None, account=None, ref: int = None, file: int = None, value: float = None,
-             key: str = None, math_operation: MathOperation = None) -> int:
+    def step(self, action: ActionEnum = None, account=None, ref: int = None, file: int = None, value: float = None,
+             key: str = None, math_operation: MathOperationEnum = None) -> int:
         """
         This method is responsible for recording the actions performed on the ZakatTracker.
 
@@ -1697,7 +1697,7 @@ class DictModel(Model):
             'ref': ref,
             'file': {},
         }
-        self.step(Action.LOG, account, ref=created, value=value)
+        self.step(ActionEnum.LOG, account, ref=created, value=value)
         return created
 
     def exchanges(self, account: int) -> dict | None:
@@ -1836,7 +1836,7 @@ class DictModel(Model):
             if debug:
                 print('memory', type(x), x)
             match x['action']:
-                case Action.CREATE:
+                case ActionEnum.CREATE:
                     if x['account'] is not None:
                         if self.account_exists(x['account']):
                             if debug:
@@ -1848,7 +1848,7 @@ class DictModel(Model):
                                 continue
                             del self._vault['account'][x['account']]
 
-                case Action.TRACK:
+                case ActionEnum.TRACK:
                     if x['account'] is not None:
                         if self.account_exists(x['account']):
                             if dry:
@@ -1857,7 +1857,7 @@ class DictModel(Model):
                             self._vault['account'][x['account']]['count'] -= 1
                             del self._vault['account'][x['account']]['box'][x['ref']]
 
-                case Action.LOG:
+                case ActionEnum.LOG:
                     if x['account'] is not None:
                         if self.account_exists(x['account']):
                             if x['ref'] in self._vault['account'][x['account']]['log']:
@@ -1886,7 +1886,7 @@ class DictModel(Model):
                                     self._vault['account'][x['account']]['count'] -= 1
                                 del self._vault['account'][x['account']]['log'][x['ref']]
 
-                case Action.SUB:
+                case ActionEnum.SUB:
                     if x['account'] is not None:
                         if self.account_exists(x['account']):
                             if x['ref'] in self._vault['account'][x['account']]['box']:
@@ -1896,7 +1896,7 @@ class DictModel(Model):
                                 self._vault['account'][x['account']]['balance'] += x['value']
                                 sub_positive_log_negative = x['value']
 
-                case Action.ADD_FILE:
+                case ActionEnum.ADD_FILE:
                     if x['account'] is not None:
                         if self.account_exists(x['account']):
                             if x['ref'] in self._vault['account'][x['account']]['log']:
@@ -1905,7 +1905,7 @@ class DictModel(Model):
                                         continue
                                     del self._vault['account'][x['account']]['log'][x['ref']]['file'][x['file']]
 
-                case Action.REMOVE_FILE:
+                case ActionEnum.REMOVE_FILE:
                     if x['account'] is not None:
                         if self.account_exists(x['account']):
                             if x['ref'] in self._vault['account'][x['account']]['log']:
@@ -1913,7 +1913,7 @@ class DictModel(Model):
                                     continue
                                 self._vault['account'][x['account']]['log'][x['ref']]['file'][x['file']] = x['value']
 
-                case Action.BOX_TRANSFER:
+                case ActionEnum.BOX_TRANSFER:
                     if x['account'] is not None:
                         if self.account_exists(x['account']):
                             if x['ref'] in self._vault['account'][x['account']]['box']:
@@ -1921,7 +1921,7 @@ class DictModel(Model):
                                     continue
                                 self._vault['account'][x['account']]['box'][x['ref']]['rest'] -= x['value']
 
-                case Action.EXCHANGE:
+                case ActionEnum.EXCHANGE:
                     if x['account'] is not None:
                         if self.account_exists(x['account']):
                             if x['ref'] in self._vault['account'][x['account']]['exchange']:
@@ -1929,13 +1929,13 @@ class DictModel(Model):
                                     continue
                                 del self._vault['account'][x['account']]['exchange'][x['ref']]
 
-                case Action.REPORT:
+                case ActionEnum.REPORT:
                     if x['ref'] in self._vault['report']:
                         if dry:
                             continue
                         del self._vault['report'][x['ref']]
 
-                case Action.ZAKAT:
+                case ActionEnum.ZAKAT:
                     if x['account'] is not None:
                         if self.account_exists(x['account']):
                             if x['ref'] in self._vault['account'][x['account']]['box']:
@@ -1943,22 +1943,22 @@ class DictModel(Model):
                                     if dry:
                                         continue
                                     match x['math']:
-                                        case MathOperation.ADDITION:
+                                        case MathOperationEnum.ADDITION:
                                             self._vault['account'][x['account']]['box'][x['ref']][x['key']] -= x[
                                                 'value']
-                                        case MathOperation.EQUAL:
+                                        case MathOperationEnum.EQUAL:
                                             self._vault['account'][x['account']]['box'][x['ref']][x['key']] = x['value']
-                                        case MathOperation.SUBTRACTION:
+                                        case MathOperationEnum.SUBTRACTION:
                                             self._vault['account'][x['account']]['box'][x['ref']][x['key']] += x[
                                                 'value']
 
-                case Action.NAME_ACCOUNT:
+                case ActionEnum.NAME_ACCOUNT:
                     if x['account'] is not None:
                         if self.account_exists(x['account']):
                             if dry:
                                 continue
                             match x['math']:
-                                case MathOperation.EQUAL:
+                                case MathOperationEnum.EQUAL:
                                     self._vault['account'][x['account']][x['key']] = x['value']
 
         if not dry:
@@ -1986,7 +1986,7 @@ class DictModel(Model):
                 'hide': False,
                 'zakatable': True,
             }
-            self.step(Action.CREATE, account)
+            self.step(ActionEnum.CREATE, account)
         if unscaled_value == 0:
             if no_lock:
                 self.free(self.lock())
@@ -2007,7 +2007,7 @@ class DictModel(Model):
             'rest': value,
             'total': 0,
         }
-        self.step(Action.TRACK, account, ref=created, value=value)
+        self.step(ActionEnum.TRACK, account, ref=created, value=value)
         if no_lock:
             self.free(self.lock())
         return created
@@ -2030,7 +2030,7 @@ class DictModel(Model):
             if len(self._vault['account'][account]['exchange']) == 0 and rate <= 1:
                 return {"time": created, "rate": 1, "description": None}
             self._vault['account'][account]['exchange'][created] = {"rate": rate, "description": description}
-            self.step(Action.EXCHANGE, account, ref=created, value=rate)
+            self.step(ActionEnum.EXCHANGE, account, ref=created, value=rate)
             if no_lock:
                 self.free(self.lock())
             if debug:
@@ -2059,7 +2059,7 @@ class DictModel(Model):
                 self._vault['account'][account]['log'][ref]['file'][file_ref] = path
                 no_lock = self.nolock()
                 self.lock()
-                self.step(Action.ADD_FILE, account, ref=ref, file=file_ref)
+                self.step(ActionEnum.ADD_FILE, account, ref=ref, file=file_ref)
                 if no_lock:
                     self.free(self.lock())
                 return file_ref
@@ -2073,7 +2073,7 @@ class DictModel(Model):
                     del self._vault['account'][account]['log'][ref]['file'][file_ref]
                     no_lock = self.nolock()
                     self.lock()
-                    self.step(Action.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
+                    self.step(ActionEnum.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
                     if no_lock:
                         self.free(self.lock())
                     return True
@@ -2120,12 +2120,12 @@ class DictModel(Model):
             if not self.account_exists(_account):
                 self.track(account=_account)
                 self.step(
-                    action=Action.NAME_ACCOUNT,
+                    action=ActionEnum.NAME_ACCOUNT,
                     account=_account,
                     value=self._vault['account'][_account]['name'] if 'name' in self._vault['account'][
                         _account] else None,
                     key='name',
-                    math_operation=MathOperation.EQUAL,
+                    math_operation=MathOperationEnum.EQUAL,
                 )
                 self._vault['account'][_account]['name'] = _name
 
@@ -2192,14 +2192,14 @@ class DictModel(Model):
             rest = self._vault['account'][account]['box'][j]['rest']
             if rest >= target:
                 self._vault['account'][account]['box'][j]['rest'] -= target
-                self.step(Action.SUB, account, ref=j, value=target)
+                self.step(ActionEnum.SUB, account, ref=j, value=target)
                 ages.append((j, target))
                 target = 0
                 break
             elif target > rest > 0:
                 chunk = rest
                 target -= chunk
-                self.step(Action.SUB, account, ref=j, value=chunk)
+                self.step(ActionEnum.SUB, account, ref=j, value=chunk)
                 ages.append((j, chunk))
                 self._vault['account'][account]['box'][j]['rest'] = 0
         if target > 0:
@@ -2256,7 +2256,7 @@ class DictModel(Model):
                     self._vault['account'][to_account]['box'][age]['capital'] += target_amount
                     selected_age = Helper.time()
                 self._vault['account'][to_account]['box'][age]['rest'] += target_amount
-                self.step(Action.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
+                self.step(ActionEnum.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
                 y = self.log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account,
                              created=None, ref=None, debug=debug)
                 times.append((age, y))
@@ -2394,7 +2394,7 @@ class DictModel(Model):
         self.lock()
         report_time = Helper.time()
         self._vault['report'][report_time] = report
-        self.step(Action.REPORT, ref=report_time)
+        self.step(ActionEnum.REPORT, ref=report_time)
         created = Helper.time()
         for x in plan:
             target_exchange = self.exchange(x)
@@ -2409,17 +2409,17 @@ class DictModel(Model):
                 j = ids[i]
                 if debug:
                     print('i', i, 'j', j)
-                self.step(Action.ZAKAT, account=x, ref=j, value=self._vault['account'][x]['box'][j]['last'],
+                self.step(ActionEnum.ZAKAT, account=x, ref=j, value=self._vault['account'][x]['box'][j]['last'],
                           key='last',
-                          math_operation=MathOperation.EQUAL)
+                          math_operation=MathOperationEnum.EQUAL)
                 self._vault['account'][x]['box'][j]['last'] = created
                 amount = Helper.exchange_calc(float(plan[x][i]['total']), 1, float(target_exchange['rate']))
                 self._vault['account'][x]['box'][j]['total'] += amount
-                self.step(Action.ZAKAT, account=x, ref=j, value=amount, key='total',
-                          math_operation=MathOperation.ADDITION)
+                self.step(ActionEnum.ZAKAT, account=x, ref=j, value=amount, key='total',
+                          math_operation=MathOperationEnum.ADDITION)
                 self._vault['account'][x]['box'][j]['count'] += plan[x][i]['count']
-                self.step(Action.ZAKAT, account=x, ref=j, value=plan[x][i]['count'], key='count',
-                          math_operation=MathOperation.ADDITION)
+                self.step(ActionEnum.ZAKAT, account=x, ref=j, value=plan[x][i]['count'], key='count',
+                          math_operation=MathOperationEnum.ADDITION)
                 if not parts_exist:
                     try:
                         self._vault['account'][x]['box'][j]['rest'] -= amount
@@ -2669,7 +2669,7 @@ class SQLiteModel(Model):
                 CONSTRAINT action_name_uk UNIQUE(name)
             );
         """)
-        actions = [(x.value, x.name) for x in Action]
+        actions = [(x.value, x.name) for x in ActionEnum]
         if len(self.db.select('action')) != len(actions):
             self.db.sql("""
                         DELETE FROM action;
@@ -2685,7 +2685,7 @@ class SQLiteModel(Model):
                 CONSTRAINT math_name_uk UNIQUE(name)
             );
         """)
-        maths = [(x.value, x.name) for x in MathOperation]
+        maths = [(x.value, x.name) for x in MathOperationEnum]
         if len(self.db.select('math')) != len(maths):
             self.db.sql("""
                         DELETE FROM math;
@@ -2876,8 +2876,8 @@ class SQLiteModel(Model):
             debug: bool = False) -> int:
         pass
 
-    def step(self, action: Action = None, account=None, ref: int = None, file: int = None, value: float = None,
-             key: str = None, math_operation: MathOperation = None) -> int:
+    def step(self, action: ActionEnum = None, account=None, ref: int = None, file: int = None, value: float = None,
+             key: str = None, math_operation: MathOperationEnum = None) -> int:
         pass
 
     def ref_exists(self, account: int, ref_type: str, ref: int) -> bool:
