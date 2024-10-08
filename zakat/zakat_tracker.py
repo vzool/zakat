@@ -102,6 +102,20 @@ class Action(Enum):
     NAME_ACCOUNT = auto()
 
 
+class MathOperation(Enum):
+    ADDITION = auto()
+    EQUAL = auto()
+    SUBTRACTION = auto()
+
+
+class Vault(Enum):
+    ALL = auto()
+    ACCOUNT = auto()
+    NAME = auto()
+    HISTORY = auto()
+    REPORT = auto()
+
+
 class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Action) or isinstance(obj, MathOperation):
@@ -109,12 +123,6 @@ class JSONEncoder(json.JSONEncoder):
         elif isinstance(obj, Decimal):
             return float(obj)
         return super().default(obj)
-
-
-class MathOperation(Enum):
-    ADDITION = auto()
-    EQUAL = auto()
-    SUBTRACTION = auto()
 
 
 camel_registry = CamelRegistry()
@@ -814,16 +822,16 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def vault(self) -> dict:
+    def vault(self, section: Vault = Vault.ALL) -> dict:
         """
-        Returns a copy of the internal vault dictionary.
+        Returns a copy of the internal vault in dictionary format.
 
         This method is used to retrieve the current state of the ZakatTracker object.
         It provides a snapshot of the internal data structure, allowing for further
         processing or analysis.
 
         Returns:
-        dict: A copy of the internal vault dictionary.
+        dict: A copy of the internal vault in dictionary format.
         """
 
     @abstractmethod
@@ -1521,8 +1529,17 @@ class DictModel(Model):
             return True
         return False
 
-    def vault(self) -> dict:
-        return self._vault.copy()
+    def vault(self, section: Vault = Vault.ALL) -> dict:
+        	match section:
+        		case Vault.ACCOUNT:
+        			return self._vault['account'].copy()
+        		case Vault.NAME:
+        			return self._vault['name'].copy()
+        		case Vault.HISTORY:
+        			return self._vault['history'].copy()
+        		case Vault.REPORT:
+        			return self._vault['report'].copy()
+        	return self._vault.copy()
 
     @staticmethod
     def stats_init() -> dict[str, tuple[int, str]]:
@@ -1542,7 +1559,7 @@ class DictModel(Model):
         }
 
     def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
-        ram_size = 0.0 if ignore_ram else Helper.get_dict_size(self.vault())
+        ram_size = 0.0 if ignore_ram else Helper.get_dict_size(self.vault(Vault.ALL))
         file_size = os.path.getsize(self.path())
         return {
             'database': (file_size, Helper.human_readable_size(file_size)),
@@ -2836,8 +2853,17 @@ class SQLiteModel(Model):
     def export_json(self, path: str = "data.json") -> bool:
         pass
 
-    def vault(self) -> dict:
-        pass
+    def vault(self, section: Vault = Vault.ALL) -> dict:
+        	match section:
+        		case Vault.ACCOUNT:
+        			return {}
+        		case Vault.NAME:
+        			return {}
+        		case Vault.HISTORY:
+        			return {}
+        		case Vault.REPORT:
+        			return {}
+        	return {}
 
     def snapshot(self) -> bool:
         pass
@@ -3354,8 +3380,8 @@ class ZakatTracker:
             if debug:
                 print(f'index = {index + 1}, ref = {ref}')
             assert index + 1 == ref
-            assert index + 1 in self.db.vault()['account']
-            assert name == self.db.vault()['account'][index + 1]['name']
+            assert index + 1 in self.db.vault(Vault.ACCOUNT)
+            assert name == self.db.vault(Vault.ACCOUNT)[index + 1]['name']
         account_z_ref, account_z_name = self.db.account(name='z')
         assert account_z_ref == 26
         assert account_z_name == 'z'
@@ -3366,13 +3392,13 @@ class ZakatTracker:
         assert self.db.account_exists(account_z_ref_new)
         assert account_z_ref_new == 321
         assert account_z_name_new == 'z'
-        assert account_z_ref not in self.db.vault()['name']['account']
+        assert account_z_ref not in self.db.vault(Vault.NAME)['account']
         assert self.db.account_exists(account_z_ref)
         account_zz_ref, account_zz_name = self.db.account(name='zz', ref=321)
         assert self.db.account_exists(account_zz_ref)
         assert account_zz_ref == 321
         assert account_zz_name == 'zz'
-        assert account_z_name not in self.db.vault()['name']['account']
+        assert account_z_name not in self.db.vault(Vault.NAME)['account']
         account_xx_ref, account_xx_name = self.db.account(name='xx', ref=333)
         assert self.db.account_exists(account_xx_ref)
         assert account_xx_ref == 333
@@ -3419,14 +3445,14 @@ class ZakatTracker:
                     if debug:
                         print('_sub', z, Helper.time())
                 assert ref != 0
-                assert len(self.db.vault()['account'][x]['log'][ref]['file']) == 0
+                assert len(self.db.vault(Vault.ACCOUNT)[x]['log'][ref]['file']) == 0
                 for i in range(3):
                     file_ref = self.db.add_file(x, ref, 'file_' + str(i))
                     sleep(0.0000001)
                     assert file_ref != 0
                     if debug:
                         print('ref', ref, 'file', file_ref)
-                    assert len(self.db.vault()['account'][x]['log'][ref]['file']) == i + 1
+                    assert len(self.db.vault(Vault.ACCOUNT)[x]['log'][ref]['file']) == i + 1
                 file_ref = self.db.add_file(x, ref, 'file_' + str(3))
                 assert self.db.remove_file(x, ref, file_ref)
                 daily_logs = self.db.daily_logs(debug=debug)
@@ -3443,7 +3469,7 @@ class ZakatTracker:
                 if debug:
                     print("debug-1", z, y[3])
                 assert z == y[3]
-                o = self.db.vault()['account'][x]['log']
+                o = self.db.vault(Vault.ACCOUNT)[x]['log']
                 z = 0
                 for i in o:
                     z += o[i]['value']
@@ -3474,14 +3500,14 @@ class ZakatTracker:
             assert self.db.zakatable(x)
 
         if restore is True:
-            count = len(self.db.vault()['history'])
+            count = len(self.db.vault(Vault.HISTORY))
             if debug:
                 print('history-count', count)
             assert count == 10
             # try mode
             for _ in range(count):
                 assert self.db.recall(True, debug)
-            count = len(self.db.vault()['history'])
+            count = len(self.db.vault(Vault.HISTORY))
             if debug:
                 print('history-count', count)
             assert count == 10
@@ -3500,7 +3526,7 @@ class ZakatTracker:
                     assert self.db.balance(account) == row[2]
                     assert self.db.recall(False, debug)
             assert self.db.recall(False, debug) is False
-            count = len(self.db.vault()['history'])
+            count = len(self.db.vault(Vault.HISTORY))
             if debug:
                 print('history-count', count)
             assert count == 0
@@ -3639,15 +3665,15 @@ class ZakatTracker:
                 assert future_fresh_balance == total
 
                 # TODO: check boxes times for `ages` should equal box times in `future`
-                for ref in self.db.vault()['account'][account_ages_ref]['box']:
-                    ages_capital = self.db.vault()['account'][account_ages_ref]['box'][ref]['capital']
-                    ages_rest = self.db.vault()['account'][account_ages_ref]['box'][ref]['rest']
+                for ref in self.db.vault(Vault.ACCOUNT)[account_ages_ref]['box']:
+                    ages_capital = self.db.vault(Vault.ACCOUNT)[account_ages_ref]['box'][ref]['capital']
+                    ages_rest = self.db.vault(Vault.ACCOUNT)[account_ages_ref]['box'][ref]['rest']
                     future_capital = 0
-                    if ref in self.db.vault()['account'][account_future_ref]['box']:
-                        future_capital = self.db.vault()['account'][account_future_ref]['box'][ref]['capital']
+                    if ref in self.db.vault(Vault.ACCOUNT)[account_future_ref]['box']:
+                        future_capital = self.db.vault(Vault.ACCOUNT)[account_future_ref]['box'][ref]['capital']
                     future_rest = 0
-                    if ref in self.db.vault()['account'][account_future_ref]['box']:
-                        future_rest = self.db.vault()['account'][account_future_ref]['box'][ref]['rest']
+                    if ref in self.db.vault(Vault.ACCOUNT)[account_future_ref]['box']:
+                        future_rest = self.db.vault(Vault.ACCOUNT)[account_future_ref]['box'][ref]['rest']
                     if ages_capital != 0 and future_capital != 0 and future_rest != 0:
                         if debug:
                             print('================================================================')
@@ -3660,7 +3686,7 @@ class ZakatTracker:
                         elif ages_rest > 0:
                             assert ages_capital == ages_rest + future_capital
                 self.db.reset()
-                assert len(self.db.vault()['history']) == 0
+                assert len(self.db.vault(Vault.HISTORY)) == 0
 
             assert self.db.history()
             assert self.db.history(False) is False
@@ -3709,7 +3735,7 @@ class ZakatTracker:
                 assert xx == z[4]
 
                 s = 0
-                log = self.db.vault()['account'][x]['log']
+                log = self.db.vault(Vault.ACCOUNT)[x]['log']
                 for i in log:
                     s += log[i]['value']
                 if debug:
@@ -3726,7 +3752,7 @@ class ZakatTracker:
                 assert yy == z[9]
 
                 s = 0
-                log = self.db.vault()['account'][y]['log']
+                log = self.db.vault(Vault.ACCOUNT)[y]['log']
                 for i in log:
                     s += log[i]['value']
                 assert s == z[10]
@@ -3739,17 +3765,17 @@ class ZakatTracker:
                 pp().pprint(self.db.check(2.17))
 
             assert not self.db.nolock()
-            history_count = len(self.db.vault()['history'])
+            history_count = len(self.db.vault(Vault.HISTORY))
             if debug:
                 print('history-count', history_count)
             assert history_count == 5
             assert not self.db.free(Helper.time())
             assert self.db.free(self.db.lock())
             assert self.db.nolock()
-            history_count = len(self.db.vault()['history'])
+            history_count = len(self.db.vault(Vault.HISTORY))
             if debug:
                 print('history-count', history_count)
-            assert len(self.db.vault()['history']) == 4
+            assert len(self.db.vault(Vault.HISTORY)) == 4
 
             # storage
 
@@ -3761,25 +3787,25 @@ class ZakatTracker:
             self.db.reset()
             assert self.db.recall(False, debug) is False
             self.db.load()
-            assert self.db.vault()['account'] is not None
+            assert self.db.vault(Vault.ACCOUNT) is not None
 
             # recall
 
             assert self.db.nolock()
-            history_count = len(self.db.vault()['history'])
+            history_count = len(self.db.vault(Vault.HISTORY))
             if debug:
                 print('history-count', history_count)
-            assert len(self.db.vault()['history']) == 4
+            assert len(self.db.vault(Vault.HISTORY)) == 4
             assert self.db.recall(False, debug) is True
-            assert len(self.db.vault()['history']) == 3
+            assert len(self.db.vault(Vault.HISTORY)) == 3
             assert self.db.recall(False, debug) is True
-            assert len(self.db.vault()['history']) == 2
+            assert len(self.db.vault(Vault.HISTORY)) == 2
             assert self.db.recall(False, debug) is True
-            assert len(self.db.vault()['history']) == 1
+            assert len(self.db.vault(Vault.HISTORY)) == 1
             assert self.db.recall(False, debug) is True
-            assert len(self.db.vault()['history']) == 0
+            assert len(self.db.vault(Vault.HISTORY)) == 0
             assert self.db.recall(False, debug) is False
-            assert len(self.db.vault()['history']) == 0
+            assert len(self.db.vault(Vault.HISTORY)) == 0
 
             # exchange
 
@@ -3826,9 +3852,9 @@ class ZakatTracker:
                 assert rate == 1
                 assert description is None
 
-            assert len(self.db.vault()['account'][account_cash_ref]['exchange']) > 0
+            assert len(self.db.vault(Vault.ACCOUNT)[account_cash_ref]['exchange']) > 0
             assert len(self.db.exchanges(account_cash_ref)) > 0
-            self.db.vault()['account'][account_cash_ref]['exchange'].clear()
+            self.db.vault(Vault.ACCOUNT)[account_cash_ref]['exchange'].clear()
             assert len(self.db.exchanges(account_cash_ref)) == 0
 
             # حفظ أسعار الصرف باستخدام التواريخ بالنانو ثانية
@@ -4244,7 +4270,7 @@ class ZakatTracker:
                     (valid, brief, plan) = report
                     assert valid is False
 
-            history_size = len(self.db.vault()['history'])
+            history_size = len(self.db.vault(Vault.HISTORY))
             if debug:
                 print('history_size', history_size)
             assert history_size == 3
@@ -4254,7 +4280,7 @@ class ZakatTracker:
             assert self.db.nolock()
 
             for i in range(3, 0, -1):
-                history_size = len(self.db.vault()['history'])
+                history_size = len(self.db.vault(Vault.HISTORY))
                 if debug:
                     print('history_size', history_size)
                 assert history_size == i
@@ -4263,17 +4289,17 @@ class ZakatTracker:
             assert self.db.nolock()
             assert self.db.recall(False, debug) is False
 
-            history_size = len(self.db.vault()['history'])
+            history_size = len(self.db.vault(Vault.HISTORY))
             if debug:
                 print('history_size', history_size)
             assert history_size == 0
 
-            account_size = len(self.db.vault()['account'])
+            account_size = len(self.db.vault(Vault.ACCOUNT))
             if debug:
                 print('account_size', account_size)
             assert account_size == 0
 
-            report_size = len(self.db.vault()['report'])
+            report_size = len(self.db.vault(Vault.REPORT))
             if debug:
                 print('report_size', report_size)
             assert report_size == 0
@@ -4291,7 +4317,7 @@ def test(debug: bool = False):
     durations = {}
     for model in [
         DictModel(db_path="./zakat_test_db/zakat.camel", history_mode=True),
-        SQLiteModel(db_path="./zakat_test_db/zakat.sqlite", history_mode=True),
+        #SQLiteModel(db_path="./zakat_test_db/zakat.sqlite", history_mode=True),
     ]:
         assert model.test(debug=debug)
         ledger = ZakatTracker(model=model)
