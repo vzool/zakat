@@ -1530,16 +1530,16 @@ class DictModel(Model):
         return False
 
     def vault(self, section: Vault = Vault.ALL) -> dict:
-        	match section:
-        		case Vault.ACCOUNT:
-        			return self._vault['account'].copy()
-        		case Vault.NAME:
-        			return self._vault['name'].copy()
-        		case Vault.HISTORY:
-        			return self._vault['history'].copy()
-        		case Vault.REPORT:
-        			return self._vault['report'].copy()
-        	return self._vault.copy()
+        match section:
+            case Vault.ACCOUNT:
+                return self._vault['account'].copy()
+            case Vault.NAME:
+                return self._vault['name'].copy()
+            case Vault.HISTORY:
+                return self._vault['history'].copy()
+            case Vault.REPORT:
+                return self._vault['report'].copy()
+        return self._vault.copy()
 
     @staticmethod
     def stats_init() -> dict[str, tuple[int, str]]:
@@ -2854,16 +2854,16 @@ class SQLiteModel(Model):
         pass
 
     def vault(self, section: Vault = Vault.ALL) -> dict:
-        	match section:
-        		case Vault.ACCOUNT:
-        			return {}
-        		case Vault.NAME:
-        			return {}
-        		case Vault.HISTORY:
-        			return {}
-        		case Vault.REPORT:
-        			return {}
-        	return {}
+        match section:
+            case Vault.ACCOUNT:
+                return {}
+            case Vault.NAME:
+                return {}
+            case Vault.HISTORY:
+                return {}
+            case Vault.REPORT:
+                return {}
+        return {}
 
     def snapshot(self) -> bool:
         pass
