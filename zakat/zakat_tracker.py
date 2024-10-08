@@ -2488,6 +2488,7 @@ db = pony.Database()
 
 
 class Account(db.Entity):
+    _table_ = 'account'
     id = pony.PrimaryKey(int, auto=True)
     name = pony.Required(pony.LongStr, unique=True)
     balance = pony.Optional(int, default=0)
@@ -2503,6 +2504,7 @@ class Account(db.Entity):
 
 
 class Box(db.Entity):
+    _table_ = 'box'
     account_id = pony.Required(Account)
     time = pony.Required(int, unique=True)
     record_date = pony.Required(datetime.datetime)
@@ -2516,6 +2518,7 @@ class Box(db.Entity):
 
 
 class Log(db.Entity):
+    _table_ = 'log'
     id = pony.PrimaryKey(int, auto=True)
     account_id = pony.Required(Account)
     time = pony.Required(int, unique=True)
@@ -2528,6 +2531,7 @@ class Log(db.Entity):
 
 
 class File(db.Entity):
+    _table_ = 'file'
     id = pony.PrimaryKey(int, auto=True)
     log_id = pony.Required(Log)
     path = pony.Required(pony.LongStr)
@@ -2537,6 +2541,7 @@ class File(db.Entity):
 
 
 class Exchange(db.Entity):
+    _table_ = 'exchange'
     id = pony.PrimaryKey(int, auto=True)
     account_id = pony.Required(Account)
     time = pony.Required(int, unique=True)
@@ -2546,20 +2551,23 @@ class Exchange(db.Entity):
 
 
 class Action(db.Entity):
+    _table_ = 'action'
     id = pony.PrimaryKey(int, auto=True)
-    name = pony.Required(pony.LongStr, unique=True)
+    name = pony.Required(str, unique=True)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
     history = pony.Set('History')
 
 
 class Math(db.Entity):
+    _table_ = 'math'
     id = pony.PrimaryKey(int, auto=True)
-    name = pony.Required(pony.LongStr, unique=True)
+    name = pony.Required(str, unique=True)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
     history = pony.Set('History')
 
 
 class History(db.Entity):
+    _table_ = 'history'
     id = pony.PrimaryKey(int, auto=True)
     time = pony.Required(int, unique=True)
     record_date = pony.Required(datetime.datetime)
@@ -2574,6 +2582,7 @@ class History(db.Entity):
 
 
 class Report(db.Entity):
+    _table_ = 'report'
     id = pony.PrimaryKey(int, auto=True)
     time = pony.Required(int, unique=True)
     record_date = pony.Required(datetime.datetime)
