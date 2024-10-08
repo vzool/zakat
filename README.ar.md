@@ -57,15 +57,24 @@
 
 - المؤسسات المالية الإسلامية: دمج الزكاة (Zakat) في الأنظمة الحالية لتحسين الإدارة المالية وإعداد التقارير.
 
-### الوثائق
+### الوثائق:
 
 - [آلية الزكاة: خوارزمية الغرف والصناديق](./docs/algorithm.ar.md)
+
+- [هيكلة قاعدة البيانات](./docs/database_structure.md)
 
 - [صيغة الزكاة: تمثيل رياضي للصدقة الإسلامية](./docs/mathematics.ar.md)
 
 - [كيفية عمل أسعار الصرف في نظام حساب الزكاة؟](./docs/exchange_rates.ar.md)
 
 - [خوارزمية تتبع المخزون مع مراعاة الزكاة (مع الدورة القمرية)](./docs/inventory.ar.md) [**مخطط له**]
+
+### المحتوى المرئي:
+
+* [Mastering Zakat: The Rooms and Boxes Algorithm Explained!](https://www.youtube.com/watch?v=maxttQ5Xo5g)
+* [طريقة الزكاة في العصر الرقمي: خوارزمية الغرف والصناديق](https://www.youtube.com/watch?v=kuhHzPjYD6o)
+* [Zakat Algorithm in 42 seconds](https://www.youtube.com/watch?v=1ipCcqf48go)
+* [How Exchange Rates Impact Zakat Calculation?](https://www.youtube.com/watch?v=PW6tjZgtShE)
 
 ### ابدأ الآن:
 

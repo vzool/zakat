@@ -1,0 +1,1 @@
+![zakat.svg](../analysis/database/zakat-pony.png)

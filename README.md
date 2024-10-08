@@ -55,15 +55,24 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
 
 - Islamic Financial Institutions: Integrate Zakat into existing systems for enhanced financial management and reporting.
 
-### Documentation
+### Documentation:
 
 - [Mechanism of Zakat: The Rooms and Boxes Algorithm](./docs/algorithm.md)
+
+- [Database Structure](./docs/database_structure.md)
 
 - [The Zakat Formula: A Mathematical Representation of Islamic Charity](./docs/mathematics.md)
 
 - [How Exchange Rates Work in a Zakat Calculation System?](./docs/exchange_rates.md)
 
 - [Zakat-Aware Inventory Tracking Algorithm (with Lunar Cycle)](./docs/inventory.md) [**PLANNED**]
+
+### Videos:
+
+* [Mastering Zakat: The Rooms and Boxes Algorithm Explained!](https://www.youtube.com/watch?v=maxttQ5Xo5g)
+* [طريقة الزكاة في العصر الرقمي: خوارزمية الغرف والصناديق](https://www.youtube.com/watch?v=kuhHzPjYD6o)
+* [Zakat Algorithm in 42 seconds](https://www.youtube.com/watch?v=1ipCcqf48go)
+* [How Exchange Rates Impact Zakat Calculation?](https://www.youtube.com/watch?v=PW6tjZgtShE)
 
 ### Get Started:
 
