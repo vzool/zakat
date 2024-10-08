@@ -72,10 +72,10 @@ from pathlib import Path
 from time import time_ns
 from camelx import Camel, CamelRegistry
 import shutil
-from datetime import timedelta
+import datetime
 from abc import ABC, abstractmethod
-import sqlite3
 from vzool_config import ConfigManager
+import pony.orm as pony
 
 
 class WeekDay(Enum):
@@ -1752,7 +1752,7 @@ class DictModel(Model):
         for i in sorted(logs, reverse=True):
             dt = Helper.time_to_datetime(i)
             daily = f'{dt.year}-{dt.month:02d}-{dt.day:02d}'
-            weekly = dt - timedelta(days=weekday.value)
+            weekly = dt - datetime.timedelta(days=weekday.value)
             monthly = f'{dt.year}-{dt.month:02d}'
             yearly = dt.year
             # daily
@@ -2484,91 +2484,104 @@ class DictModel(Model):
         return True
 
 
-class SQLiteDatabase:
-    """
-    Represents a connection to a SQLite database.
-
-    Provides methods for interacting with the database, such as executing SQL queries.
-
-    Attributes:
-    conn (sqlite3.Connection): The SQLite connection object.
-    debug (bool): Whether to enable debug mode (default: False).
-    cursor (sqlite3.Cursor): The SQLite cursor object.
-    """
-
-    def __init__(self, db_file: str, debug: bool = False):
-        """
-        Initializes a new SQLiteDatabase instance.
-
-        Parameters:
-        db_file (str): The path to the SQLite database file.
-        debug (bool, optional): Whether to enable debug mode. Defaults to False.
-        """
-        self.conn = sqlite3.connect(db_file)
-        self.debug = debug
-        self.cursor = self.conn.cursor()
-
-    def sql(self, query):
-        try:
-            self.cursor.execute(query)
-            self.conn.commit()
-        except Exception as e:
-            print(f'Exception: {e}')
-            print(f'SQL: {query}')
-
-    def create_table(self, table_name: str, columns: dict):
-        """Creates a table with specified columns."""
-        column_str = ", ".join([f"{col} {data_type}" for col, data_type in columns.items()])
-        query = f"CREATE TABLE IF NOT EXISTS {table_name} ({column_str})"
-        try:
-            self.cursor.execute(query)
-            self.conn.commit()
-        except Exception as e:
-            print(f'Exception: {e}')
-            print(f'SQL: {query}')
-
-    def insert(self, table_name: str, data: dict) -> dict:
-        """Inserts data into a table."""
-        columns = ", ".join(data.keys())
-        values = ", ".join(["?" for _ in data.values()])
-        query = f"INSERT INTO {table_name} ({columns}) VALUES ({values})"
-        if self.debug:
-            print(f'SQL: {query}')
-        self.cursor.execute(query, tuple(data.values()))
-        self.conn.commit()
-        data['id'] = self.cursor.lastrowid
-        return data
-
-    def select(self, table_name: str, columns: list[str] = None, where: str = None) -> list:
-        """Selects data from a table."""
-        columns = "*" if columns is None else ", ".join(columns)
-        query = f"SELECT {columns} FROM {table_name}"
-        if where:
-            query += f" WHERE {where}"
-        if self.debug:
-            print(f'SQL: {query}')
-        self.cursor.execute(query)
-        return self.cursor.fetchall()
-
-    def update(self, table_name: str, data: dict, where: str):
-        """Updates data in a table."""
-        set_clause = ", ".join([f"{col} = ?" for col in data])
-        query = f"UPDATE {table_name} SET {set_clause} WHERE {where}"
-        self.cursor.execute(query, tuple(data.values()) + (where,))
-        self.conn.commit()
-
-    def delete(self, table_name: str, where: str):
-        """Deletes data from a table."""
-        query = f"DELETE FROM {table_name} WHERE {where}"
-        self.cursor.execute(query)
-        self.conn.commit()
-
-    def close(self):
-        """Closes the database connection."""
-        self.conn.close()
+db = pony.Database()
 
 
-class SQLiteModel(Model):
+class Account(db.Entity):
+    id = pony.PrimaryKey(int, auto=True)
+    name = pony.Required(pony.LongStr, unique=True)
+    balance = pony.Optional(int, default=0)
+    count = pony.Optional(int, default=0)
+    hide = pony.Optional(bool, default='false')
+    zakatable = pony.Optional(bool, default='true')
+    created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
+    updated_at = pony.Optional(datetime.datetime)
+    box = pony.Set('Box')
+    log = pony.Set('Log')
+    exchange = pony.Set('Exchange')
+    history = pony.Set('History')
+
+
+class Box(db.Entity):
+    account_id = pony.Required(Account)
+    time = pony.Required(int, unique=True)
+    record_date = pony.Required(datetime.datetime)
+    capital = pony.Required(int)
+    count = pony.Optional(int, default=0)
+    last = pony.Optional(datetime.datetime)
+    rest = pony.Required(int)
+    total = pony.Optional(int, default=0)
+    created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
+    updated_at = pony.Optional(datetime.datetime)
+
+
+class Log(db.Entity):
+    id = pony.PrimaryKey(int, auto=True)
+    account_id = pony.Required(Account)
+    time = pony.Required(int, unique=True)
+    record_date = pony.Required(datetime.datetime)
+    value = pony.Required(int)
+    desc = pony.Required(pony.LongStr)
+    ref = pony.Required(int)
+    created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
+    file = pony.Set('File')
+
+
+class File(db.Entity):
+    id = pony.PrimaryKey(int, auto=True)
+    log_id = pony.Required(Log)
+    path = pony.Required(pony.LongStr)
+    name = pony.Optional(pony.LongStr)
+    created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
+    updated_at = pony.Optional(datetime.datetime)
+
+
+class Exchange(db.Entity):
+    id = pony.PrimaryKey(int, auto=True)
+    account_id = pony.Required(Account)
+    time = pony.Required(int, unique=True)
+    rate = pony.Required(Decimal)
+    desc = pony.Required(pony.LongStr)
+    record_date = pony.Required(datetime.datetime)
+
+
+class Action(db.Entity):
+    id = pony.PrimaryKey(int, auto=True)
+    name = pony.Required(pony.LongStr, unique=True)
+    created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
+    history = pony.Set('History')
+
+
+class Math(db.Entity):
+    id = pony.PrimaryKey(int, auto=True)
+    name = pony.Required(pony.LongStr, unique=True)
+    created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
+    history = pony.Set('History')
+
+
+class History(db.Entity):
+    id = pony.PrimaryKey(int, auto=True)
+    time = pony.Required(int, unique=True)
+    record_date = pony.Required(datetime.datetime)
+    action_id = pony.Required(Action)
+    account_id = pony.Required(Account)
+    ref = pony.Optional(int)
+    file = pony.Optional(int)
+    key = pony.Optional(str)
+    value = pony.Optional(int)
+    math_id = pony.Optional(Math)
+    created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
+
+
+class Report(db.Entity):
+    id = pony.PrimaryKey(int, auto=True)
+    time = pony.Required(int, unique=True)
+    record_date = pony.Required(datetime.datetime)
+    details = pony.Required(pony.Json)
+    created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
+
+
+class SQLModel(Model):
     """
     A model that maps to a SQLite database tables.
 
@@ -2576,149 +2589,55 @@ class SQLiteModel(Model):
     It may offer features like automatic mapping to database columns, validation, and query building.
     """
 
-    def __init__(self, db_path: str = "./zakat_db/zakat.sqlite", history_mode: bool = True, debug: bool = False):
+    def __init__(self, *args, **kwargs):
         """
-        Initializes a new SQLiteModel instance.
+        Initializes a new SQLModel instance.
 
         Parameters:
-        db_path (str, optional): The path to the SQLite database file. Defaults to "./zakat_db/zakat.sqlite".
-        history_mode (bool, optional): Whether to enable history mode. Defaults to True.
-        debug (bool, optional): Whether to enable debug mode. Defaults to False.
+        provider (str): The database engine like: (sqlite, mysql, postgres, etc.) Check what PonyORM support.
+        filename (str): The path to the SQLite database file, if database provider is sqlite.
         """
+
         self._base_path = None
         self._vault_path = None
         self._history_mode = None
-        self.path(db_path)
-        self.db = SQLiteDatabase(db_file=self.path(), debug=debug)
-        self.create_db()
-        self.config = ConfigManager(self.path())
-        self.history(history_mode)
+        self.config_path = None
 
-    def create_db(self):
-        self.db.sql("""
-            CREATE TABLE IF NOT EXISTS account(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                balance INTEGER DEFAULT 0,
-                count INTEGER DEFAULT 0,
-                hide BOOLEAN DEFAULT false,
-                zakatable BOOLEAN DEFAULT true,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT NULL,
-                CONSTRAINT account_name_uk UNIQUE(name)  
-            );
-        """)
-        self.db.sql("""
-            CREATE TABLE IF NOT EXISTS box(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                account_id INTEGER NOT NULL,
-                time INTEGER NOT NULL,
-                capital INTEGER NOT NULL,
-                count INTEGER DEFAULT 0,
-                last DATETIME DEFAULT NULL,
-                rest INTEGER NOT NULL,
-                total INTEGER DEFAULT 0,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT NULL,
-                CONSTRAINT box_time_uk UNIQUE(time),
-                CONSTRAINT box_account_id_fk FOREIGN KEY(account_id) REFERENCES account(id)
-            );
-        """)
-        self.db.sql("""
-            CREATE TABLE IF NOT EXISTS log(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                account_id INTEGER NOT NULL,
-                time INTEGER NOT NULL,
-                value INTEGER NOT NULL,
-                desc TEXT NOT NULL,
-                ref INTEGER NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT log_time_uk UNIQUE(time),
-                CONSTRAINT log_account_id_fk FOREIGN KEY(account_id) REFERENCES account(id)
-            );
-        """)
-        self.db.sql("""
-            CREATE TABLE IF NOT EXISTS file(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                log_id INTEGER NOT NULL,
-                path TEXT NOT NULL,
-                name TEXT DEFAULT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                updated_at DATETIME DEFAULT NULL,
-                CONSTRAINT file_path_uk UNIQUE(log_id, path),
-                CONSTRAINT file_log_id_fk FOREIGN KEY(log_id) REFERENCES log(id)
-            );
-        """)
-        self.db.sql("""
-            CREATE TABLE IF NOT EXISTS exchange(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                account_id INTEGER NOT NULL,
-                time INTEGER NOT NULL,
-                rate FLOAT NOT NULL,
-                desc TEXT NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT exchange_time_uk UNIQUE(time),
-                CONSTRAINT exchange_account_id_fk FOREIGN KEY(account_id) REFERENCES account(id)
-            );
-        """)
-        self.db.sql("""
-            CREATE TABLE IF NOT EXISTS action(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT action_name_uk UNIQUE(name)
-            );
-        """)
-        actions = [(x.value, x.name) for x in ActionEnum]
-        if len(self.db.select('action')) != len(actions):
-            self.db.sql("""
-                        DELETE FROM action;
-                    """)
-            print('xxx', actions)
-            for ref, name in actions:
-                self.db.insert('action', {'id': ref, 'name': name})
-        self.db.sql("""
-            CREATE TABLE IF NOT EXISTS math(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT math_name_uk UNIQUE(name)
-            );
-        """)
-        maths = [(x.value, x.name) for x in MathOperationEnum]
-        if len(self.db.select('math')) != len(maths):
-            self.db.sql("""
-                        DELETE FROM math;
-                    """)
-            print('xxx', maths)
-            for ref, name in maths:
-                self.db.insert('math', {'id': ref, 'name': name})
-        self.db.sql("""
-            CREATE TABLE IF NOT EXISTS history(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                time INTEGER NOT NULL,
-                action TEXT NOT NULL,
-                account_id INTEGER NOT NULL,
-                ref INTEGER DEFAULT NULL,
-                file INTEGER DEFAULT NULL,
-                key TEXT DEFAULT NULL,
-                value INTEGER DEFAULT NULL,
-                math TEXT DEFAULT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT history_action_fk FOREIGN KEY(action) REFERENCES action(id),
-                CONSTRAINT history_math_fk FOREIGN KEY(math) REFERENCES math(id),
-                CONSTRAINT history_account_id_fk FOREIGN KEY(account_id) REFERENCES account(id)
-            );
-        """)
-        self.db.sql("""
-            CREATE TABLE IF NOT EXISTS report(
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                time INTEGER NOT NULL,
-                details JSON NOT NULL,
-                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                CONSTRAINT exchange_time_uk UNIQUE(time)
-            );
-        """)
+        if str.lower(kwargs['provider']) == 'sqlite' and 'filename' in kwargs:
+            self.path(kwargs['filename'])
+            kwargs['filename'] = str(self.path())
+        else:
+            self.path('config.db')
+        self.config_path = str(self.path())
+        self.config = ConfigManager(db_file=self.config_path)
+
+        # history_mode = True
+        # if 'history_mode' in kwargs:
+        #     if kwargs['history_mode'] is bool:
+        #         history_mode = kwargs['history_mode']
+        #         del kwargs['history_mode']
+        self.history(status=True)
+
+        db.bind(*args, **kwargs)
+        db.generate_mapping(create_tables=True)
+        SQLModel.create_db()
+
+    @staticmethod
+    def create_db():
+        with pony.db_session:
+            actions = [(x.value, x.name) for x in ActionEnum]
+            if pony.count(Action.select()) != len(actions):
+                Action.select().delete()
+                print('xxx', actions)
+                for ref, name in actions:
+                    Action(id=ref, name=name)
+
+            maths = [(x.value, x.name) for x in MathOperationEnum]
+            if pony.count(Math.select()) != len(maths):
+                Math.select().delete()
+                print('xxx', maths)
+                for ref, name in maths:
+                    Math(id=ref, name=name)
 
     def path(self, path: str = None) -> str:
         if path is None:
@@ -4317,7 +4236,7 @@ def test(debug: bool = False):
     durations = {}
     for model in [
         DictModel(db_path="./zakat_test_db/zakat.camel", history_mode=True),
-        #SQLiteModel(db_path="./zakat_test_db/zakat.sqlite", history_mode=True),
+        SQLModel(provider="sqlite", filename="./zakat_test_db/zakat.sqlite"),
     ]:
         assert model.test(debug=debug)
         ledger = ZakatTracker(model=model)
