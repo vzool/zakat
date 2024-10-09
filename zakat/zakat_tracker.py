@@ -2526,7 +2526,7 @@ class Log(db.Entity):
     record_date = pony.Required(datetime.datetime)
     value = pony.Required(int)
     desc = pony.Required(pony.LongStr)
-    ref = pony.Required(int)
+    ref = pony.Optional(int)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
     file = pony.Set('File')
 
@@ -2678,6 +2678,43 @@ class SQLModel(Model):
             created = Helper.time()
         no_lock = self.nolock()
         self.lock()
+        if not self.account_exists(account):
+            if debug:
+                print(f"account {account} created")
+            with pony.db_session:
+                Account(
+                    id=account,
+                    name=str(Helper.time()),
+                )
+            self.step(ActionEnum.CREATE, account)
+        if unscaled_value == 0:
+            if no_lock:
+                self.free(self.lock())
+            return 0
+        value = Helper.scale(unscaled_value)
+        if logging:
+            self.log(value=value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
+        if debug:
+            print('create-box', created)
+        if self.box_exists(account, created):
+            raise ValueError(f"The box transaction happened again in the same nanosecond time({created}).")
+        if debug:
+            print('created-box', created)
+        with pony.db_session:
+            Box(
+                account_id=account,
+                time=created,
+                record_date=datetime.datetime.now(),
+                capital=value,
+                count=0,
+                last=0,
+                rest=value,
+                total=0,
+            )
+        self.step(ActionEnum.TRACK, account, ref=created, value=value)
+        if no_lock:
+            self.free(self.lock())
+        return created
 
     def add_file(self, account: int, ref: int, path: str) -> int:
         pass
@@ -2725,7 +2762,7 @@ class SQLModel(Model):
                     if account.name != name:
                         self.step(
                             action=ActionEnum.NAME_ACCOUNT,
-                            account=account.id,
+                            account_id=account.id,
                             value=account.name,
                             key='name',
                             math_operation=MathOperationEnum.EQUAL,
@@ -2774,7 +2811,13 @@ class SQLModel(Model):
         return self.step()
 
     def free(self, lock: int, auto_save: bool = True) -> bool:
-        pass
+        if lock == self.config.get('lock'):
+            self.config.set('lock', '')
+            self.clean_history(lock)
+            if auto_save:
+                return self.save(self.path())
+            return True
+        return False
 
     def history(self, status: bool = None) -> bool:
         if status is not None:
@@ -2837,13 +2880,41 @@ class SQLModel(Model):
 
     @staticmethod
     def ext() -> str:
-        pass
+        return 'sqlite'
 
-    def log(self, value: float, desc: str = '', account: int = 1, created: int = None, ref: int = None,
+    def log(self, value: float, desc: str = '', account_id: int = 1, created: int = None, ref: int = None,
             debug: bool = False) -> int:
-        pass
+        if debug:
+            print('_log', f'debug={debug}')
+        if created is None:
+            created = Helper.time()
+        with pony.db_session:
+            account = Account.get(id=account_id)
+            if account:
+                try:
+                    account.balance += value
+                except TypeError:
+                    account.balance += Decimal(value)
+                account.count += 1
+            if debug:
+                print('create-log', created)
+            if self.log_exists(account_id, created):
+                raise ValueError(f"The log transaction happened again in the same nanosecond time({created}).")
+            if debug:
+                print('created-log', created)
+            Log(
+                account_id=account_id,
+                time=created,
+                record_date=datetime.datetime.now(),
+                value=value,
+                desc=desc,
+                ref=ref,
+                file={},
+            )
+            self.step(ActionEnum.LOG, account_id=account_id, ref=created, value=value)
+        return created
 
-    def step(self, action: ActionEnum = None, account=None, ref: int = None, file: int = None, value: float = None,
+    def step(self, action: ActionEnum = None, account_id=None, ref: int = None, file: int = None, value: float = None,
              key: str = None, math_operation: MathOperationEnum = None) -> int:
         if not self.history():
             return 0
@@ -2856,33 +2927,39 @@ class SQLModel(Model):
         with pony.db_session:
             History(
                 action_id=action.value,
-                account_id=account,
+                account_id=account_id,
                 time=Helper.time(),
                 record_date=datetime.datetime.now(),
                 ref=ref,
                 file=file,
-                key=key,
+                key=key if key else '',
                 value=str(value),
                 value_type=value.__class__.__name__,
-                math_id=math_operation.value,
+                math_id=math_operation.value if math_operation else None,
             )
         return lock
 
     def ref_exists(self, account: int, ref_type: str, ref: int) -> bool:
         pass
 
+    @pony.db_session()
     def box_exists(self, account: int, ref: int) -> bool:
-        pass
+        return Box.exists(account_id=account, time=ref)
 
+    @pony.db_session()
     def log_exists(self, account: int, ref: int) -> bool:
-        pass
+        return Log.exists(account_id=account, time=ref)
 
     def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) -> dict[
         int, tuple[str, str, bool]]:
         pass
 
+    @pony.db_session()
     def clean_history(self, lock: int | None = None) -> int:
-        pass
+        count = History.count(time=lock)
+        if count > 0:
+            History.select(lambda h: h.time == lock).delete(bulk=True)
+        return count
 
     @staticmethod
     def test(debug: bool = False) -> bool:
