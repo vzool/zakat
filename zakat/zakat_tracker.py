@@ -376,33 +376,44 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def account(self, name: str, ref: int = None) -> tuple[int, str]:
+    def account(self, name: str = None, ref: int = None) -> tuple[int, str] | None:
         """
-        Associates a name with an account number and tracks the relationship.
+        This function manages accounts, supporting creation, retrieval, and updating.
 
         Parameters:
-        name (str): The name to associate with the account.
-        ref (int, optional): The optional reference number for the account.
+        name (str, optional): The name of the account. If provided and `ref` is not provided,
+            a new account with this name will be created if it doesn't already exist. Defaults to None.
+        ref (int, optional): The reference ID of an existing account. If provided and `name` is not provided,
+            the account with this ID will be retrieved.  Defaults to None.
+
 
         Returns:
-        tuple[int, str]: A tuple containing the account number and the associated name.
+        tuple[int, str] | None: A tuple containing the account ID and name if successful,
+            otherwise None.
 
-        This function manages the association between names and account numbers. It creates new accounts if necessary,
-        and updates existing associations based on the provided name and reference.
-        The function also tracks the relationship between names and accounts in a dictionary for future reference.
+        Raises:
+        (Implementation specific exceptions, if any)
 
-        The following actions are performed:
+        This function performs the following actions based on the provided arguments:
 
-        1. If the 'name' key doesn't exist in the `self._vault` dictionary, it creates a new entry with 'last_account'
-           set to 0 and 'account' set to an empty dictionary.
-        2. If both `name` and `ref` are provided, the function checks if either the name or reference already exists in
-           the 'account' dictionary. If so, it removes the existing association and creates a new one with the provided
-           name and reference.
-        3. If only `name` is provided, the function checks if the name already exists in the 'account' dictionary.
-           If not, it creates a new account number and associates it with the name.
-        4. In all cases, the function updates the 'account' dictionary with the new association and calls the `set_name`
-           function to update the 'name' field in the corresponding account entry.
-        5. Finally, the function returns a tuple containing the account number and the associated name.
+        1. **Create Account (name provided, no reference):**
+            - Checks if an account with the provided name exists.
+            - If not found, creates a new account with the given name and commits the change to the database.
+            - Returns a tuple containing the newly created account's ID and name.
+
+        2. **Retrieve Account (reference provided, no name):**
+            - Attempts to find an account with the provided reference.
+            - If found, returns a tuple containing the account's ID and name.
+            - If not found, returns None.
+
+        3. **Update Account Name (both name and reference provided):**
+            - Attempts to find an account with the provided reference.
+            - If found:
+                - Checks if the existing name matches the provided name.
+                - If names differ, updates the account name with the provided name and commits the change.
+            - Returns a tuple containing the account's ID and updated name (if applicable).
+            - If not found with the reference, creates a new account with the provided ID and name and
+              returns the new account information.
         """
 
     @abstractmethod
@@ -2109,7 +2120,9 @@ class DictModel(Model):
                 return self._vault['account'][account]['name']
         return None
 
-    def account(self, name: str, ref: int = None) -> tuple[int, str]:
+    def account(self, name: str = None, ref: int = None) -> tuple[int, str] | None:
+        if not name and not ref:
+            return None
         if 'name' not in self._vault:
             self._vault['name'] = {
                 'last_account': 0,
@@ -2119,31 +2132,34 @@ class DictModel(Model):
         def set_name(_account: int, _name: str):
             if not self.account_exists(_account):
                 self.track(account=_account)
-                self.step(
-                    action=ActionEnum.NAME_ACCOUNT,
-                    account=_account,
-                    value=self._vault['account'][_account]['name'] if 'name' in self._vault['account'][
-                        _account] else None,
-                    key='name',
-                    math_operation=MathOperationEnum.EQUAL,
-                )
-                self._vault['account'][_account]['name'] = _name
+            self.step(
+                action=ActionEnum.NAME_ACCOUNT,
+                account=_account,
+                value=self._vault['account'][_account]['name'] if 'name' in self._vault['account'][
+                    _account] else None,
+                key='name',
+                math_operation=MathOperationEnum.EQUAL,
+            )
+            self._vault['account'][_account]['name'] = _name
+            self._vault['name']['account'][_name] = _account
+            self._vault['name']['account'][_account] = _name
+
+        if ref and not name:
+            if ref not in self._vault['name']['account']:
+                return None
 
         if name and ref:
             if name in self._vault['name']['account']:
-                old_ref = self._vault['name']['account'][name]
-                del self._vault['name']['account'][name]
-                if old_ref in self._vault['name']['account']:
-                    del self._vault['name']['account'][old_ref]
+                raise 'Name is already used'
             if ref in self._vault['name']['account']:
                 old_name = self._vault['name']['account'][ref]
                 del self._vault['name']['account'][ref]
                 if old_name in self._vault['name']['account']:
                     del self._vault['name']['account'][old_name]
-            self._vault['name']['account'][name] = ref
-            self._vault['name']['account'][ref] = name
+
             set_name(ref, name)
             return ref, name
+
         if name not in self._vault['name']['account']:
             account = self._vault['name']['last_account']
             account += 1
@@ -2505,6 +2521,7 @@ class Account(db.Entity):
 
 class Box(db.Entity):
     _table_ = 'box'
+    id = pony.PrimaryKey(int, auto=True)
     account_id = pony.Required(Account)
     time = pony.Required(int, unique=True)
     record_date = pony.Required(datetime.datetime)
@@ -2697,23 +2714,37 @@ class SQLModel(Model):
     def exchanges(self, account: int) -> dict | None:
         pass
 
-    def account(self, name: str, ref: int = None) -> tuple[int, str]:
+    def account(self, name: str = None, ref: int = None) -> tuple[int, str] | None:
+        if not name and not ref:
+            return None
         with pony.db_session:
-            if name:
+            if name and not ref:
                 account = Account.get(name=name)
-            if ref:
-                account = Account[ref]
-            if account:
+                if not account:
+                    account = Account(name=name)
+                    pony.commit()
                 return account.id, account.name
-            account = Account(name=name)
-        return account.id, account.name
+            if ref and not name:
+                account = Account.get(id=ref)
+                if not account:
+                    return None
+                return account.id, account.name
+            if name and ref:
+                account = Account.get(id=ref)
+                if account:
+                    if account.name != name:
+                        account.name = name
+                    return account.id, account.name
+                account = Account(id=ref, name=name)
+                return account.id, account.name
 
     def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
                  created: int = None, debug: bool = False) -> list[int]:
         pass
 
+    @pony.db_session()
     def account_exists(self, account: int) -> bool:
-        pass
+        return Account.exists(id=account)
 
     def steps(self) -> dict:
         pass
@@ -2785,17 +2816,23 @@ class SQLModel(Model):
     def vault(self, section: Vault = Vault.ALL) -> dict:
         match section:
             case Vault.ACCOUNT:
-                return Account.select()
+                return {a.id: a.to_dict(with_lazy=True) for a in Account.select()[:]}
             case Vault.NAME:
-                return Account.select()
+                account = {}
+                for k, v in self.vault(Vault.ACCOUNT).items():
+                    account[k] = v['name']
+                    account[v['name']] = k
+                return {
+                    'account': account,
+                }
             case Vault.HISTORY:
-                return History.select()
+                return History.select()[:]
             case Vault.REPORT:
-                return Report.select()
+                return Report.select()[:]
         return {
-            'account': Account.select(),
-            'history': History.select(),
-            'report': Report.select(),
+            'account': Account.select()[:],
+            'history': History.select()[:],
+            'report': Report.select()[:],
         }
 
     def snapshot(self) -> bool:
@@ -3313,8 +3350,6 @@ class ZakatTracker:
             if debug:
                 print(f'index = {index + 1}, ref = {ref}')
             assert index + 1 == ref
-            print(self.db.vault(Vault.ACCOUNT))
-            #raise 123
             assert index + 1 in self.db.vault(Vault.ACCOUNT)
             assert name == self.db.vault(Vault.ACCOUNT)[index + 1]['name']
         account_z_ref, account_z_name = self.db.account(name='z')
@@ -3323,17 +3358,24 @@ class ZakatTracker:
         account_xz_ref, account_xz_name = self.db.account(name='xz')
         assert account_xz_ref == 27
         assert account_xz_name == 'xz'
-        account_z_ref_new, account_z_name_new = self.db.account(name='z', ref=321)
-        assert self.db.account_exists(account_z_ref_new)
-        assert account_z_ref_new == 321
-        assert account_z_name_new == 'z'
-        assert account_z_ref not in self.db.vault(Vault.NAME)['account']
+        use_same_account_name_failed = False
+        assert self.db.account(ref=321) is None
+        try:
+            self.db.account(name='z', ref=321)
+        except:
+            use_same_account_name_failed = True
+        assert use_same_account_name_failed
+        account_zzz_ref_new, account_zzz_name_new = self.db.account(name='zzz', ref=321)
+        assert self.db.account_exists(account_zzz_ref_new)
+        assert account_zzz_ref_new == 321
+        assert account_zzz_name_new == 'zzz'
+        assert account_z_ref in self.db.vault(Vault.NAME)['account']
         assert self.db.account_exists(account_z_ref)
         account_zz_ref, account_zz_name = self.db.account(name='zz', ref=321)
         assert self.db.account_exists(account_zz_ref)
         assert account_zz_ref == 321
         assert account_zz_name == 'zz'
-        assert account_z_name not in self.db.vault(Vault.NAME)['account']
+        assert account_zzz_name_new not in self.db.vault(Vault.NAME)['account']
         account_xx_ref, account_xx_name = self.db.account(name='xx', ref=333)
         assert self.db.account_exists(account_xx_ref)
         assert account_xx_ref == 333
