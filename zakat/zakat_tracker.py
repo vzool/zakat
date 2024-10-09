@@ -72,7 +72,6 @@ from pathlib import Path
 from time import time_ns
 from camelx import Camel, CamelRegistry
 import shutil
-import datetime
 from abc import ABC, abstractmethod
 from vzool_config import ConfigManager
 import pony.orm as pony
@@ -1486,21 +1485,6 @@ class DictModel(Model):
 
     def step(self, action: ActionEnum = None, account=None, ref: int = None, file: int = None, value: float = None,
              key: str = None, math_operation: MathOperationEnum = None) -> int:
-        """
-        This method is responsible for recording the actions performed on the ZakatTracker.
-
-        Parameters:
-        - action (Action): The type of action performed.
-        - account (str): The account number on which the action was performed.
-        - ref (int): The reference number of the action.
-        - file (int): The file reference number of the action.
-        - value (int): The value associated with the action.
-        - key (str): The key associated with the action.
-        - math_operation (MathOperation): The mathematical operation performed during the action.
-
-        Returns:
-        - int: The lock time of the recorded action. If no lock was performed, it returns 0.
-        """
         if not self.history():
             return 0
         lock = self._vault['lock']
@@ -2523,7 +2507,7 @@ class Box(db.Entity):
     _table_ = 'box'
     id = pony.PrimaryKey(int, auto=True)
     account_id = pony.Required(Account)
-    time = pony.Required(int, unique=True)
+    time = pony.Required(int, size=64, unique=True)
     record_date = pony.Required(datetime.datetime)
     capital = pony.Required(int)
     count = pony.Optional(int, default=0)
@@ -2538,7 +2522,7 @@ class Log(db.Entity):
     _table_ = 'log'
     id = pony.PrimaryKey(int, auto=True)
     account_id = pony.Required(Account)
-    time = pony.Required(int, unique=True)
+    time = pony.Required(int, size=64, unique=True)
     record_date = pony.Required(datetime.datetime)
     value = pony.Required(int)
     desc = pony.Required(pony.LongStr)
@@ -2561,7 +2545,7 @@ class Exchange(db.Entity):
     _table_ = 'exchange'
     id = pony.PrimaryKey(int, auto=True)
     account_id = pony.Required(Account)
-    time = pony.Required(int, unique=True)
+    time = pony.Required(int, size=64, unique=True)
     rate = pony.Required(Decimal)
     desc = pony.Required(pony.LongStr)
     record_date = pony.Required(datetime.datetime)
@@ -2586,14 +2570,15 @@ class Math(db.Entity):
 class History(db.Entity):
     _table_ = 'history'
     id = pony.PrimaryKey(int, auto=True)
-    time = pony.Required(int, unique=True)
+    time = pony.Required(int, size=64, unique=True)
     record_date = pony.Required(datetime.datetime)
     action_id = pony.Required(Action)
     account_id = pony.Required(Account)
     ref = pony.Optional(int)
     file = pony.Optional(int)
     key = pony.Optional(str)
-    value = pony.Optional(int)
+    value = pony.Optional(str)
+    value_type = pony.Optional(str)
     math_id = pony.Optional(Math)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
 
@@ -2601,7 +2586,7 @@ class History(db.Entity):
 class Report(db.Entity):
     _table_ = 'report'
     id = pony.PrimaryKey(int, auto=True)
-    time = pony.Required(int, unique=True)
+    time = pony.Required(int, size=64, unique=True)
     record_date = pony.Required(datetime.datetime)
     details = pony.Required(pony.Json)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
@@ -2687,7 +2672,12 @@ class SQLModel(Model):
 
     def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
               created: int = None, debug: bool = False) -> int:
-        pass
+        if debug:
+            print('track', f'unscaled_value={unscaled_value}, debug={debug}')
+        if created is None:
+            created = Helper.time()
+        no_lock = self.nolock()
+        self.lock()
 
     def add_file(self, account: int, ref: int, path: str) -> int:
         pass
@@ -2733,6 +2723,13 @@ class SQLModel(Model):
                 account = Account.get(id=ref)
                 if account:
                     if account.name != name:
+                        self.step(
+                            action=ActionEnum.NAME_ACCOUNT,
+                            account=account.id,
+                            value=account.name,
+                            key='name',
+                            math_operation=MathOperationEnum.EQUAL,
+                        )
                         account.name = name
                     return account.id, account.name
                 account = Account(id=ref, name=name)
@@ -2774,7 +2771,7 @@ class SQLModel(Model):
         return self.config.get(key='nolock', default=True)
 
     def lock(self) -> int:
-        return self.config.get(key='lock')
+        return self.step()
 
     def free(self, lock: int, auto_save: bool = True) -> bool:
         pass
@@ -2848,7 +2845,28 @@ class SQLModel(Model):
 
     def step(self, action: ActionEnum = None, account=None, ref: int = None, file: int = None, value: float = None,
              key: str = None, math_operation: MathOperationEnum = None) -> int:
-        pass
+        if not self.history():
+            return 0
+        lock = self.config.get(key='lock')
+        if self.nolock():
+            lock = Helper.time()
+            self.config.set(key='lock', value=lock)
+        if action is None:
+            return lock
+        with pony.db_session:
+            History(
+                action_id=action.value,
+                account_id=account,
+                time=Helper.time(),
+                record_date=datetime.datetime.now(),
+                ref=ref,
+                file=file,
+                key=key,
+                value=str(value),
+                value_type=value.__class__.__name__,
+                math_id=math_operation.value,
+            )
+        return lock
 
     def ref_exists(self, account: int, ref_type: str, ref: int) -> bool:
         pass
