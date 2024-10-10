@@ -1990,11 +1990,9 @@ class DictModel(Model):
         if logging:
             self.log(value=value, desc=desc, account=account, created=created, ref=None, debug=debug)
         if debug:
-            print('create-box', created)
+            print('creating-box', created)
         if self.box_exists(account, created):
             raise ValueError(f"The box transaction happened again in the same nanosecond time({created}).")
-        if debug:
-            print('created-box', created)
         self._vault['account'][account]['box'][created] = {
             'capital': value,
             'count': 0,
@@ -2002,6 +2000,8 @@ class DictModel(Model):
             'rest': value,
             'total': 0,
         }
+        if debug:
+            print('created-box', created)
         self.step(ActionEnum.TRACK, account, ref=created, value=value)
         if no_lock:
             self.free(self.lock())
@@ -2491,8 +2491,8 @@ class Account(db.Entity):
     _table_ = 'account'
     id = pony.PrimaryKey(int, auto=True)
     name = pony.Required(pony.LongStr, unique=True)
-    balance = pony.Optional(int, default=0)
-    count = pony.Optional(int, default=0)
+    balance = pony.Optional(int, size=64, default=0)
+    count = pony.Optional(int, size=64, default=0)
     hide = pony.Optional(bool, default=False)
     zakatable = pony.Optional(bool, default=True)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
@@ -2509,11 +2509,11 @@ class Box(db.Entity):
     account_id = pony.Required(Account)
     time = pony.Required(int, size=64, unique=True)
     record_date = pony.Required(datetime.datetime)
-    capital = pony.Required(int)
-    count = pony.Optional(int, default=0)
+    capital = pony.Required(int, size=64)
+    count = pony.Optional(int, size=64, default=0)
     last = pony.Optional(datetime.datetime)
-    rest = pony.Required(int)
-    total = pony.Optional(int, default=0)
+    rest = pony.Required(int, size=64)
+    total = pony.Optional(int, size=64, default=0)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
     updated_at = pony.Optional(datetime.datetime)
 
@@ -2524,9 +2524,9 @@ class Log(db.Entity):
     account_id = pony.Required(Account)
     time = pony.Required(int, size=64, unique=True)
     record_date = pony.Required(datetime.datetime)
-    value = pony.Required(int)
+    value = pony.Required(int, size=64)
     desc = pony.Required(pony.LongStr)
-    ref = pony.Optional(int)
+    ref = pony.Optional(int, size=64)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
     file = pony.Set('File')
 
@@ -2574,8 +2574,8 @@ class History(db.Entity):
     record_date = pony.Required(datetime.datetime)
     action_id = pony.Required(Action)
     account_id = pony.Required(Account)
-    ref = pony.Optional(int)
-    file = pony.Optional(int)
+    ref = pony.Optional(int, size=64)
+    file = pony.Optional(int, size=64)
     key = pony.Optional(str)
     value = pony.Optional(str)
     value_type = pony.Optional(str)
@@ -2600,36 +2600,37 @@ class SQLModel(Model):
     It may offer features like automatic mapping to database columns, validation, and query building.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **db_params):
         """
         Initializes a new SQLModel instance.
 
         Parameters:
-        provider (str): The database engine like: (sqlite, mysql, postgres, etc.) Check what PonyORM support.
-        filename (str): The path to the SQLite database file, if database provider is sqlite.
+        provider (str, required): The database engine like: (sqlite, mysql, postgres, etc.) Check what PonyORM support.
+        filename (str, optional): The path to the SQLite database file, if database provider is sqlite.
+        history_mode (bool, optional): The mode for tracking history. Default is True.
         """
 
         self._base_path = None
         self._vault_path = None
         self._history_mode = None
-        self.config_path = None
+        self._config_path = None
 
-        if str.lower(kwargs['provider']) == 'sqlite' and 'filename' in kwargs:
-            self.path(kwargs['filename'])
-            kwargs['filename'] = str(self.path())
+        if str.lower(db_params['provider']) == 'sqlite' and 'filename' in db_params:
+            db_params['filename'] = str(self.path(db_params['filename']))
+            self._config_path = str(self._base_path / 'config.db')
         else:
-            self.path('config.db')
-        self.config_path = str(self.path())
-        self.config = ConfigManager(db_file=self.config_path)
+            self._config_path = str(self.path('config.db'))
+        self.config = ConfigManager(db_file=self._config_path)
 
-        # history_mode = True
-        # if 'history_mode' in kwargs:
-        #     if kwargs['history_mode'] is bool:
-        #         history_mode = kwargs['history_mode']
-        #         del kwargs['history_mode']
-        self.history(status=True)
+        history_mode = True
+        if 'history_mode' in db_params:
+            if type(db_params['history_mode']) is not bool:
+                raise 'history_mode should be bool type'
+            history_mode = db_params['history_mode']
+            del db_params['history_mode']
+        self.history(status=history_mode)
 
-        db.bind(*args, **kwargs)
+        db.bind(**db_params)
         db.generate_mapping(create_tables=True)
         SQLModel.create_db()
 
@@ -2639,14 +2640,12 @@ class SQLModel(Model):
             actions = [(x.value, x.name) for x in ActionEnum]
             if pony.count(Action.select()) != len(actions):
                 Action.select().delete()
-                print('xxx', actions)
                 for ref, name in actions:
                     Action(id=ref, name=name)
 
             maths = [(x.value, x.name) for x in MathOperationEnum]
             if pony.count(Math.select()) != len(maths):
                 Math.select().delete()
-                print('xxx', maths)
                 for ref, name in maths:
                     Math(id=ref, name=name)
 
@@ -2692,25 +2691,25 @@ class SQLModel(Model):
                 self.free(self.lock())
             return 0
         value = Helper.scale(unscaled_value)
-        if logging:
-            self.log(value=value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
-        if debug:
-            print('create-box', created)
-        if self.box_exists(account, created):
-            raise ValueError(f"The box transaction happened again in the same nanosecond time({created}).")
-        if debug:
-            print('created-box', created)
         with pony.db_session:
+            if logging:
+                self.log(value=value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
+            if debug:
+                print('creating-box', created)
+            if self.box_exists(account, created):
+                raise ValueError(f"The box transaction happened again in the same nanosecond time({created}).")
             Box(
                 account_id=account,
                 time=created,
                 record_date=datetime.datetime.now(),
                 capital=value,
                 count=0,
-                last=0,
+                last=None,
                 rest=value,
                 total=0,
             )
+            if debug:
+                print('created-box', created)
         self.step(ActionEnum.TRACK, account, ref=created, value=value)
         if no_lock:
             self.free(self.lock())
@@ -2856,7 +2855,30 @@ class SQLModel(Model):
     def vault(self, section: Vault = Vault.ALL) -> dict:
         match section:
             case Vault.ACCOUNT:
-                return {a.id: a.to_dict(with_lazy=True) for a in Account.select()[:]}
+                account = {}
+                for k, v in {
+                    a.id: a.to_dict(with_lazy=True, with_collections=True, related_objects=True)
+                    for a in Account.select()[:]
+                }.items():
+                    account[k] = v
+                    if v['box']:
+                        box = {}
+                        for b in v['box']:
+                            box[b.id] = b.to_dict()
+                        account[k]['box'] = box
+
+                    if v['log']:
+                        log = {}
+                        for l in v['log']:
+                            log[l.id] = l.to_dict(with_lazy=True, with_collections=True, related_objects=True)
+                        account[k]['log'] = log
+
+                    if v['history']:
+                        history = {}
+                        for h in v['history']:
+                            history[h.id] = h.to_dict()
+                        account[k]['history'] = history
+                return account
             case Vault.NAME:
                 account = {}
                 for k, v in self.vault(Vault.ACCOUNT).items():
@@ -2933,8 +2955,8 @@ class SQLModel(Model):
                 ref=ref,
                 file=file,
                 key=key if key else '',
-                value=str(value),
-                value_type=value.__class__.__name__,
+                value=str(value) if value else '',
+                value_type=value.__class__.__name__ if value else '',
                 math_id=math_operation.value if math_operation else None,
             )
         return lock
@@ -2956,7 +2978,7 @@ class SQLModel(Model):
 
     @pony.db_session()
     def clean_history(self, lock: int | None = None) -> int:
-        count = History.count(time=lock)
+        count = pony.count(h for h in History if h.time == lock)
         if count > 0:
             History.select(lambda h: h.time == lock).delete(bulk=True)
         return count
@@ -4389,7 +4411,7 @@ def test(debug: bool = False):
     durations = {}
     for model in [
         DictModel(db_path="./zakat_test_db/zakat.camel", history_mode=True),
-        SQLModel(provider="sqlite", filename="./zakat_test_db/zakat.sqlite"),
+        SQLModel(provider="sqlite", filename="./zakat_test_db/zakat.sqlite", history_mode=True, create_db=True),
     ]:
         assert model.test(debug=debug)
         ledger = ZakatTracker(model=model)
