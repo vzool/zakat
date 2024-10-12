@@ -265,12 +265,12 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def hide(self, account: int, status: bool = None) -> bool:
+    def hide(self, account_id: int, status: bool = None) -> bool:
         """
         Check or set the hide status of a specific account.
 
         Parameters:
-        account (int): The account number.
+        account_id (int): The account number.
         status (bool, optional): The new hide status. If not provided, the function will return the current status.
 
         Returns:
@@ -293,12 +293,12 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def zakatable(self, account: int, status: bool = None) -> bool:
+    def zakatable(self, account_id: int, status: bool = None) -> bool:
         """
         Check or set the zakatable status of a specific account.
 
         Parameters:
-        account (int): The account number.
+        account_id (int): The account number.
         status (bool, optional): The new zakatable status. If not provided, the function will return the current status.
 
         Returns:
@@ -321,12 +321,12 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def name(self, account: int) -> str | None:
+    def name(self, account_id: int) -> str | None:
         """
         Retrieves the name associated with a given account number.
 
         Parameters:
-        account (int): The account number to look up.
+        account_id (int): The account number to look up.
 
         Returns:
         str | None: The name associated with the account, or None if not found.
@@ -521,12 +521,12 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def logs(self, account: int) -> dict:
+    def logs(self, account_id: int) -> dict:
         """
         Retrieve the logs (transactions) associated with a specific account.
 
         Parameters:
-        account (int): The account number for which to retrieve the logs.
+        account_id (int): The account number for which to retrieve the logs.
 
         Returns:
         dict: A dictionary containing the logs associated with the given account.
@@ -534,12 +534,12 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def boxes(self, account: int) -> dict:
+    def boxes(self, account_id: int) -> dict:
         """
         Retrieve the boxes (transactions) associated with a specific account.
 
         Parameters:
-        account (int): The account number for which to retrieve the boxes.
+        account_id (int): The account number for which to retrieve the boxes.
 
         Returns:
         dict: A dictionary containing the boxes associated with the given account.
@@ -547,12 +547,12 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def balance(self, account: int = 1, cached: bool = True) -> int:
+    def balance(self, account_id: int = 1, cached: bool = True) -> int:
         """
         Calculate and return the balance of a specific account.
 
         Parameters:
-        account (int): The account number. Default is '1'.
+        account_id (int): The account number. Default is '1'.
         cached (bool): If True, use the cached balance. If False, calculate the balance from the box. Default is True.
 
         Returns:
@@ -564,24 +564,24 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def box_size(self, account: int) -> int:
+    def box_size(self, account_id: int) -> int:
         """
         Calculate the size of the box for a specific account.
 
         Parameters:
-        account (int): The account number for which the box size needs to be calculated.
+        account_id (int): The account number for which the box size needs to be calculated.
 
         Returns:
         int: The size of the box for the given account. If the account does not exist, -1 is returned.
         """
 
     @abstractmethod
-    def log_size(self, account: int) -> int:
+    def log_size(self, account_id: int) -> int:
         """
         Get the size of the log for a specific account.
 
         Parameters:
-        account (int): The account number for which the log size needs to be calculated.
+        account_id (int): The account number for which the log size needs to be calculated.
 
         Returns:
         int: The size of the log for the given account. If the account does not exist, -1 is returned.
@@ -876,7 +876,7 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def log(self, value: float, desc: str = '', account: int = 1, created: int = None, ref: int = None,
+    def log(self, value: float, desc: str = '', account_id: int = 1, created: int = None, ref: int = None,
             debug: bool = False) -> int:
         """
         Log a transaction into the account's log.
@@ -884,7 +884,7 @@ class Model(ABC):
         Parameters:
         value (float): The value of the transaction.
         desc (str): The description of the transaction.
-        account (int): The account to log the transaction into. Default is 1.
+        account_id (int): The account to log the transaction into. Default is 1.
         created (int): The timestamp of the transaction. If not provided, it will be generated.
         ref (int): The reference of the object.
         debug (bool): Whether to print debug information. Default is False.
@@ -919,12 +919,12 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def ref_exists(self, account: int, ref_type: str, ref: int) -> bool:
+    def ref_exists(self, account_id: int, ref_type: str, ref: int) -> bool:
         """
         Check if a specific reference (transaction) exists in the vault for a given account and reference type.
 
         Parameters:
-        account (int): The account number for which to check the existence of the reference.
+        account_id (int): The account number for which to check the existence of the reference.
         ref_type (str): The type of reference (e.g., 'box', 'log', etc.).
         ref (int): The reference (transaction) number to check for existence.
 
@@ -933,12 +933,12 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def box_exists(self, account: int, ref: int) -> bool:
+    def box_exists(self, account_id: int, ref: int) -> bool:
         """
         Check if a specific box (transaction) exists in the vault for a given account and reference.
 
         Parameters:
-        - account (int): The account number for which to check the existence of the box.
+        - account_id (int): The account number for which to check the existence of the box.
         - ref (int): The reference (transaction) number to check for existence.
 
         Returns:
@@ -946,12 +946,12 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def log_exists(self, account: int, ref: int) -> bool:
+    def log_exists(self, account_id: int, ref: int) -> bool:
         """
         Checks if a specific transaction log entry exists for a given account.
 
         Parameters:
-        account (int): The account number associated with the transaction log.
+        account_id (int): The account number associated with the transaction log.
         ref (int): The reference to the transaction log entry.
 
         Returns:
@@ -1588,14 +1588,14 @@ class DictModel(Model):
             raise ValueError(f'The account must be an integer, {type(account)} was provided.')
         return account in self._vault['account']
 
-    def box_size(self, account: int) -> int:
-        if self.account_exists(account):
-            return len(self._vault['account'][account]['box'])
+    def box_size(self, account_id: int) -> int:
+        if self.account_exists(account_id):
+            return len(self._vault['account'][account_id]['box'])
         return -1
 
-    def log_size(self, account: int) -> int:
-        if self.account_exists(account):
-            return len(self._vault['account'][account]['log'])
+    def log_size(self, account_id: int) -> int:
+        if self.account_exists(account_id):
+            return len(self._vault['account'][account_id]['log'])
         return -1
 
     def snapshot_cache_path(self):
@@ -1635,15 +1635,15 @@ class DictModel(Model):
             stream.write(camel.dump(cache))
         return True
 
-    def ref_exists(self, account: int, ref_type: str, ref: int) -> bool:
-        if not isinstance(account, int):
-            raise ValueError(f'The account must be an integer, {type(account)} was provided.')
-        if account in self._vault['account']:
-            return ref in self._vault['account'][account][ref_type]
+    def ref_exists(self, account_id: int, ref_type: str, ref: int) -> bool:
+        if not isinstance(account_id, int):
+            raise ValueError(f'The account_id must be an integer, {type(account_id)} was provided.')
+        if account_id in self._vault['account']:
+            return ref in self._vault['account'][account_id][ref_type]
         return False
 
-    def box_exists(self, account: int, ref: int) -> bool:
-        return self.ref_exists(account, 'box', ref)
+    def box_exists(self, account_id: int, ref: int) -> bool:
+        return self.ref_exists(account_id, 'box', ref)
 
     def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) \
             -> dict[int, tuple[str, str, bool]]:
@@ -1666,33 +1666,33 @@ class DictModel(Model):
                 result[ref] = (file_hash, path, exists)
         return result
 
-    def log_exists(self, account: int, ref: int) -> bool:
-        return self.ref_exists(account, 'log', ref)
+    def log_exists(self, account_id: int, ref: int) -> bool:
+        return self.ref_exists(account_id, 'log', ref)
 
-    def log(self, value: float, desc: str = '', account: int = 1, created: int = None, ref: int = None,
+    def log(self, value: float, desc: str = '', account_id: int = 1, created: int = None, ref: int = None,
             debug: bool = False) -> int:
         if debug:
             print('_log', f'debug={debug}')
         if created is None:
             created = Helper.time()
         try:
-            self._vault['account'][account]['balance'] += value
+            self._vault['account'][account_id]['balance'] += value
         except TypeError:
-            self._vault['account'][account]['balance'] += Decimal(value)
-        self._vault['account'][account]['count'] += 1
+            self._vault['account'][account_id]['balance'] += Decimal(value)
+        self._vault['account'][account_id]['count'] += 1
         if debug:
             print('create-log', created)
-        if self.log_exists(account, created):
+        if self.log_exists(account_id, created):
             raise ValueError(f"The log transaction happened again in the same nanosecond time({created}).")
         if debug:
             print('created-log', created)
-        self._vault['account'][account]['log'][created] = {
+        self._vault['account'][account_id]['log'][created] = {
             'value': value,
             'desc': desc,
             'ref': ref,
             'file': {},
         }
-        self.step(ActionEnum.LOG, account, ref=created, value=value)
+        self.step(ActionEnum.LOG, account_id, ref=created, value=value)
         return created
 
     def exchanges(self, account: int) -> dict | None:
@@ -1706,14 +1706,14 @@ class DictModel(Model):
             result[i] = self._vault['account'][i]['balance']
         return result
 
-    def boxes(self, account: int) -> dict:
-        if self.account_exists(account):
-            return self._vault['account'][account]['box']
+    def boxes(self, account_id: int) -> dict:
+        if self.account_exists(account_id):
+            return self._vault['account'][account_id]['box']
         return {}
 
-    def logs(self, account: int) -> dict:
-        if self.account_exists(account):
-            return self._vault['account'][account]['log']
+    def logs(self, account_id: int) -> dict:
+        if self.account_exists(account_id):
+            return self._vault['account'][account_id]['log']
         return {}
 
     @staticmethod
@@ -1988,7 +1988,7 @@ class DictModel(Model):
             return 0
         value = Helper.scale(unscaled_value)
         if logging:
-            self.log(value=value, desc=desc, account=account, created=created, ref=None, debug=debug)
+            self.log(value=value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
         if debug:
             print('creating-box', created)
         if self.box_exists(account, created):
@@ -2074,34 +2074,34 @@ class DictModel(Model):
                     return True
         return False
 
-    def balance(self, account: int = 1, cached: bool = True) -> int:
-        if not isinstance(account, int):
-            raise ValueError(f'The account must be an integer, {type(account)} was provided.')
+    def balance(self, account_id: int = 1, cached: bool = True) -> int:
+        if not isinstance(account_id, int):
+            raise ValueError(f'The account must be an integer, {type(account_id)} was provided.')
         if cached:
-            return self._vault['account'][account]['balance']
+            return self._vault['account'][account_id]['balance']
         x = 0
-        return [x := x + y['rest'] for y in self._vault['account'][account]['box'].values()][-1]
+        return [x := x + y['rest'] for y in self._vault['account'][account_id]['box'].values()][-1]
 
-    def hide(self, account: int, status: bool = None) -> bool:
-        if self.account_exists(account):
+    def hide(self, account_id: int, status: bool = None) -> bool:
+        if self.account_exists(account_id):
             if status is None:
-                return self._vault['account'][account]['hide']
-            self._vault['account'][account]['hide'] = status
+                return self._vault['account'][account_id]['hide']
+            self._vault['account'][account_id]['hide'] = status
             return status
         return False
 
-    def zakatable(self, account: int, status: bool = None) -> bool:
-        if self.account_exists(account):
+    def zakatable(self, account_id: int, status: bool = None) -> bool:
+        if self.account_exists(account_id):
             if status is None:
-                return self._vault['account'][account]['zakatable']
-            self._vault['account'][account]['zakatable'] = status
+                return self._vault['account'][account_id]['zakatable']
+            self._vault['account'][account_id]['zakatable'] = status
             return status
         return False
 
-    def name(self, account: int) -> str | None:
-        if account in self._vault['account']:
-            if 'name' in self._vault['account'][account]:
-                return self._vault['account'][account]['name']
+    def name(self, account_id: int) -> str | None:
+        if account_id in self._vault['account']:
+            if 'name' in self._vault['account'][account_id]:
+                return self._vault['account'][account_id]['name']
         return None
 
     def account(self, name: str = None, ref: int = None) -> tuple[int, str] | None:
@@ -2176,7 +2176,7 @@ class DictModel(Model):
         self.lock()
         self.track(0, '', account)
         value = Helper.scale(unscaled_value)
-        self.log(value=-value, desc=desc, account=account, created=created, ref=None, debug=debug)
+        self.log(value=-value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
         ids = sorted(self._vault['account'][account]['box'].keys())
         limit = len(ids) + 1
         target = value
@@ -2257,7 +2257,7 @@ class DictModel(Model):
                     selected_age = Helper.time()
                 self._vault['account'][to_account]['box'][age]['rest'] += target_amount
                 self.step(ActionEnum.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
-                y = self.log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account,
+                y = self.log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account_id=to_account,
                              created=None, ref=None, debug=debug)
                 times.append((age, y))
                 continue
@@ -2427,7 +2427,7 @@ class DictModel(Model):
                         self._vault['account'][x]['box'][j]['rest'] -= Decimal(amount)
                     # self.step(Action.ZAKAT, account=x, ref=j, value=amount, key='rest',
                     #            math_operation=MathOperation.SUBTRACTION)
-                    self.log(-float(amount), desc='zakat-زكاة', account=x, created=None, ref=j, debug=debug)
+                    self.log(-float(amount), desc='zakat-زكاة', account_id=x, created=None, ref=j, debug=debug)
         if parts_exist:
             for account, part in parts['account'].items():
                 if part['part'] == 0:
@@ -2490,7 +2490,7 @@ db = pony.Database()
 class Account(db.Entity):
     _table_ = 'account'
     id = pony.PrimaryKey(int, auto=True)
-    name = pony.Required(pony.LongStr, unique=True)
+    name = pony.Optional(pony.LongStr, unique=True)
     balance = pony.Optional(int, size=64, default=0)
     count = pony.Optional(int, size=64, default=0)
     hide = pony.Optional(bool, default=False)
@@ -2535,6 +2535,8 @@ class File(db.Entity):
     _table_ = 'file'
     id = pony.PrimaryKey(int, auto=True)
     log_id = pony.Required(Log)
+    time = pony.Required(int, size=64, unique=True)
+    record_date = pony.Required(datetime.datetime)
     path = pony.Required(pony.LongStr)
     name = pony.Optional(pony.LongStr)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
@@ -2683,7 +2685,6 @@ class SQLModel(Model):
             with pony.db_session:
                 Account(
                     id=account,
-                    name=str(Helper.time()),
                 )
             self.step(ActionEnum.CREATE, account)
         if unscaled_value == 0:
@@ -2716,19 +2717,63 @@ class SQLModel(Model):
         return created
 
     def add_file(self, account: int, ref: int, path: str) -> int:
-        pass
+        if self.account_exists(account):
+            with pony.db_session:
+                log = Log.get(time=ref)
+                if log:
+                    file_ref = Helper.time()
+                    File(
+                        log_id=log.id,
+                        time=file_ref,
+                        record_date=datetime.datetime.now(),
+                        path=path,
+                    )
+                    no_lock = self.nolock()
+                    self.lock()
+                    self.step(ActionEnum.ADD_FILE, account, ref=ref, file=file_ref)
+                    if no_lock:
+                        self.free(self.lock())
+                    return file_ref
+        return 0
 
     def remove_file(self, account: int, ref: int, file_ref: int) -> bool:
-        pass
+        if self.account_exists(account):
+            if self.log_exists(account, ref):
+               with pony.db_session:
+                file = File.get(time=file_ref)
+                if file:
+                    x = file.path
+                    file.delete()
+                    no_lock = self.nolock()
+                    self.lock()
+                    self.step(ActionEnum.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
+                    if no_lock:
+                        self.free(self.lock())
+                    return True
+        return False
 
-    def hide(self, account: int, status: bool = None) -> bool:
-        pass
+    def hide(self, account_id: int, status: bool = None) -> bool:
+        with pony.db_session:
+            account = Account.get(id=account_id)
+            if account:
+                account.hide = status
+                return True
+        return False
 
-    def zakatable(self, account: int, status: bool = None) -> bool:
-        pass
+    def zakatable(self, account_id: int, status: bool = None) -> bool:
+        with pony.db_session:
+            account = Account.get(id=account_id)
+            if account:
+                account.zakatable = status
+                return True
+        return False
 
-    def name(self, account: int) -> str | None:
-        pass
+    def name(self, account_id: int) -> str | None:
+        with pony.db_session:
+            account = Account.get(id=account_id)
+            if account:
+                return account.name
+        return None
 
     def accounts(self) -> dict:
         pass
@@ -2788,20 +2833,45 @@ class SQLModel(Model):
     def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
         pass
 
-    def logs(self, account: int) -> dict:
-        pass
+    def logs(self, account_id: int) -> dict:
+        with pony.db_session:
+            account = Account.get(id=account_id)
+            if account:
+                return account.log.to_dict()
+        return {}
 
-    def boxes(self, account: int) -> dict:
-        pass
+    def boxes(self, account_id: int) -> dict:
+        with pony.db_session:
+            account = Account.get(id=account_id)
+            if account:
+                return account.box.to_dict()
+        return {}
 
-    def balance(self, account: int = 1, cached: bool = True) -> int:
-        pass
+    def balance(self, account_id: int = 1, cached: bool = True) -> int:
+        if not isinstance(account_id, int):
+            raise ValueError(f'The account must be an integer, {type(account_id)} was provided.')
+        with pony.db_session:
+            account = Account.get(id=account_id)
+            if account:
+                if cached:
+                    return account.balance
+                x = 0
+                return [x := x + y.rest for y in account.box][-1]
+        return -1
 
-    def box_size(self, account: int) -> int:
-        pass
+    def box_size(self, account_id: int) -> int:
+        with pony.db_session:
+            account = Account.get(id=account_id)
+            if account:
+                return len(account.box)
+        return -1
 
-    def log_size(self, account: int) -> int:
-        pass
+    def log_size(self, account_id: int) -> int:
+        with pony.db_session:
+            account = Account.get(id=account_id)
+            if account:
+                return len(account.log)
+        return -1
 
     def nolock(self) -> bool:
         return self.config.get(key='nolock', default=True)
@@ -2846,7 +2916,12 @@ class SQLModel(Model):
         pass
 
     def daily_logs(self, weekday: WeekDay = WeekDay.Friday, debug: bool = False):
-        pass
+        return {
+            'daily': True,
+            'weekly': True,
+            'monthly': True,
+            'yearly': True,
+        }
 
     def export_json(self, path: str = "data.json") -> bool:
         pass
@@ -2864,19 +2939,19 @@ class SQLModel(Model):
                     if v['box']:
                         box = {}
                         for b in v['box']:
-                            box[b.id] = b.to_dict()
+                            box[b.time] = b.to_dict()
                         account[k]['box'] = box
 
                     if v['log']:
                         log = {}
                         for l in v['log']:
-                            log[l.id] = l.to_dict(with_lazy=True, with_collections=True, related_objects=True)
+                            log[l.time] = l.to_dict(with_lazy=True, with_collections=True, related_objects=True)
                         account[k]['log'] = log
 
                     if v['history']:
                         history = {}
                         for h in v['history']:
-                            history[h.id] = h.to_dict()
+                            history[h.time] = h.to_dict()
                         account[k]['history'] = history
                 return account
             case Vault.NAME:
@@ -2961,16 +3036,23 @@ class SQLModel(Model):
             )
         return lock
 
-    def ref_exists(self, account: int, ref_type: str, ref: int) -> bool:
-        pass
+    def ref_exists(self, account_id: int, ref_type: str, ref: int) -> bool:
+        if not isinstance(account_id, int):
+            raise ValueError(f'The account_id must be an integer, {type(account_id)} was provided.')
+        match ref_type:
+            case 'box':
+                return Box.exists(account_id=account_id, time=ref)
+            case 'log':
+                return Log.exists(account_id=account_id, time=ref)
+        return False
 
     @pony.db_session()
-    def box_exists(self, account: int, ref: int) -> bool:
-        return Box.exists(account_id=account, time=ref)
+    def box_exists(self, account_id: int, ref: int) -> bool:
+        return self.ref_exists(account_id=account_id, ref_type='box', ref=ref)
 
     @pony.db_session()
-    def log_exists(self, account: int, ref: int) -> bool:
-        return Log.exists(account_id=account, time=ref)
+    def log_exists(self, account_id: int, ref: int) -> bool:
+        return self.ref_exists(account_id=account_id, ref_type='log', ref=ref)
 
     def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) -> dict[
         int, tuple[str, str, bool]]:
@@ -4409,13 +4491,19 @@ class ZakatTracker:
 
 def test(debug: bool = False):
     durations = {}
+    # clean
+    if os.path.exists('zakat_test_db'):
+        shutil.rmtree('zakat_test_db')
+        print("Directory removed successfully.")
+    else:
+        print("Directory does not exist.")
     for model in [
         DictModel(db_path="./zakat_test_db/zakat.camel", history_mode=True),
         SQLModel(provider="sqlite", filename="./zakat_test_db/zakat.sqlite", history_mode=True, create_db=True),
     ]:
+        start = Helper.time()
         assert model.test(debug=debug)
         ledger = ZakatTracker(model=model)
-        start = Helper.time()
         assert ledger.test(debug=debug)
         durations[model.__class__.__name__] = Helper.time() - start
     if debug:
