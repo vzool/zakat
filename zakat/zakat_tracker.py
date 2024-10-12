@@ -3583,6 +3583,20 @@ class ZakatTracker:
 
         self.db.reset()
 
+        # lock
+        assert self.db.nolock()
+        lock1 = self.db.lock()
+        if debug:
+            print(f'lock1 = {lock1}')
+        assert lock1 != 0
+        lock2 = self.db.lock()
+        if debug:
+            print(f'lock2 = {lock2}')
+        assert lock1 == lock2
+        assert not self.db.nolock()
+        assert self.db.free(lock1)
+        assert not self.db.free(lock1)
+
         table = {
             102: [
                 (0, 10, 1000, 1000, 1000, 1, 1),
