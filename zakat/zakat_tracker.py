@@ -900,14 +900,14 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def step(self, action: ActionEnum = None, account=None, ref: int = None, file: int = None, value: float = None,
+    def step(self, action: ActionEnum = None, account_id = None, ref: int = None, file: int = None, value: float = None,
              key: str = None, math_operation: MathOperationEnum = None) -> int:
         """
         This method is responsible for recording the actions performed on the ZakatTracker.
 
         Parameters:
         - action (Action): The type of action performed.
-        - account (str): The account number on which the action was performed.
+        - account_id (str): The account number on which the action was performed.
         - ref (int): The reference number of the action.
         - file (int): The file reference number of the action.
         - value (int): The value associated with the action.
@@ -1483,7 +1483,7 @@ class DictModel(Model):
                 del self._vault['history'][lock]
         return count
 
-    def step(self, action: ActionEnum = None, account=None, ref: int = None, file: int = None, value: float = None,
+    def step(self, action: ActionEnum = None, account_id=None, ref: int = None, file: int = None, value: float = None,
              key: str = None, math_operation: MathOperationEnum = None) -> int:
         if not self.history():
             return 0
@@ -1495,7 +1495,7 @@ class DictModel(Model):
             return lock
         self._vault['history'][lock].append({
             'action': action,
-            'account': account,
+            'account': account_id,
             'ref': ref,
             'file': file,
             'key': key,
@@ -2118,7 +2118,7 @@ class DictModel(Model):
                 self.track(account=_account)
             self.step(
                 action=ActionEnum.NAME_ACCOUNT,
-                account=_account,
+                account_id=_account,
                 value=self._vault['account'][_account]['name'] if 'name' in self._vault['account'][
                     _account] else None,
                 key='name',
@@ -2257,7 +2257,8 @@ class DictModel(Model):
                     selected_age = Helper.time()
                 self._vault['account'][to_account]['box'][age]['rest'] += target_amount
                 self.step(ActionEnum.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
-                y = self.log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account_id=to_account,
+                y = self.log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}',
+                             account_id=to_account,
                              created=None, ref=None, debug=debug)
                 times.append((age, y))
                 continue
@@ -2409,16 +2410,16 @@ class DictModel(Model):
                 j = ids[i]
                 if debug:
                     print('i', i, 'j', j)
-                self.step(ActionEnum.ZAKAT, account=x, ref=j, value=self._vault['account'][x]['box'][j]['last'],
+                self.step(ActionEnum.ZAKAT, account_id=x, ref=j, value=self._vault['account'][x]['box'][j]['last'],
                           key='last',
                           math_operation=MathOperationEnum.EQUAL)
                 self._vault['account'][x]['box'][j]['last'] = created
                 amount = Helper.exchange_calc(float(plan[x][i]['total']), 1, float(target_exchange['rate']))
                 self._vault['account'][x]['box'][j]['total'] += amount
-                self.step(ActionEnum.ZAKAT, account=x, ref=j, value=amount, key='total',
+                self.step(ActionEnum.ZAKAT, account_id=x, ref=j, value=amount, key='total',
                           math_operation=MathOperationEnum.ADDITION)
                 self._vault['account'][x]['box'][j]['count'] += plan[x][i]['count']
-                self.step(ActionEnum.ZAKAT, account=x, ref=j, value=plan[x][i]['count'], key='count',
+                self.step(ActionEnum.ZAKAT, account_id=x, ref=j, value=plan[x][i]['count'], key='count',
                           math_operation=MathOperationEnum.ADDITION)
                 if not parts_exist:
                     try:
@@ -2663,13 +2664,64 @@ class SQLModel(Model):
         return str(self._vault_path)
 
     def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: int = None,
-            debug: bool = False) -> tuple[
-                                        int,
-                                        list[
-                                            tuple[int, int],
-                                        ],
-                                    ] | tuple:
-        pass
+            debug: bool = False) \
+            -> tuple[
+                   int,
+                   list[
+                       tuple[int, int],
+                   ],
+               ] | tuple:
+        if debug:
+            print('sub', f'debug={debug}')
+        if unscaled_value < 0:
+            return tuple()
+        if not isinstance(account, int):
+            raise ValueError(f'The account must be an integer, {type(account)} was provided.')
+        if unscaled_value == 0:
+            ref = self.track(unscaled_value, '', account)
+            return ref, ref
+        if created is None:
+            created = Helper.time()
+        no_lock = self.nolock()
+        self.lock()
+        self.track(0, '', account)
+        value = Helper.scale(unscaled_value)
+        self.log(value=-value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
+        target = value
+        ages = []
+        with pony.db_session:
+            selected_account = Account.get(id=account)
+            boxes = selected_account.box.select().order_by(pony.desc(Box.id))[:]
+            if debug:
+                print('boxes', boxes)
+            for box in boxes:
+                if target == 0:
+                    break
+                rest = box.rest
+                if rest >= target:
+                    box.rest -= target
+                    self.step(ActionEnum.SUB, account, ref=box.time, value=target)
+                    ages.append((box.time, target))
+                    target = 0
+                    break
+                elif target > rest > 0:
+                    chunk = rest
+                    target -= chunk
+                    self.step(ActionEnum.SUB, account, ref=box.time, value=chunk)
+                    ages.append((box.time, chunk))
+                    box.rest = 0
+        if target > 0:
+            self.track(
+                unscaled_value=Helper.unscale(-target),
+                desc=desc,
+                account=account,
+                logging=False,
+                created=created,
+            )
+            ages.append((created, target))
+        if no_lock:
+            self.free(self.lock())
+        return created, ages
 
     def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
               created: int = None, debug: bool = False) -> int:
@@ -2739,33 +2791,37 @@ class SQLModel(Model):
     def remove_file(self, account: int, ref: int, file_ref: int) -> bool:
         if self.account_exists(account):
             if self.log_exists(account, ref):
-               with pony.db_session:
-                file = File.get(time=file_ref)
-                if file:
-                    x = file.path
-                    file.delete()
-                    no_lock = self.nolock()
-                    self.lock()
-                    self.step(ActionEnum.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
-                    if no_lock:
-                        self.free(self.lock())
-                    return True
+                with pony.db_session:
+                    file = File.get(time=file_ref)
+                    if file:
+                        x = file.path
+                        file.delete()
+                        no_lock = self.nolock()
+                        self.lock()
+                        self.step(ActionEnum.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
+                        if no_lock:
+                            self.free(self.lock())
+                        return True
         return False
 
     def hide(self, account_id: int, status: bool = None) -> bool:
         with pony.db_session:
             account = Account.get(id=account_id)
             if account:
+                if status is None:
+                    return account.hide
                 account.hide = status
-                return True
+                return account.hide
         return False
 
     def zakatable(self, account_id: int, status: bool = None) -> bool:
         with pony.db_session:
             account = Account.get(id=account_id)
             if account:
+                if status is None:
+                    return account.zakatable
                 account.zakatable = status
-                return True
+                return account.zakatable
         return False
 
     def name(self, account_id: int) -> str | None:
@@ -2837,14 +2893,14 @@ class SQLModel(Model):
         with pony.db_session:
             account = Account.get(id=account_id)
             if account:
-                return account.log.to_dict()
+                return {l.time: l.to_dict() for l in account.log.select()[:]}
         return {}
 
     def boxes(self, account_id: int) -> dict:
         with pony.db_session:
             account = Account.get(id=account_id)
             if account:
-                return account.box.to_dict()
+                return {b.time: b.to_dict() for b in account.box.select()[:]}
         return {}
 
     def balance(self, account_id: int = 1, cached: bool = True) -> int:
@@ -2874,14 +2930,14 @@ class SQLModel(Model):
         return -1
 
     def nolock(self) -> bool:
-        return self.config.get(key='nolock', default=True)
+        return self.config.get(key='lock', default=0) == 0
 
     def lock(self) -> int:
         return self.step()
 
     def free(self, lock: int, auto_save: bool = True) -> bool:
         if lock == self.config.get('lock'):
-            self.config.set('lock', '')
+            self.config.set('lock', 0)
             self.clean_history(lock)
             if auto_save:
                 return self.save(self.path())
@@ -2894,10 +2950,22 @@ class SQLModel(Model):
         return self._history_mode
 
     def save(self, path: str = None) -> bool:
-        pass
+        if path is None:
+            path = self.path()
+        db.commit()
+        if path != self.path():
+            shutil.copy(self.path(), path)
+        return True
 
     def load(self, path: str = None) -> bool:
-        pass
+        return False
+        if path is None:
+            path = self.path()
+        if os.path.exists(path):
+            with open(path, 'r') as stream:
+                self._vault = camel.load(stream.read())
+                return True
+        return False
 
     def recall(self, dry=True, debug=False) -> bool:
         pass
@@ -3011,7 +3079,7 @@ class SQLModel(Model):
             self.step(ActionEnum.LOG, account_id=account_id, ref=created, value=value)
         return created
 
-    def step(self, action: ActionEnum = None, account_id=None, ref: int = None, file: int = None, value: float = None,
+    def step(self, action: ActionEnum = None, account_id = None, ref: int = None, file: int = None, value: float = None,
              key: str = None, math_operation: MathOperationEnum = None) -> int:
         if not self.history():
             return 0
@@ -3537,6 +3605,19 @@ class ZakatTracker:
             print(f'total: {total}, error({error}): {100 * error / total}%')
         assert error == 0
 
+        # lock
+        assert self.db.nolock()
+        lock1 = self.db.lock()
+        if debug:
+            print(f'lock1 = {lock1}')
+        assert lock1 != 0
+        lock2 = self.db.lock()
+        if debug:
+            print(f'lock2 = {lock2}')
+        assert lock1 == lock2
+        assert not self.db.nolock()
+        assert self.db.free(lock1)
+        assert not self.db.free(lock1)
         assert self.db.nolock()
         assert self.db.history() is True
 
@@ -3582,20 +3663,6 @@ class ZakatTracker:
         assert self.db.account_exists(account_xx_ref)
 
         self.db.reset()
-
-        # lock
-        assert self.db.nolock()
-        lock1 = self.db.lock()
-        if debug:
-            print(f'lock1 = {lock1}')
-        assert lock1 != 0
-        lock2 = self.db.lock()
-        if debug:
-            print(f'lock2 = {lock2}')
-        assert lock1 == lock2
-        assert not self.db.nolock()
-        assert self.db.free(lock1)
-        assert not self.db.free(lock1)
 
         table = {
             102: [
