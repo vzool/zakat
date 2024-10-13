@@ -2608,9 +2608,21 @@ class SQLModel(Model):
         Initializes a new SQLModel instance.
 
         Parameters:
-        provider (str, required): The database engine like: (sqlite, mysql, postgres, etc.) Check what PonyORM support.
+        provider (str, required): The database engine like: (sqlite, postgres, mysql, oracle & cockroach)
         filename (str, optional): The path to the SQLite database file, if database provider is sqlite.
         history_mode (bool, optional): The mode for tracking history. Default is True.
+        debug (bool, optional): Flag to enable debug mode. Default is False.
+
+        Examples:
+        SQLModel(provider='sqlite', filename=':sharedmemory:')
+        SQLModel(provider='sqlite', filename='db.sqlite', create_db=True)
+        SQLModel(provider='postgres', user='', password='', host='', database='')
+        SQLModel(provider='mysql', host='', user='', passwd='', db='')
+        SQLModel(provider='oracle', user='', password='', dsn='')
+        SQLModel(provider='cockroach', user='', password='', host='', database='', sslmode='disable')
+        SQLModel(provider='cockroach', user='', password='', host='', database='', sslmode='require',
+                 port=26257, sslrootcert='certs/ca.crt', sslkey='certs/client.maxroach.key',
+                 sslcert='certs/client.maxroach.crt')
         """
 
         self._base_path = None
@@ -2632,6 +2644,12 @@ class SQLModel(Model):
             history_mode = db_params['history_mode']
             del db_params['history_mode']
         self.history(status=history_mode)
+
+        if 'debug' in db_params:
+            if type(db_params['debug']) is not bool:
+                raise 'debug should be bool type'
+            pony.set_sql_debug(db_params['debug'])
+            del db_params['debug']
 
         db.bind(**db_params)
         db.generate_mapping(create_tables=True)
@@ -3638,8 +3656,8 @@ class ZakatTracker:
         account_xz_ref, account_xz_name = self.db.account(name='xz')
         assert account_xz_ref == 27
         assert account_xz_name == 'xz'
-        use_same_account_name_failed = False
         assert self.db.account(ref=321) is None
+        use_same_account_name_failed = False
         try:
             self.db.account(name='z', ref=321)
         except:
@@ -4580,7 +4598,7 @@ def test(debug: bool = False):
         print("Directory does not exist.")
     for model in [
         DictModel(db_path="./zakat_test_db/zakat.camel", history_mode=True),
-        SQLModel(provider="sqlite", filename="./zakat_test_db/zakat.sqlite", history_mode=True, create_db=True),
+        SQLModel(provider="sqlite", filename="./zakat_test_db/zakat.sqlite", history_mode=True, create_db=True, debug=True),
     ]:
         start = Helper.time()
         assert model.test(debug=debug)

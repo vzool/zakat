@@ -11,15 +11,18 @@ clean:
 	rm -rf *.sqlite
 	rm -rf *.json
 	rm -rf *.txt
+	rm -rf *.db
 	rm -rf zakat_test_db
 	rm -rf zakat/*.csv
 	rm -rf zakat/*.camel
 	rm -rf zakat/*.json
+	rm -rf zakat/*.db
 	rm -rf zakat/zakat_test_db
 	rm -rf tests/*.csv
 	rm -rf tests/*.camel
 	rm -rf tests/*.sqlite
 	rm -rf tests/*.json
+	rm -rf tests/*.db
 	rm -rf tests/zakat_test_db
 	rm -rf snapshots
 
