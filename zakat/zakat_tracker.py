@@ -3016,48 +3016,69 @@ class SQLModel(Model):
 
     @pony.db_session()
     def vault(self, section: Vault = Vault.ALL) -> dict:
-        match section:
-            case Vault.ACCOUNT:
-                account = {}
-                for k, v in {
-                    a.id: a.to_dict(with_lazy=True, with_collections=True, related_objects=True)
-                    for a in Account.select()[:]
-                }.items():
-                    account[k] = v
-                    if v['box']:
-                        box = {}
-                        for b in v['box']:
-                            box[b.time] = b.to_dict()
-                        account[k]['box'] = box
+        account = {}
+        name = {}
+        history = {}
+        report = {}
+        all: bool = section == Vault.ALL
 
-                    if v['log']:
-                        log = {}
-                        for l in v['log']:
-                            log[l.time] = l.to_dict(with_lazy=True, with_collections=True, related_objects=True)
-                        account[k]['log'] = log
+        if section == Vault.ACCOUNT or all:
+            for k, v in {
+                a.id: a.to_dict(with_lazy=True, with_collections=True, related_objects=True)
+                for a in Account.select()[:]
+            }.items():
+                account[k] = v
+                if v['box']:
+                    box = {}
+                    for b in v['box']:
+                        box[b.time] = b.to_dict()
+                    account[k]['box'] = box
 
-                    if v['history']:
-                        history = {}
-                        for h in v['history']:
-                            history[h.time] = h.to_dict()
-                        account[k]['history'] = history
-                return account
-            case Vault.NAME:
-                account = {}
-                for k, v in self.vault(Vault.ACCOUNT).items():
-                    account[k] = v['name']
-                    account[v['name']] = k
-                return {
-                    'account': account,
-                }
-            case Vault.HISTORY:
-                return History.select()[:]
-            case Vault.REPORT:
-                return Report.select()[:]
+                if v['log']:
+                    log = {}
+                    for l in v['log']:
+                        log[l.time] = l.to_dict(with_lazy=True, with_collections=True, related_objects=True)
+                    account[k]['log'] = log
+
+                if v['history']:
+                    history = {}
+                    for h in v['history']:
+                        history[h.time] = h.to_dict()
+                    account[k]['history'] = history
+
+        if section == Vault.NAME or all:
+            for k, v in {
+                a.id: a.to_dict(only=['id', 'name'])
+                for a in Account.select()[:]
+            }.items():
+                name[k] = v['name']
+                name[v['name']] = k
+
+        if section == Vault.HISTORY or all:
+            for h in History.select().order_by(History.time)[:]:
+                if h.time not in history:
+                    history[h.time] = []
+                history[h.time].append(h.to_dict())
+
+        if section == Vault.REPORT or all:
+            report = Report.select()[:]
+
+        if section == Vault.ACCOUNT:
+            return account
+
+        if section == Vault.NAME:
+            return {
+                'account': name,
+            }
+
+        if section == Vault.HISTORY:
+            return history
+
         return {
-            'account': Account.select()[:],
-            'history': History.select()[:],
-            'report': Report.select()[:],
+            'account': account,
+            'name': name,
+            'history': history,
+            'report': report,
         }
 
     def snapshot(self) -> bool:
