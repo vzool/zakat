@@ -900,8 +900,8 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def step(self, action: ActionEnum = None, account_id = None, ref: int = None, file: int = None, value: float = None,
-             key: str = None, math_operation: MathOperationEnum = None) -> int:
+    def step(self, action: ActionEnum = None, account_id: int = None, ref: int = None, file: int = None,
+             value: float = None, key: str = None, math_operation: MathOperationEnum = None) -> int:
         """
         This method is responsible for recording the actions performed on the ZakatTracker.
 
@@ -1483,8 +1483,8 @@ class DictModel(Model):
                 del self._vault['history'][lock]
         return count
 
-    def step(self, action: ActionEnum = None, account_id=None, ref: int = None, file: int = None, value: float = None,
-             key: str = None, math_operation: MathOperationEnum = None) -> int:
+    def step(self, action: ActionEnum = None, account_id: int = None, ref: int = None, file: int = None,
+             value: float = None, key: str = None, math_operation: MathOperationEnum = None) -> int:
         if not self.history():
             return 0
         lock = self._vault['lock']
@@ -3097,8 +3097,8 @@ class SQLModel(Model):
             self.step(ActionEnum.LOG, account_id=account_id, ref=created, value=value)
         return created
 
-    def step(self, action: ActionEnum = None, account_id = None, ref: int = None, file: int = None, value: float = None,
-             key: str = None, math_operation: MathOperationEnum = None) -> int:
+    def step(self, action: ActionEnum = None, account_id : int = None, ref: int = None, file: int = None,
+             value: float = None, key: str = None, math_operation: MathOperationEnum = None) -> int:
         if not self.history():
             return 0
         lock = self.config.get(key='lock')
@@ -3684,35 +3684,115 @@ class ZakatTracker:
 
         table = {
             102: [
-                (0, 10, 1000, 1000, 1000, 1, 1),
-                (0, 20, 3000, 3000, 3000, 2, 2),
-                (0, 30, 6000, 6000, 6000, 3, 3),
-                (1, 15, 4500, 4500, 4500, 3, 4),
-                (1, 50, -500, -500, -500, 4, 5),
-                (1, 100, -10500, -10500, -10500, 5, 6),
+                {
+                    'ops': 'track',
+                    'unscaled_value': 10,
+                    'cached_balance': 1000,
+                    'fresh_balance': 1000,
+                    'log_value_sum': 1000,
+                    'box_size': 1,
+                    'log_size': 1,
+                },
+                {
+                    'ops': 'track',
+                    'unscaled_value': 20,
+                    'cached_balance': 3000,
+                    'fresh_balance': 3000,
+                    'log_value_sum': 3000,
+                    'box_size': 2,
+                    'log_size': 2,
+                },
+                {
+                    'ops': 'track',
+                    'unscaled_value': 30,
+                    'cached_balance': 6000,
+                    'fresh_balance': 6000,
+                    'log_value_sum': 6000,
+                    'box_size': 3,
+                    'log_size': 3,
+                },
+                {
+                    'ops': 'sub',
+                    'unscaled_value': 15,
+                    'cached_balance': 4500,
+                    'fresh_balance': 4500,
+                    'log_value_sum': 4500,
+                    'box_size': 3,
+                    'log_size': 4,
+                },
+                {
+                    'ops': 'sub',
+                    'unscaled_value': 50,
+                    'cached_balance': -500,
+                    'fresh_balance': -500,
+                    'log_value_sum': -500,
+                    'box_size': 4,
+                    'log_size': 5,
+                },
+                {
+                    'ops': 'sub',
+                    'unscaled_value': 100,
+                    'cached_balance': -10500,
+                    'fresh_balance': -10500,
+                    'log_value_sum': -10500,
+                    'box_size': 5,
+                    'log_size': 6,
+                },
             ],
             201: [
-                (1, 90, -9000, -9000, -9000, 1, 1),
-                (0, 100, 1000, 1000, 1000, 2, 2),
-                (1, 190, -18000, -18000, -18000, 3, 3),
-                (0, 1000, 82000, 82000, 82000, 4, 4),
+                {
+                    'ops': 'sub',
+                    'unscaled_value': 90,
+                    'cached_balance': -9000,
+                    'fresh_balance': -9000,
+                    'log_value_sum': -9000,
+                    'box_size': 1,
+                    'log_size': 1,
+                },
+                {
+                    'ops': 'track',
+                    'unscaled_value': 100,
+                    'cached_balance': 1000,
+                    'fresh_balance': 1000,
+                    'log_value_sum': 1000,
+                    'box_size': 2,
+                    'log_size': 2,
+                },
+                {
+                    'ops': 'sub',
+                    'unscaled_value': 190,
+                    'cached_balance': -18000,
+                    'fresh_balance': -18000,
+                    'log_value_sum': -18000,
+                    'box_size': 3,
+                    'log_size': 3,
+                },
+                {
+                    'ops': 'track',
+                    'unscaled_value': 1000,
+                    'cached_balance': 82000,
+                    'fresh_balance': 82000,
+                    'log_value_sum': 82000,
+                    'box_size': 4,
+                    'log_size': 4,
+                },
             ],
         }
         for x in table:
             for y in table[x]:
                 self.db.lock()
-                if y[0] == 0:
+                if y['ops'] == 'track':
                     ref = self.db.track(
-                        unscaled_value=y[1],
+                        unscaled_value=y['unscaled_value'],
                         desc='test-add',
                         account=x,
                         logging=True,
                         created=Helper.time(),
                         debug=debug,
                     )
-                else:
+                elif y['ops'] == 'sub':
                     (ref, z) = self.db.sub(
-                        unscaled_value=y[1],
+                        unscaled_value=y['unscaled_value'],
                         desc='test-sub',
                         account=x,
                         created=Helper.time(),
@@ -3739,23 +3819,23 @@ class ZakatTracker:
                 z = self.db.balance(x)
                 if debug:
                     print("debug-0", z, y)
-                assert z == y[2]
+                assert z == y['cached_balance']
                 z = self.db.balance(x, False)
                 if debug:
-                    print("debug-1", z, y[3])
-                assert z == y[3]
+                    print("debug-1", z, y['fresh_balance'])
+                assert z == y['fresh_balance']
                 o = self.db.vault(Vault.ACCOUNT)[x]['log']
                 z = 0
                 for i in o:
                     z += o[i]['value']
                 if debug:
                     print("debug-2", z, type(z))
-                    print("debug-2", y[4], type(y[4]))
-                assert z == y[4]
+                    print("debug-2", y['log_value_sum'], type(y['log_value_sum']))
+                assert z == y['log_value_sum']
                 if debug:
                     print('debug-2 - PASSED')
-                assert self.db.box_size(x) == y[5]
-                assert self.db.log_size(x) == y[6]
+                assert self.db.box_size(x) == y['box_size']
+                assert self.db.log_size(x) == y['log_size']
                 assert not self.db.nolock()
                 self.db.free(self.db.lock())
                 assert self.db.nolock()
@@ -3796,9 +3876,9 @@ class ZakatTracker:
                 for j in range(-1, -transaction_limit, -1):
                     row = table[account][j]
                     if debug:
-                        print(row, self.db.balance(account), self.db.balance(account, False), row[2])
+                        print(row, self.db.balance(account), self.db.balance(account, False), row['cached_balance'])
                     assert self.db.balance(account) == self.db.balance(account, False)
-                    assert self.db.balance(account) == row[2]
+                    assert self.db.balance(account) == row['cached_balance']
                     assert self.db.recall(False, debug)
             assert self.db.recall(False, debug) is False
             count = len(self.db.vault(Vault.HISTORY))
@@ -4591,14 +4671,24 @@ class ZakatTracker:
 def test(debug: bool = False):
     durations = {}
     # clean
-    if os.path.exists('zakat_test_db'):
-        shutil.rmtree('zakat_test_db')
-        print("Directory removed successfully.")
+    test_directory = 'zakat_test_db'
+    if os.path.exists(test_directory):
+        shutil.rmtree(test_directory)
+        print(f"{test_directory} Directory removed successfully.")
     else:
-        print("Directory does not exist.")
+        print(f"{test_directory} Directory does not exist.")
     for model in [
-        DictModel(db_path="./zakat_test_db/zakat.camel", history_mode=True),
-        SQLModel(provider="sqlite", filename="./zakat_test_db/zakat.sqlite", history_mode=True, create_db=True, debug=True),
+        DictModel(
+            db_path=f"./{test_directory}/zakat.camel",
+            history_mode=True,
+        ),
+        SQLModel(
+            provider="sqlite",
+            filename=f"./{test_directory}/zakat.sqlite",
+            create_db=True,
+            history_mode=True,
+            debug=True,
+        ),
     ]:
         start = Helper.time()
         assert model.test(debug=debug)
