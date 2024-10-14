@@ -2498,10 +2498,10 @@ class Account(db.Entity):
     zakatable = pony.Optional(bool, default=True)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
     updated_at = pony.Optional(datetime.datetime)
-    box = pony.Set('Box')
-    log = pony.Set('Log')
-    exchange = pony.Set('Exchange')
-    history = pony.Set('History')
+    box = pony.Set('Box', cascade_delete=False)
+    log = pony.Set('Log', cascade_delete=False)
+    exchange = pony.Set('Exchange', cascade_delete=False)
+    history = pony.Set('History', cascade_delete=False)
 
 
 class Box(db.Entity):
@@ -2529,7 +2529,7 @@ class Log(db.Entity):
     desc = pony.Required(pony.LongStr)
     ref = pony.Optional(int, size=64)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
-    file = pony.Set('File')
+    file = pony.Set('File', cascade_delete=False)
 
 
 class File(db.Entity):
@@ -2559,7 +2559,7 @@ class Action(db.Entity):
     id = pony.PrimaryKey(int, auto=True)
     name = pony.Required(str, unique=True)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
-    history = pony.Set('History')
+    history = pony.Set('History', cascade_delete=False)
 
 
 class Math(db.Entity):
@@ -2567,7 +2567,7 @@ class Math(db.Entity):
     id = pony.PrimaryKey(int, auto=True)
     name = pony.Required(str, unique=True)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
-    history = pony.Set('History')
+    history = pony.Set('History', cascade_delete=False)
 
 
 class History(db.Entity):
@@ -2989,7 +2989,9 @@ class SQLModel(Model):
         pass
 
     def reset(self) -> None:
-        pass
+        db.drop_all_tables(with_all_data=True)
+        db.create_tables()
+        SQLModel.create_db()
 
     def check(self, silver_gram_price: float, unscaled_nisab: float | int | Decimal = None, debug: bool = False,
               now: int = None, cycle: float = None) -> tuple:
@@ -3656,7 +3658,7 @@ class ZakatTracker:
         account_xz_ref, account_xz_name = self.db.account(name='xz')
         assert account_xz_ref == 27
         assert account_xz_name == 'xz'
-        assert self.db.account(ref=321) is None
+        assert self.db.account(ref=123) is None
         use_same_account_name_failed = False
         try:
             self.db.account(name='z', ref=321)
@@ -3885,7 +3887,7 @@ class ZakatTracker:
             if debug:
                 print('history-count', count)
             assert count == 0
-            self.db.reset()
+        self.db.reset()
 
     def test(self, debug: bool = False) -> bool:
         if debug:
