@@ -657,7 +657,7 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def recall(self, dry=True, debug=False) -> bool:
+    def recall(self, dry: bool = True, debug: bool = False) -> bool:
         """
         Revert the last operation.
 
@@ -1917,10 +1917,8 @@ class DictModel(Model):
             print('y', y)
         return y
 
-    def recall(self, dry=True, debug=False) -> bool:
-        if not self.nolock() or len(self._vault['history']) == 0:
-            return False
-        if len(self._vault['history']) <= 0:
+    def recall(self, dry: bool = True, debug: bool = False) -> bool:
+        if not self.nolock() or len(self._vault['history']) <= 0:
             return False
         ref = sorted(self._vault['history'].keys())[-1]
         if debug:
@@ -1966,7 +1964,7 @@ class DictModel(Model):
                                     self._vault['account'][x['account']]['count'] -= 1
                                     sub_positive_log_negative = 0
                                 box_ref = self._vault['account'][x['account']]['log'][x['ref']]['ref']
-                                if not box_ref is None:
+                                if box_ref is not None:
                                     assert self.box_exists(x['account'], box_ref)
                                     box_value = self._vault['account'][x['account']]['log'][x['ref']]['value']
                                     assert box_value < 0
@@ -2611,7 +2609,7 @@ class Account(db.Entity):
 class Box(db.Entity):
     _table_ = 'box'
     id = pony.PrimaryKey(int, auto=True)
-    account_id = pony.Required(Account)
+    account = pony.Required(Account, column='account_id')
     time = pony.Required(int, size=64, unique=True)
     record_date = pony.Required(datetime.datetime)
     capital = pony.Required(int, size=64)
@@ -2626,7 +2624,7 @@ class Box(db.Entity):
 class Log(db.Entity):
     _table_ = 'log'
     id = pony.PrimaryKey(int, auto=True)
-    account_id = pony.Required(Account)
+    account = pony.Required(Account, column='account_id')
     time = pony.Required(int, size=64, unique=True)
     record_date = pony.Required(datetime.datetime)
     value = pony.Required(int, size=64)
@@ -2639,7 +2637,7 @@ class Log(db.Entity):
 class File(db.Entity):
     _table_ = 'file'
     id = pony.PrimaryKey(int, auto=True)
-    log_id = pony.Required(Log)
+    log = pony.Required(Log, column='log_id')
     time = pony.Required(int, size=64, unique=True)
     record_date = pony.Required(datetime.datetime)
     path = pony.Required(pony.LongStr)
@@ -2651,7 +2649,7 @@ class File(db.Entity):
 class Exchange(db.Entity):
     _table_ = 'exchange'
     id = pony.PrimaryKey(int, auto=True)
-    account_id = pony.Required(Account)
+    account = pony.Required(Account, column='account_id')
     time = pony.Required(int, size=64, unique=True)
     rate = pony.Required(Decimal)
     desc = pony.Required(pony.LongStr)
@@ -2678,14 +2676,14 @@ class History(db.Entity):
     _table_ = 'history'
     id = pony.PrimaryKey(int, auto=True)
     lock = pony.Required(int, size=64)
-    action_id = pony.Required(Action)
-    account_id = pony.Required(Account)
+    action = pony.Required(Action, column='action_id')
+    account = pony.Required(Account, column='account_id')
     ref = pony.Optional(int, size=64)
     file = pony.Optional(int, size=64)
     key = pony.Optional(str)
     value = pony.Optional(str)
     value_type = pony.Optional(str)
-    math_id = pony.Optional(Math)
+    math = pony.Optional(Math, column='math_id')
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
 
 
@@ -2873,7 +2871,7 @@ class SQLModel(Model):
             if self.box_exists(account, created):
                 raise ValueError(f"The box transaction happened again in the same nanosecond time({created}).")
             Box(
-                account_id=account,
+                account=account,
                 time=created,
                 record_date=datetime.datetime.now(),
                 capital=value,
@@ -2896,7 +2894,7 @@ class SQLModel(Model):
                 if log:
                     file_ref = Helper.time()
                     File(
-                        log_id=log.id,
+                        log=log.id,
                         time=file_ref,
                         record_date=datetime.datetime.now(),
                         path=path,
@@ -3087,8 +3085,141 @@ class SQLModel(Model):
                 return True
         return False
 
-    def recall(self, dry=True, debug=False) -> bool:
-        pass
+    @pony.db_session()
+    def recall(self, dry: bool = True, debug: bool = False) -> bool:
+        # return False
+        if not self.nolock() or pony.count(History.select()) <= 0:
+            return False
+        memory = History.select(
+            lambda h: h.lock == pony.max(hh.lock for hh in History)
+        ).order_by(pony.desc(History.id))[:]
+        if debug:
+            print('memories', type(memory), memory)
+        sub_positive_log_negative = 0
+        for x in memory:
+            if debug:
+                print('memory', type(x), x.to_dict())
+            account = Account.get(id=x.account.id)
+            if debug:
+                print(account)
+            match x.action.id:
+                case ActionEnum.CREATE.value:
+                    assert pony.count(Box.select(lambda b: b.account.id == x.account.id)) == 0
+                    assert account.balance == 0
+                    assert account.count == 0
+                    if dry:
+                        continue
+                    account.delete()
+
+                case ActionEnum.TRACK.value:
+                    if dry:
+                        continue
+                    account.balance -= int(x.value)
+                    account.count -= 1
+                    Box.get(time=x.ref).delete()
+
+                case ActionEnum.LOG.value:
+                    if dry:
+                        continue
+                    if sub_positive_log_negative == -int(x.value):
+                        account.count -= 1
+                        sub_positive_log_negative = 0
+                    log = Log.get(time=x.ref)
+                    if log.ref:
+                        box = Box.get(time=x.ref)
+                        print('box', box)
+                        assert box
+                        assert box.value < 0
+
+                        try:
+                            box.rest += -box.value
+                        except TypeError:
+                            box.rest += Decimal(-box.value)
+
+                        try:
+                            account.balance += -box.value
+                        except TypeError:
+                            account.balance += Decimal(-box.value)
+
+                        account.count -= 1
+                    log.delete()
+
+                case ActionEnum.SUB.value:
+                    box = Box.get(time=x.ref)
+                    if box:
+                        if dry:
+                            continue
+                        box.rest += int(x.value)
+                        account.balance += int(x.value)
+                        sub_positive_log_negative = int(x.value)
+
+                case ActionEnum.ADD_FILE.value:
+                    file = File.get(time=x.file)
+                    if file:
+                        if dry:
+                            continue
+                        file.delete()
+
+                case ActionEnum.REMOVE_FILE.value:
+                    log = Log.get(time=x.ref)
+                    File(
+                        log=log.id,
+                        time=x.ref,
+                        record_date=Helper.time_to_datetime(x.file),
+                        path=x.value,
+                    )
+
+        #         case ActionEnum.BOX_TRANSFER.value:
+        #             if x['account'] is not None:
+        #                 if self.account_exists(x['account']):
+        #                     if x['ref'] in self._vault['account'][x['account']]['box']:
+        #                         if dry:
+        #                             continue
+        #                         self._vault['account'][x['account']]['box'][x['ref']]['rest'] -= x['value']
+        #
+        #         case ActionEnum.EXCHANGE.value:
+        #             if x['account'] is not None:
+        #                 if self.account_exists(x['account']):
+        #                     if x['ref'] in self._vault['account'][x['account']]['exchange']:
+        #                         if dry:
+        #                             continue
+        #                         del self._vault['account'][x['account']]['exchange'][x['ref']]
+        #
+        #         case ActionEnum.REPORT.value:
+        #             if x['ref'] in self._vault['report']:
+        #                 if dry:
+        #                     continue
+        #                 del self._vault['report'][x['ref']]
+        #
+        #         case ActionEnum.ZAKAT.value:
+        #             if x['account'] is not None:
+        #                 if self.account_exists(x['account']):
+        #                     if x['ref'] in self._vault['account'][x['account']]['box']:
+        #                         if x['key'] in self._vault['account'][x['account']]['box'][x['ref']]:
+        #                             if dry:
+        #                                 continue
+        #                             match x['math']:
+        #                                 case MathOperationEnum.ADDITION:
+        #                                     self._vault['account'][x['account']]['box'][x['ref']][x['key']] -= x[
+        #                                         'value']
+        #                                 case MathOperationEnum.EQUAL:
+        #                                     self._vault['account'][x['account']]['box'][x['ref']][x['key']] = x['value']
+        #                                 case MathOperationEnum.SUBTRACTION:
+        #                                     self._vault['account'][x['account']]['box'][x['ref']][x['key']] += x[
+        #                                         'value']
+        #
+        #         case ActionEnum.NAME_ACCOUNT.value:
+        #             if x['account'] is not None:
+        #                 if self.account_exists(x['account']):
+        #                     if dry:
+        #                         continue
+        #                     match x['math']:
+        #                         case MathOperationEnum.EQUAL:
+        #                             self._vault['account'][x['account']][x['key']] = x['value']
+        #
+        if not dry:
+            self.clean_history(memory[0].lock)
+        return True
 
     def reset(self) -> None:
         db.drop_all_tables(with_all_data=True)
@@ -3213,7 +3344,7 @@ class SQLModel(Model):
             if debug:
                 print('created-log', created)
             Log(
-                account_id=account_id,
+                account=account_id,
                 time=created,
                 record_date=datetime.datetime.now(),
                 value=value,
@@ -3238,15 +3369,15 @@ class SQLModel(Model):
             raise ValueError(f'lock({lock}) is empty')
         with pony.db_session:
             History(
-                action_id=action.value,
-                account_id=account_id,
+                action=action.value,
+                account=account_id,
                 lock=lock,
                 ref=ref,
                 file=file,
                 key=key if key else '',
                 value=str(value) if value else '',
                 value_type=value.__class__.__name__ if value else '',
-                math_id=math_operation.value if math_operation else None,
+                math=math_operation.value if math_operation else None,
             )
         return lock
 
@@ -3255,9 +3386,9 @@ class SQLModel(Model):
             raise ValueError(f'The account_id must be an integer, {type(account_id)} was provided.')
         match ref_type:
             case 'box':
-                return Box.exists(account_id=account_id, time=ref)
+                return Box.exists(account=account_id, time=ref)
             case 'log':
-                return Log.exists(account_id=account_id, time=ref)
+                return Log.exists(account=account_id, time=ref)
         return False
 
     @pony.db_session()
