@@ -1392,6 +1392,111 @@ class Helper:
         """
         return Helper.time(datetime.datetime(year, month, day))
 
+    @staticmethod
+    def test(debug: bool = False):
+
+        # sanity check - random forward time
+
+        xlist = []
+        limit = 1000
+        for _ in range(limit):
+            y = Helper.time()
+            z = '-'
+            if y not in xlist:
+                xlist.append(y)
+            else:
+                z = 'x'
+            if debug:
+                print(z, y)
+        xx = len(xlist)
+        if debug:
+            print('count', xx, ' - unique: ', (xx / limit) * 100, '%')
+        assert limit == xx
+
+        # sanity check - convert date since 1000AD
+
+        for year in range(1000, 9000):
+            ns = Helper.time(datetime.datetime.strptime(f"{year}-12-30 18:30:45", "%Y-%m-%d %H:%M:%S"))
+            date = Helper.time_to_datetime(ns)
+            if debug:
+                print(date)
+            assert date.year == year
+            assert date.month == 12
+            assert date.day == 30
+            assert date.hour == 18
+            assert date.minute == 30
+            assert date.second in [44, 45]
+
+        # human_readable_size
+
+        assert Helper.human_readable_size(0) == "0.00 B"
+        assert Helper.human_readable_size(512) == "512.00 B"
+        assert Helper.human_readable_size(1023) == "1023.00 B"
+
+        assert Helper.human_readable_size(1024) == "1.00 KB"
+        assert Helper.human_readable_size(2048) == "2.00 KB"
+        assert Helper.human_readable_size(5120) == "5.00 KB"
+
+        assert Helper.human_readable_size(1024 ** 2) == "1.00 MB"
+        assert Helper.human_readable_size(2.5 * 1024 ** 2) == "2.50 MB"
+
+        assert Helper.human_readable_size(1024 ** 3) == "1.00 GB"
+        assert Helper.human_readable_size(1024 ** 4) == "1.00 TB"
+        assert Helper.human_readable_size(1024 ** 5) == "1.00 PB"
+
+        assert Helper.human_readable_size(1536, decimal_places=0) == "2 KB"
+        assert Helper.human_readable_size(2.5 * 1024 ** 2, decimal_places=1) == "2.5 MB"
+        assert Helper.human_readable_size(1234567890, decimal_places=3) == "1.150 GB"
+
+        try:
+            # noinspection PyTypeChecker
+            Helper.human_readable_size("not a number")
+            assert False, "Expected TypeError for invalid input"
+        except TypeError:
+            pass
+
+        try:
+            # noinspection PyTypeChecker
+            Helper.human_readable_size(1024, decimal_places="not an int")
+            assert False, "Expected TypeError for invalid decimal_places"
+        except TypeError:
+            pass
+
+        # get_dict_size
+        assert Helper.get_dict_size({}) == sys.getsizeof({}), "Empty dictionary size mismatch"
+        assert Helper.get_dict_size({"a": 1, "b": 2.5, "c": True}) != sys.getsizeof({}), "Not Empty dictionary"
+
+        # number scale
+        error = 0
+        total = 0
+        for sign in ['', '-']:
+            for max_i, max_j, decimal_places in [
+                (101, 101, 2),  # fiat currency minimum unit took 2 decimal places
+                (1, 1_000, 8),  # cryptocurrency like Satoshi in Bitcoin took 8 decimal places
+                (1, 1_000, 18)  # cryptocurrency like Wei in Ethereum took 18 decimal places
+            ]:
+                for return_type in (
+                        float,
+                        Decimal,
+                ):
+                    for i in range(max_i):
+                        for j in range(max_j):
+                            total += 1
+                            num_str = f'{sign}{i}.{j:0{decimal_places}d}'
+                            num = return_type(num_str)
+                            scaled = Helper.scale(num, decimal_places=decimal_places)
+                            unscaled = Helper.unscale(scaled, return_type=return_type, decimal_places=decimal_places)
+                            if debug:
+                                print(
+                                    f'return_type: {return_type}, num_str: {num_str} - num: {num} - scaled: {scaled} - unscaled: {unscaled}')
+                            if unscaled != num:
+                                if debug:
+                                    print('***** SCALE ERROR *****')
+                                error += 1
+        if debug:
+            print(f'total: {total}, error({error}): {100 * error / total}%')
+        assert error == 0
+
 
 class DictModel(Model):
     """
@@ -1518,7 +1623,6 @@ class DictModel(Model):
     def free(self, lock: int, auto_save: bool = True) -> bool:
         if lock == self._vault['lock']:
             self._vault['lock'] = None
-            self.clean_history(lock)
             if auto_save:
                 return self.save(self.path())
             return True
@@ -2573,8 +2677,7 @@ class Math(db.Entity):
 class History(db.Entity):
     _table_ = 'history'
     id = pony.PrimaryKey(int, auto=True)
-    time = pony.Required(int, size=64, unique=True)
-    record_date = pony.Required(datetime.datetime)
+    lock = pony.Required(int, size=64)
     action_id = pony.Required(Action)
     account_id = pony.Required(Account)
     ref = pony.Optional(int, size=64)
@@ -2956,7 +3059,6 @@ class SQLModel(Model):
     def free(self, lock: int, auto_save: bool = True) -> bool:
         if lock == self.config.get('lock'):
             self.config.set('lock', 0)
-            self.clean_history(lock)
             if auto_save:
                 return self.save(self.path())
             return True
@@ -3043,7 +3145,9 @@ class SQLModel(Model):
                 if v['history']:
                     history = {}
                     for h in v['history']:
-                        history[h.time] = h.to_dict()
+                        if h.lock not in history:
+                            history[h.lock] = []
+                        history[h.lock].append(h.to_dict())
                     account[k]['history'] = history
 
         if section == Vault.NAME or all:
@@ -3055,10 +3159,10 @@ class SQLModel(Model):
                 name[v['name']] = k
 
         if section == Vault.HISTORY or all:
-            for h in History.select().order_by(History.time)[:]:
-                if h.time not in history:
-                    history[h.time] = []
-                history[h.time].append(h.to_dict())
+            for h in History.select().order_by(History.lock)[:]:
+                if h.lock not in history:
+                    history[h.lock] = []
+                history[h.lock].append(h.to_dict())
 
         if section == Vault.REPORT or all:
             report = Report.select()[:]
@@ -3120,7 +3224,7 @@ class SQLModel(Model):
             self.step(ActionEnum.LOG, account_id=account_id, ref=created, value=value)
         return created
 
-    def step(self, action: ActionEnum = None, account_id : int = None, ref: int = None, file: int = None,
+    def step(self, action: ActionEnum = None, account_id: int = None, ref: int = None, file: int = None,
              value: float = None, key: str = None, math_operation: MathOperationEnum = None) -> int:
         if not self.history():
             return 0
@@ -3130,12 +3234,13 @@ class SQLModel(Model):
             self.config.set(key='lock', value=lock)
         if action is None:
             return lock
+        if not lock or lock == 0:
+            raise ValueError(f'lock({lock}) is empty')
         with pony.db_session:
             History(
                 action_id=action.value,
                 account_id=account_id,
-                time=Helper.time(),
-                record_date=datetime.datetime.now(),
+                lock=lock,
                 ref=ref,
                 file=file,
                 key=key if key else '',
@@ -3169,9 +3274,9 @@ class SQLModel(Model):
 
     @pony.db_session()
     def clean_history(self, lock: int | None = None) -> int:
-        count = pony.count(h for h in History if h.time == lock)
+        count = pony.count(h for h in History if h.lock == lock)
         if count > 0:
-            History.select(lambda h: h.time == lock).delete(bulk=True)
+            History.select(lambda h: h.lock == lock).delete(bulk=True)
         return count
 
     @staticmethod
@@ -3543,108 +3648,6 @@ class ZakatTracker:
 
         if debug:
             random.seed(1234567890)
-
-        # sanity check - random forward time
-
-        xlist = []
-        limit = 1000
-        for _ in range(limit):
-            y = Helper.time()
-            z = '-'
-            if y not in xlist:
-                xlist.append(y)
-            else:
-                z = 'x'
-            if debug:
-                print(z, y)
-        xx = len(xlist)
-        if debug:
-            print('count', xx, ' - unique: ', (xx / limit) * 100, '%')
-        assert limit == xx
-
-        # sanity check - convert date since 1000AD
-
-        for year in range(1000, 9000):
-            ns = Helper.time(datetime.datetime.strptime(f"{year}-12-30 18:30:45", "%Y-%m-%d %H:%M:%S"))
-            date = Helper.time_to_datetime(ns)
-            if debug:
-                print(date)
-            assert date.year == year
-            assert date.month == 12
-            assert date.day == 30
-            assert date.hour == 18
-            assert date.minute == 30
-            assert date.second in [44, 45]
-
-        # human_readable_size
-
-        assert Helper.human_readable_size(0) == "0.00 B"
-        assert Helper.human_readable_size(512) == "512.00 B"
-        assert Helper.human_readable_size(1023) == "1023.00 B"
-
-        assert Helper.human_readable_size(1024) == "1.00 KB"
-        assert Helper.human_readable_size(2048) == "2.00 KB"
-        assert Helper.human_readable_size(5120) == "5.00 KB"
-
-        assert Helper.human_readable_size(1024 ** 2) == "1.00 MB"
-        assert Helper.human_readable_size(2.5 * 1024 ** 2) == "2.50 MB"
-
-        assert Helper.human_readable_size(1024 ** 3) == "1.00 GB"
-        assert Helper.human_readable_size(1024 ** 4) == "1.00 TB"
-        assert Helper.human_readable_size(1024 ** 5) == "1.00 PB"
-
-        assert Helper.human_readable_size(1536, decimal_places=0) == "2 KB"
-        assert Helper.human_readable_size(2.5 * 1024 ** 2, decimal_places=1) == "2.5 MB"
-        assert Helper.human_readable_size(1234567890, decimal_places=3) == "1.150 GB"
-
-        try:
-            # noinspection PyTypeChecker
-            Helper.human_readable_size("not a number")
-            assert False, "Expected TypeError for invalid input"
-        except TypeError:
-            pass
-
-        try:
-            # noinspection PyTypeChecker
-            Helper.human_readable_size(1024, decimal_places="not an int")
-            assert False, "Expected TypeError for invalid decimal_places"
-        except TypeError:
-            pass
-
-        # get_dict_size
-        assert Helper.get_dict_size({}) == sys.getsizeof({}), "Empty dictionary size mismatch"
-        assert Helper.get_dict_size({"a": 1, "b": 2.5, "c": True}) != sys.getsizeof({}), "Not Empty dictionary"
-
-        # number scale
-        error = 0
-        total = 0
-        for sign in ['', '-']:
-            for max_i, max_j, decimal_places in [
-                (101, 101, 2),  # fiat currency minimum unit took 2 decimal places
-                (1, 1_000, 8),  # cryptocurrency like Satoshi in Bitcoin took 8 decimal places
-                (1, 1_000, 18)  # cryptocurrency like Wei in Ethereum took 18 decimal places
-            ]:
-                for return_type in (
-                        float,
-                        Decimal,
-                ):
-                    for i in range(max_i):
-                        for j in range(max_j):
-                            total += 1
-                            num_str = f'{sign}{i}.{j:0{decimal_places}d}'
-                            num = return_type(num_str)
-                            scaled = Helper.scale(num, decimal_places=decimal_places)
-                            unscaled = Helper.unscale(scaled, return_type=return_type, decimal_places=decimal_places)
-                            if debug:
-                                print(
-                                    f'return_type: {return_type}, num_str: {num_str} - num: {num} - scaled: {scaled} - unscaled: {unscaled}')
-                            if unscaled != num:
-                                if debug:
-                                    print('***** SCALE ERROR *****')
-                                error += 1
-        if debug:
-            print(f'total: {total}, error({error}): {100 * error / total}%')
-        assert error == 0
 
         # lock
         assert self.db.nolock()
@@ -4153,7 +4156,7 @@ class ZakatTracker:
             history_count = len(self.db.vault(Vault.HISTORY))
             if debug:
                 print('history-count', history_count)
-            assert len(self.db.vault(Vault.HISTORY)) == 4
+            assert len(self.db.vault(Vault.HISTORY)) == 5
 
             # storage
 
@@ -4173,6 +4176,8 @@ class ZakatTracker:
             history_count = len(self.db.vault(Vault.HISTORY))
             if debug:
                 print('history-count', history_count)
+            assert len(self.db.vault(Vault.HISTORY)) == 5
+            assert self.db.recall(False, debug) is True
             assert len(self.db.vault(Vault.HISTORY)) == 4
             assert self.db.recall(False, debug) is True
             assert len(self.db.vault(Vault.HISTORY)) == 3
@@ -4700,6 +4705,7 @@ def test(debug: bool = False):
         print(f"{test_directory} Directory removed successfully.")
     else:
         print(f"{test_directory} Directory does not exist.")
+    Helper.test(debug=True)
     for model in [
         DictModel(
             db_path=f"./{test_directory}/zakat.camel",
