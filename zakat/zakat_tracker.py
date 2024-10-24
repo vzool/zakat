@@ -1939,6 +1939,7 @@ class DictModel(Model):
                             if debug:
                                 print('account', self._vault['account'][x['account']])
                             assert len(self._vault['account'][x['account']]['box']) == 0
+                            assert len(self._vault['account'][x['account']]['log']) == 0
                             assert self._vault['account'][x['account']]['balance'] == 0
                             assert self._vault['account'][x['account']]['count'] == 0
                             if dry:
@@ -3105,6 +3106,7 @@ class SQLModel(Model):
             match x.action.id:
                 case ActionEnum.CREATE.value:
                     assert pony.count(Box.select(lambda b: b.account.id == x.account.id)) == 0
+                    assert pony.count(Log.select(lambda l: l.account.id == x.account.id)) == 0
                     assert account.balance == 0
                     assert account.count == 0
                     if dry:
