@@ -1629,15 +1629,14 @@ class DictModel(Model):
         return False
 
     def vault(self, section: Vault = Vault.ALL) -> dict:
-        match section:
-            case Vault.ACCOUNT:
-                return self._vault['account'].copy()
-            case Vault.NAME:
-                return self._vault['name'].copy()
-            case Vault.HISTORY:
-                return self._vault['history'].copy()
-            case Vault.REPORT:
-                return self._vault['report'].copy()
+        if section == Vault.ACCOUNT:
+            return self._vault['account'].copy()
+        elif section == Vault.NAME:
+            return self._vault['name'].copy()
+        elif section == Vault.HISTORY:
+            return self._vault['history'].copy()
+        elif section == Vault.REPORT:
+            return self._vault['report'].copy()
         return self._vault.copy()
 
     @staticmethod
@@ -1932,132 +1931,129 @@ class DictModel(Model):
             x = memory[i]
             if debug:
                 print('memory', type(x), x)
-            match x['action']:
-                case ActionEnum.CREATE:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if debug:
-                                print('account', self._vault['account'][x['account']])
-                            assert len(self._vault['account'][x['account']]['box']) == 0
-                            assert len(self._vault['account'][x['account']]['log']) == 0
-                            assert self._vault['account'][x['account']]['balance'] == 0
-                            assert self._vault['account'][x['account']]['count'] == 0
-                            if dry:
-                                continue
-                            del self._vault['account'][x['account']]
-
-                case ActionEnum.TRACK:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if dry:
-                                continue
-                            self._vault['account'][x['account']]['balance'] -= x['value']
-                            self._vault['account'][x['account']]['count'] -= 1
-                            del self._vault['account'][x['account']]['box'][x['ref']]
-
-                case ActionEnum.LOG:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['log']:
-                                if dry:
-                                    continue
-                                if sub_positive_log_negative == -x['value']:
-                                    self._vault['account'][x['account']]['count'] -= 1
-                                    sub_positive_log_negative = 0
-                                box_ref = self._vault['account'][x['account']]['log'][x['ref']]['ref']
-                                if box_ref is not None:
-                                    assert self.box_exists(x['account'], box_ref)
-                                    box_value = self._vault['account'][x['account']]['log'][x['ref']]['value']
-                                    assert box_value < 0
-
-                                    try:
-                                        self._vault['account'][x['account']]['box'][box_ref]['rest'] += -box_value
-                                    except TypeError:
-                                        self._vault['account'][x['account']]['box'][box_ref]['rest'] += Decimal(
-                                            -box_value)
-
-                                    try:
-                                        self._vault['account'][x['account']]['balance'] += -box_value
-                                    except TypeError:
-                                        self._vault['account'][x['account']]['balance'] += Decimal(-box_value)
-
-                                    self._vault['account'][x['account']]['count'] -= 1
-                                del self._vault['account'][x['account']]['log'][x['ref']]
-
-                case ActionEnum.SUB:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['box']:
-                                if dry:
-                                    continue
-                                self._vault['account'][x['account']]['box'][x['ref']]['rest'] += x['value']
-                                self._vault['account'][x['account']]['balance'] += x['value']
-                                sub_positive_log_negative = x['value']
-
-                case ActionEnum.ADD_FILE:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['log']:
-                                if x['file'] in self._vault['account'][x['account']]['log'][x['ref']]['file']:
-                                    if dry:
-                                        continue
-                                    del self._vault['account'][x['account']]['log'][x['ref']]['file'][x['file']]
-
-                case ActionEnum.REMOVE_FILE:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['log']:
-                                if dry:
-                                    continue
-                                self._vault['account'][x['account']]['log'][x['ref']]['file'][x['file']] = x['value']
-
-                case ActionEnum.BOX_TRANSFER:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['box']:
-                                if dry:
-                                    continue
-                                self._vault['account'][x['account']]['box'][x['ref']]['rest'] -= x['value']
-
-                case ActionEnum.EXCHANGE:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['exchange']:
-                                if dry:
-                                    continue
-                                del self._vault['account'][x['account']]['exchange'][x['ref']]
-
-                case ActionEnum.REPORT:
-                    if x['ref'] in self._vault['report']:
+            if x['action'] == ActionEnum.CREATE:
+                if x['account'] is not None:
+                    if self.account_exists(x['account']):
+                        if debug:
+                            print('account', self._vault['account'][x['account']])
+                        assert len(self._vault['account'][x['account']]['box']) == 0
+                        assert len(self._vault['account'][x['account']]['log']) == 0
+                        assert self._vault['account'][x['account']]['balance'] == 0
+                        assert self._vault['account'][x['account']]['count'] == 0
                         if dry:
                             continue
-                        del self._vault['report'][x['ref']]
+                        del self._vault['account'][x['account']]
 
-                case ActionEnum.ZAKAT:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['box']:
-                                if x['key'] in self._vault['account'][x['account']]['box'][x['ref']]:
-                                    if dry:
-                                        continue
-                                    match x['math']:
-                                        case MathOperationEnum.ADDITION:
-                                            self._vault['account'][x['account']]['box'][x['ref']][x['key']] -= x[
-                                                'value']
-                                        case MathOperationEnum.EQUAL:
-                                            self._vault['account'][x['account']]['box'][x['ref']][x['key']] = x['value']
-                                        case MathOperationEnum.SUBTRACTION:
-                                            self._vault['account'][x['account']]['box'][x['ref']][x['key']] += x[
-                                                'value']
+            elif x['action'] == ActionEnum.TRACK:
+                if x['account'] is not None:
+                    if self.account_exists(x['account']):
+                        if dry:
+                            continue
+                        self._vault['account'][x['account']]['balance'] -= x['value']
+                        self._vault['account'][x['account']]['count'] -= 1
+                        del self._vault['account'][x['account']]['box'][x['ref']]
 
-                case ActionEnum.NAME_ACCOUNT:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
+            elif x['action'] == ActionEnum.LOG:
+                if x['account'] is not None:
+                    if self.account_exists(x['account']):
+                        if x['ref'] in self._vault['account'][x['account']]['log']:
                             if dry:
                                 continue
-                            match x['math']:
-                                case MathOperationEnum.EQUAL:
-                                    self._vault['account'][x['account']][x['key']] = x['value']
+                            if sub_positive_log_negative == -x['value']:
+                                self._vault['account'][x['account']]['count'] -= 1
+                                sub_positive_log_negative = 0
+                            box_ref = self._vault['account'][x['account']]['log'][x['ref']]['ref']
+                            if box_ref is not None:
+                                assert self.box_exists(x['account'], box_ref)
+                                box_value = self._vault['account'][x['account']]['log'][x['ref']]['value']
+                                assert box_value < 0
+
+                                try:
+                                    self._vault['account'][x['account']]['box'][box_ref]['rest'] += -box_value
+                                except TypeError:
+                                    self._vault['account'][x['account']]['box'][box_ref]['rest'] += Decimal(
+                                        -box_value)
+
+                                try:
+                                    self._vault['account'][x['account']]['balance'] += -box_value
+                                except TypeError:
+                                    self._vault['account'][x['account']]['balance'] += Decimal(-box_value)
+
+                                self._vault['account'][x['account']]['count'] -= 1
+                            del self._vault['account'][x['account']]['log'][x['ref']]
+
+            elif x['action'] == ActionEnum.SUB:
+                if x['account'] is not None:
+                    if self.account_exists(x['account']):
+                        if x['ref'] in self._vault['account'][x['account']]['box']:
+                            if dry:
+                                continue
+                            self._vault['account'][x['account']]['box'][x['ref']]['rest'] += x['value']
+                            self._vault['account'][x['account']]['balance'] += x['value']
+                            sub_positive_log_negative = x['value']
+
+            elif x['action'] == ActionEnum.ADD_FILE:
+                if x['account'] is not None:
+                    if self.account_exists(x['account']):
+                        if x['ref'] in self._vault['account'][x['account']]['log']:
+                            if x['file'] in self._vault['account'][x['account']]['log'][x['ref']]['file']:
+                                if dry:
+                                    continue
+                                del self._vault['account'][x['account']]['log'][x['ref']]['file'][x['file']]
+
+            elif x['action'] == ActionEnum.REMOVE_FILE:
+                if x['account'] is not None:
+                    if self.account_exists(x['account']):
+                        if x['ref'] in self._vault['account'][x['account']]['log']:
+                            if dry:
+                                continue
+                            self._vault['account'][x['account']]['log'][x['ref']]['file'][x['file']] = x['value']
+
+            elif x['action'] == ActionEnum.BOX_TRANSFER:
+                if x['account'] is not None:
+                    if self.account_exists(x['account']):
+                        if x['ref'] in self._vault['account'][x['account']]['box']:
+                            if dry:
+                                continue
+                            self._vault['account'][x['account']]['box'][x['ref']]['rest'] -= x['value']
+
+            elif x['action'] == ActionEnum.EXCHANGE:
+                if x['account'] is not None:
+                    if self.account_exists(x['account']):
+                        if x['ref'] in self._vault['account'][x['account']]['exchange']:
+                            if dry:
+                                continue
+                            del self._vault['account'][x['account']]['exchange'][x['ref']]
+
+            elif x['action'] == ActionEnum.REPORT:
+                if x['ref'] in self._vault['report']:
+                    if dry:
+                        continue
+                    del self._vault['report'][x['ref']]
+
+            elif x['action'] == ActionEnum.ZAKAT:
+                if x['account'] is not None:
+                    if self.account_exists(x['account']):
+                        if x['ref'] in self._vault['account'][x['account']]['box']:
+                            if x['key'] in self._vault['account'][x['account']]['box'][x['ref']]:
+                                if dry:
+                                    continue
+                                if x['math'] == MathOperationEnum.ADDITION:
+                                    self._vault['account'][x['account']]['box'][x['ref']][x['key']] -= x[
+                                        'value']
+                                elif x['math'] == MathOperationEnum.EQUAL:
+                                    self._vault['account'][x['account']]['box'][x['ref']][x['key']] = x['value']
+                                elif x['math'] == MathOperationEnum.SUBTRACTION:
+                                    self._vault['account'][x['account']]['box'][x['ref']][x['key']] += x[
+                                        'value']
+
+            elif x['action'] == ActionEnum.NAME_ACCOUNT:
+                if x['account'] is not None:
+                    if self.account_exists(x['account']):
+                        if dry:
+                            continue
+                        if x['math'] == MathOperationEnum.EQUAL:
+                            self._vault['account'][x['account']][x['key']] = x['value']
 
         if not dry:
             del self._vault['history'][ref]
@@ -3103,75 +3099,74 @@ class SQLModel(Model):
             account = Account.get(id=x.account.id)
             if debug:
                 print(account)
-            match x.action.id:
-                case ActionEnum.CREATE.value:
-                    assert pony.count(Box.select(lambda b: b.account.id == x.account.id)) == 0
-                    assert pony.count(Log.select(lambda l: l.account.id == x.account.id)) == 0
-                    assert account.balance == 0
-                    assert account.count == 0
-                    if dry:
-                        continue
-                    account.delete()
+            if x.action.id == ActionEnum.CREATE.value:
+                assert pony.count(Box.select(lambda b: b.account.id == x.account.id)) == 0
+                assert pony.count(Log.select(lambda l: l.account.id == x.account.id)) == 0
+                assert account.balance == 0
+                assert account.count == 0
+                if dry:
+                    continue
+                account.delete()
 
-                case ActionEnum.TRACK.value:
-                    if dry:
-                        continue
-                    account.balance -= int(x.value)
+            elif x.action.id == ActionEnum.TRACK.value:
+                if dry:
+                    continue
+                account.balance -= int(x.value)
+                account.count -= 1
+                Box.get(time=x.ref).delete()
+
+            elif x.action.id == ActionEnum.LOG.value:
+                if dry:
+                    continue
+                if sub_positive_log_negative == -int(x.value):
                     account.count -= 1
-                    Box.get(time=x.ref).delete()
+                    sub_positive_log_negative = 0
+                log = Log.get(time=x.ref)
+                if log.ref:
+                    box = Box.get(time=x.ref)
+                    print('box', box)
+                    assert box
+                    assert box.value < 0
 
-                case ActionEnum.LOG.value:
+                    try:
+                        box.rest += -box.value
+                    except TypeError:
+                        box.rest += Decimal(-box.value)
+
+                    try:
+                        account.balance += -box.value
+                    except TypeError:
+                        account.balance += Decimal(-box.value)
+
+                    account.count -= 1
+                log.delete()
+
+            elif x.action.id == ActionEnum.SUB.value:
+                box = Box.get(time=x.ref)
+                if box:
                     if dry:
                         continue
-                    if sub_positive_log_negative == -int(x.value):
-                        account.count -= 1
-                        sub_positive_log_negative = 0
-                    log = Log.get(time=x.ref)
-                    if log.ref:
-                        box = Box.get(time=x.ref)
-                        print('box', box)
-                        assert box
-                        assert box.value < 0
+                    box.rest += int(x.value)
+                    account.balance += int(x.value)
+                    sub_positive_log_negative = int(x.value)
 
-                        try:
-                            box.rest += -box.value
-                        except TypeError:
-                            box.rest += Decimal(-box.value)
+            elif x.action.id == ActionEnum.ADD_FILE.value:
+                file = File.get(time=x.file)
+                if file:
+                    if dry:
+                        continue
+                    file.delete()
 
-                        try:
-                            account.balance += -box.value
-                        except TypeError:
-                            account.balance += Decimal(-box.value)
+            elif x.action.id == ActionEnum.REMOVE_FILE.value:
+                log = Log.get(time=x.ref)
+                File(
+                    log=log.id,
+                    time=x.ref,
+                    record_date=Helper.time_to_datetime(x.file),
+                    path=x.value,
+                )
 
-                        account.count -= 1
-                    log.delete()
-
-                case ActionEnum.SUB.value:
-                    box = Box.get(time=x.ref)
-                    if box:
-                        if dry:
-                            continue
-                        box.rest += int(x.value)
-                        account.balance += int(x.value)
-                        sub_positive_log_negative = int(x.value)
-
-                case ActionEnum.ADD_FILE.value:
-                    file = File.get(time=x.file)
-                    if file:
-                        if dry:
-                            continue
-                        file.delete()
-
-                case ActionEnum.REMOVE_FILE.value:
-                    log = Log.get(time=x.ref)
-                    File(
-                        log=log.id,
-                        time=x.ref,
-                        record_date=Helper.time_to_datetime(x.file),
-                        path=x.value,
-                    )
-
-        #         case ActionEnum.BOX_TRANSFER.value:
+        #         elif x.action.id == ActionEnum.BOX_TRANSFER.value:
         #             if x['account'] is not None:
         #                 if self.account_exists(x['account']):
         #                     if x['ref'] in self._vault['account'][x['account']]['box']:
@@ -3179,7 +3174,7 @@ class SQLModel(Model):
         #                             continue
         #                         self._vault['account'][x['account']]['box'][x['ref']]['rest'] -= x['value']
         #
-        #         case ActionEnum.EXCHANGE.value:
+        #         elif x.action.id == ActionEnum.EXCHANGE.value:
         #             if x['account'] is not None:
         #                 if self.account_exists(x['account']):
         #                     if x['ref'] in self._vault['account'][x['account']]['exchange']:
@@ -3187,37 +3182,35 @@ class SQLModel(Model):
         #                             continue
         #                         del self._vault['account'][x['account']]['exchange'][x['ref']]
         #
-        #         case ActionEnum.REPORT.value:
+        #         elif x.action.id == ActionEnum.REPORT.value:
         #             if x['ref'] in self._vault['report']:
         #                 if dry:
         #                     continue
         #                 del self._vault['report'][x['ref']]
         #
-        #         case ActionEnum.ZAKAT.value:
+        #         elif x.action.id == ActionEnum.ZAKAT.value:
         #             if x['account'] is not None:
         #                 if self.account_exists(x['account']):
         #                     if x['ref'] in self._vault['account'][x['account']]['box']:
         #                         if x['key'] in self._vault['account'][x['account']]['box'][x['ref']]:
         #                             if dry:
         #                                 continue
-        #                             match x['math']:
-        #                                 case MathOperationEnum.ADDITION:
-        #                                     self._vault['account'][x['account']]['box'][x['ref']][x['key']] -= x[
-        #                                         'value']
-        #                                 case MathOperationEnum.EQUAL:
-        #                                     self._vault['account'][x['account']]['box'][x['ref']][x['key']] = x['value']
-        #                                 case MathOperationEnum.SUBTRACTION:
-        #                                     self._vault['account'][x['account']]['box'][x['ref']][x['key']] += x[
-        #                                         'value']
+        #                             if x['math'] == MathOperationEnum.ADDITION:
+        #                                 self._vault['account'][x['account']]['box'][x['ref']][x['key']] -= x[
+        #                                     'value']
+        #                             elif x['math'] == MathOperationEnum.EQUAL:
+        #                                 self._vault['account'][x['account']]['box'][x['ref']][x['key']] = x['value']
+        #                             elif x['math'] == MathOperationEnum.SUBTRACTION:
+        #                                 self._vault['account'][x['account']]['box'][x['ref']][x['key']] += x[
+        #                                     'value']
         #
-        #         case ActionEnum.NAME_ACCOUNT.value:
+        #         elif x.action.id == ActionEnum.NAME_ACCOUNT.value:
         #             if x['account'] is not None:
         #                 if self.account_exists(x['account']):
         #                     if dry:
         #                         continue
-        #                     match x['math']:
-        #                         case MathOperationEnum.EQUAL:
-        #                             self._vault['account'][x['account']][x['key']] = x['value']
+        #                     if x['math'] == MathOperationEnum.EQUAL:
+        #                         self._vault['account'][x['account']][x['key']] = x['value']
         #
         if not dry:
             self.clean_history(memory[0].lock)
@@ -3386,11 +3379,10 @@ class SQLModel(Model):
     def ref_exists(self, account_id: int, ref_type: str, ref: int) -> bool:
         if not isinstance(account_id, int):
             raise ValueError(f'The account_id must be an integer, {type(account_id)} was provided.')
-        match ref_type:
-            case 'box':
-                return Box.exists(account=account_id, time=ref)
-            case 'log':
-                return Log.exists(account=account_id, time=ref)
+        if ref_type == 'box':
+            return Box.exists(account=account_id, time=ref)
+        elif ref_type == 'log':
+            return Log.exists(account=account_id, time=ref)
         return False
 
     @pony.db_session()
@@ -4581,52 +4573,51 @@ class ZakatTracker:
             ]:
                 if debug:
                     print('case', case)
-                match (case[0]):
-                    case 0:  # track
-                        _, account, desc, x, balance = case
-                        self.db.track(unscaled_value=x, desc=desc, account=account, debug=debug)
+                if case[0] == 0:  # track
+                    _, account, desc, x, balance = case
+                    self.db.track(unscaled_value=x, desc=desc, account=account, debug=debug)
 
-                        cached_value = self.db.balance(account, cached=True)
-                        fresh_value = self.db.balance(account, cached=False)
-                        if debug:
-                            print('account', account, 'cached_value', cached_value, 'fresh_value', fresh_value)
-                        assert cached_value == balance
-                        assert fresh_value == balance
-                    case 1:  # check-exchange
-                        _, account, expected_rate = case
-                        t_exchange = self.db.exchange(account, created=Helper.time(), debug=debug)
-                        if debug:
-                            print('t-exchange', t_exchange)
-                        assert t_exchange['rate'] == expected_rate
-                    case 2:  # do-exchange
-                        _, account, rate = case
-                        self.db.exchange(account, rate=rate, debug=debug)
-                        b_exchange = self.db.exchange(account, created=Helper.time(), debug=debug)
-                        if debug:
-                            print('b-exchange', b_exchange)
-                        assert b_exchange['rate'] == rate
-                    case 3:  # transfer
-                        _, x, a, b, desc, a_balance, b_balance = case
-                        self.db.transfer(x, a, b, desc, debug=debug)
+                    cached_value = self.db.balance(account, cached=True)
+                    fresh_value = self.db.balance(account, cached=False)
+                    if debug:
+                        print('account', account, 'cached_value', cached_value, 'fresh_value', fresh_value)
+                    assert cached_value == balance
+                    assert fresh_value == balance
+                elif case[0] == 1:  # check-exchange
+                    _, account, expected_rate = case
+                    t_exchange = self.db.exchange(account, created=Helper.time(), debug=debug)
+                    if debug:
+                        print('t-exchange', t_exchange)
+                    assert t_exchange['rate'] == expected_rate
+                elif case[0] == 2:  # do-exchange
+                    _, account, rate = case
+                    self.db.exchange(account, rate=rate, debug=debug)
+                    b_exchange = self.db.exchange(account, created=Helper.time(), debug=debug)
+                    if debug:
+                        print('b-exchange', b_exchange)
+                    assert b_exchange['rate'] == rate
+                elif case[0] == 3:  # transfer
+                    _, x, a, b, desc, a_balance, b_balance = case
+                    self.db.transfer(x, a, b, desc, debug=debug)
 
-                        cached_value = self.db.balance(a, cached=True)
-                        fresh_value = self.db.balance(a, cached=False)
-                        if debug:
-                            print(
-                                'account', a,
-                                'cached_value', cached_value,
-                                'fresh_value', fresh_value,
-                                'a_balance', a_balance,
-                            )
-                        assert cached_value == a_balance
-                        assert fresh_value == a_balance
+                    cached_value = self.db.balance(a, cached=True)
+                    fresh_value = self.db.balance(a, cached=False)
+                    if debug:
+                        print(
+                            'account', a,
+                            'cached_value', cached_value,
+                            'fresh_value', fresh_value,
+                            'a_balance', a_balance,
+                        )
+                    assert cached_value == a_balance
+                    assert fresh_value == a_balance
 
-                        cached_value = self.db.balance(b, cached=True)
-                        fresh_value = self.db.balance(b, cached=False)
-                        if debug:
-                            print('account', b, 'cached_value', cached_value, 'fresh_value', fresh_value)
-                        assert cached_value == b_balance
-                        assert fresh_value == b_balance
+                    cached_value = self.db.balance(b, cached=True)
+                    fresh_value = self.db.balance(b, cached=False)
+                    if debug:
+                        print('account', b, 'cached_value', cached_value, 'fresh_value', fresh_value)
+                    assert cached_value == b_balance
+                    assert fresh_value == b_balance
 
             # Transfer all in many chunks randomly from B to A
             a_SAR_balance = 137125
