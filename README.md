@@ -33,6 +33,19 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
 
 - History Tracking: Optionally enable a detailed history of actions for transparency and review (can be disabled optionally).
 
+### Models:
+
+| # | Model     | Database Engine | Status      | 
+|---|-----------|-----------------|-------------|
+| 1 | DictModel | Camel           | Completed   |
+|   |           |                 |             |
+| 2 | SQLModel  | SQLite          | In Progress |
+|   |           | MySQL           | Planned     |
+|   |           | MariaDB         | Planned     |
+|   |           | PostgreSQL      | Planned     |
+|   |           | CockroachDB     | Planned     |
+|   |           | Oracle          | Planned     |
+
 ### Benefits:
 
 - Accurate Zakat Calculation: Ensure precise calculation of Zakat obligations, promoting financial responsibility and spiritual well-being.

@@ -1982,6 +1982,10 @@ class DictModel(Model):
                                         self._vault['account'][x['account']]['balance'] += Decimal(-box_value)
 
                                     self._vault['account'][x['account']]['count'] -= 1
+                                file_count = len(self._vault['account'][x['account']]['log'][x['ref']]['file'])
+                                if debug:
+                                    print('file_count = ', file_count)
+                                assert file_count == 0
                                 del self._vault['account'][x['account']]['log'][x['ref']]
 
                 case ActionEnum.SUB:
@@ -3102,7 +3106,7 @@ class SQLModel(Model):
                 print('memory', type(x), x.to_dict())
             account = Account.get(id=x.account.id)
             if debug:
-                print(account)
+                print(account, ActionEnum(x.action.id), f'dry = {dry}')
             match x.action.id:
                 case ActionEnum.CREATE.value:
                     assert pony.count(Box.select(lambda b: b.account.id == x.account.id)) == 0
@@ -3144,6 +3148,10 @@ class SQLModel(Model):
                             account.balance += Decimal(-box.value)
 
                         account.count -= 1
+                    file_count = pony.count(File.select(lambda f: f.log.id == log.id))
+                    if debug:
+                        print('file_count = ', file_count)
+                    assert file_count == 0
                     log.delete()
 
                 case ActionEnum.SUB.value:
@@ -3163,6 +3171,8 @@ class SQLModel(Model):
                         file.delete()
 
                 case ActionEnum.REMOVE_FILE.value:
+                    if dry:
+                        continue
                     log = Log.get(time=x.ref)
                     File(
                         log=log.id,
