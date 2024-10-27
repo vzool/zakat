@@ -47,6 +47,7 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
         <td></td>
         <td></td>
         <td></td>
+        <td></td>
     </tr>
     <tr>
         <td>1</td>
@@ -56,6 +57,7 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
         <td>Completed</td>
     </tr>
     <tr>
+        <td></td>
         <td></td>
         <td></td>
         <td></td>
@@ -94,6 +96,7 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
         <td>Planned</td>
     </tr>
     <tr>
+        <td></td>
         <td></td>
         <td></td>
         <td></td>

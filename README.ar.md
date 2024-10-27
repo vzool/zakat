@@ -51,6 +51,7 @@
         <td></td>
         <td></td>
         <td></td>
+        <td></td>
     </tr>
     <tr>
         <td>1</td>
@@ -60,6 +61,7 @@
         <td>مكتمل</td>
     </tr>
     <tr>
+        <td></td>
         <td></td>
         <td></td>
         <td></td>
@@ -98,6 +100,7 @@
         <td>بالخطة</td>
     </tr>
     <tr>
+        <td></td>
         <td></td>
         <td></td>
         <td></td>
