@@ -35,16 +35,71 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
 
 ### Models:
 
-| # | Model     | Database Engine | Status      | 
-|---|-----------|-----------------|-------------|
-| 1 | DictModel | Camel           | Completed   |
-|   |           |                 |             |
-| 2 | SQLModel  | SQLite          | In Progress |
-|   |           | MySQL           | Planned     |
-|   |           | MariaDB         | Planned     |
-|   |           | PostgreSQL      | Planned     |
-|   |           | CockroachDB     | Planned     |
-|   |           | Oracle          | Planned     |
+<table>
+    <tr>
+        <th>#</th>
+        <th>Model</th>
+        <th colspan="2">Database Engine</th>
+        <th>Status</th>
+    </tr>
+    <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>1</td>
+        <td>DictModel</td>
+        <td></td>
+        <td>Camel</td>
+        <td>Completed</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td rowspan="6">2</td>
+        <td rowspan="6">SQLModel</td>
+        <td>1</td>
+        <td>SQLite</td>
+        <td>In Progress</td>
+    </tr>
+    <tr>
+        <td>2</td>
+        <td>MySQL</td>
+        <td>Planned</td>
+    </tr>
+    <tr>
+        <td>3</td>
+        <td>MariaDB</td>
+        <td>Planned</td>
+    </tr>
+    <tr>
+        <td>4</td>
+        <td>PostgreSQL</td>
+        <td>Planned</td>
+    </tr>
+    <tr>
+        <td>5</td>
+        <td>CockroachDB</td>
+        <td>Planned</td>
+    </tr>
+    <tr>
+        <td>6</td>
+        <td>Oracle</td>
+        <td>Planned</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
 
 ### Benefits:
 

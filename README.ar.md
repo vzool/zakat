@@ -39,16 +39,72 @@
 
 ### النماذج:
 
-| # | النموذج   | نوع قاعدة البيانات | الحالة          | 
-|---|-----------|--------------------|-----------------|
-| 1 | DictModel | Camel              | مكتمل           |
-|   |           |                    |                 |
-| 2 | SQLModel  | SQLite             | جاري العمل عليه |
-|   |           | MySQL              | بالخطة          |
-|   |           | MariaDB            | بالخطة          |
-|   |           | PostgreSQL         | بالخطة          |
-|   |           | CockroachDB        | بالخطة          |
-|   |           | Oracle             | بالخطة          |
+<table>
+    <tr>
+        <th>#</th>
+        <th>النموذج</th>
+        <th colspan="2">نوع قاعدة البيانات</th>
+        <th>الحالة</th>
+    </tr>
+    <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td>1</td>
+        <td>DictModel</td>
+        <td></td>
+        <td>Camel</td>
+        <td>مكتمل</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td rowspan="6">2</td>
+        <td rowspan="6">SQLModel</td>
+        <td>1</td>
+        <td>SQLite</td>
+        <td>جاري العمل عليه</td>
+    </tr>
+    <tr>
+        <td>2</td>
+        <td>MySQL</td>
+        <td>بالخطة</td>
+    </tr>
+    <tr>
+        <td>3</td>
+        <td>MariaDB</td>
+        <td>بالخطة</td>
+    </tr>
+    <tr>
+        <td>4</td>
+        <td>PostgreSQL</td>
+        <td>بالخطة</td>
+    </tr>
+    <tr>
+        <td>5</td>
+        <td>CockroachDB</td>
+        <td>بالخطة</td>
+    </tr>
+    <tr>
+        <td>6</td>
+        <td>Oracle</td>
+        <td>بالخطة</td>
+    </tr>
+    <tr>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td></td>
+    </tr>
+</table>
+
 
 ### الفوائد:
 
