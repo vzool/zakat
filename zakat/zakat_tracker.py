@@ -99,6 +99,7 @@ class ActionEnum(Enum):
     REPORT = auto()
     ZAKAT = auto()
     NAME_ACCOUNT = auto()
+    IMPORT = auto()  # TODO: في حالة استيراد بيانات يجب متابعتها في سجل التاريخ أيضا، حتى إذا تم التراجع يمكن إضافتها مرة أخرى في كلا النموذجين لاحقا
 
 
 class MathOperationEnum(Enum):
@@ -1931,15 +1932,29 @@ class DictModel(Model):
         for i in range(-1, -limit, -1):
             x = memory[i]
             if debug:
-                print('memory', type(x), x)
+                print('memory', type(x), x, f'dry={dry}')
             match x['action']:
                 case ActionEnum.CREATE:
                     if x['account'] is not None:
                         if self.account_exists(x['account']):
                             if debug:
                                 print('account', self._vault['account'][x['account']])
-                            assert len(self._vault['account'][x['account']]['box']) == 0
-                            assert len(self._vault['account'][x['account']]['log']) == 0
+                            box_count = len(self._vault['account'][x['account']]['box'])
+                            if debug:
+                                print(f'box_count = {box_count}')
+                            assert box_count == 0
+                            log_count = len(self._vault['account'][x['account']]['log'])
+                            if debug:
+                                print(f'log_count = {log_count}')
+                            assert log_count == 0
+                            history_count = 0
+                            for lock, steps in self._vault['history'].items():
+                                for step in steps:
+                                    if step['account'] == x['account']:
+                                        history_count += 1
+                            if debug:
+                                print(f'history_count = {history_count}')
+                            assert history_count == 0
                             assert self._vault['account'][x['account']]['balance'] == 0
                             assert self._vault['account'][x['account']]['count'] == 0
                             if dry:
@@ -2735,6 +2750,7 @@ class SQLModel(Model):
         self._vault_path = None
         self._history_mode = None
         self._config_path = None
+        self.debug = False
 
         if str.lower(db_params['provider']) == 'sqlite' and 'filename' in db_params:
             db_params['filename'] = str(self.path(db_params['filename']))
@@ -2755,6 +2771,7 @@ class SQLModel(Model):
             if type(db_params['debug']) is not bool:
                 raise 'debug should be bool type'
             pony.set_sql_debug(db_params['debug'])
+            self.debug = db_params['debug']
             del db_params['debug']
 
         db.bind(**db_params)
@@ -3106,11 +3123,21 @@ class SQLModel(Model):
                 print('memory', type(x), x.to_dict())
             account = Account.get(id=x.account.id)
             if debug:
-                print(account, ActionEnum(x.action.id), f'dry = {dry}')
+                print(account, ActionEnum(x.action.id), f'dry={dry}')
             match x.action.id:
                 case ActionEnum.CREATE.value:
-                    assert pony.count(Box.select(lambda b: b.account.id == x.account.id)) == 0
-                    assert pony.count(Log.select(lambda l: l.account.id == x.account.id)) == 0
+                    box_count = pony.count(Box.select(lambda b: b.account.id == x.account.id))
+                    if debug:
+                        print(f'box_count = {box_count}')
+                    assert box_count == 0
+                    log_count = pony.count(Log.select(lambda l: l.account.id == x.account.id))
+                    if debug:
+                        print(f'log_count = {log_count}')
+                    assert log_count == 0
+                    history_count = pony.count(History.select(lambda h: h.account.id == x.account.id))
+                    if debug:
+                        print(f'history_count = {history_count}')
+                    assert history_count == 0
                     assert account.balance == 0
                     assert account.count == 0
                     if dry:
@@ -3165,6 +3192,8 @@ class SQLModel(Model):
 
                 case ActionEnum.ADD_FILE.value:
                     file = File.get(time=x.file)
+                    if debug:
+                        print(f'file = {file}')
                     if file:
                         if dry:
                             continue
@@ -3176,7 +3205,7 @@ class SQLModel(Model):
                     log = Log.get(time=x.ref)
                     File(
                         log=log.id,
-                        time=x.ref,
+                        time=x.file,
                         record_date=Helper.time_to_datetime(x.file),
                         path=x.value,
                     )
@@ -3418,6 +3447,8 @@ class SQLModel(Model):
     @pony.db_session()
     def clean_history(self, lock: int | None = None) -> int:
         count = pony.count(h for h in History if h.lock == lock)
+        if self.debug:
+            print(f'[clean_history] count = {count}')
         if count > 0:
             History.select(lambda h: h.lock == lock).delete(bulk=True)
         return count
