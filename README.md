@@ -54,7 +54,7 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
         <td>DictModel</td>
         <td></td>
         <td>Camel</td>
-        <td>Completed</td>
+        <td>In Progress</td>
     </tr>
     <tr>
         <td></td>

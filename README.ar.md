@@ -58,7 +58,7 @@
         <td>DictModel</td>
         <td></td>
         <td>Camel</td>
-        <td>مكتمل</td>
+        <td>جاري العمل عليه</td>
     </tr>
     <tr>
         <td></td>
