@@ -902,7 +902,7 @@ class Model(ABC):
 
     @abstractmethod
     def step(self, action: ActionEnum = None, account_id: int = None, ref: int = None, file: int = None,
-             value: float = None, key: str = None, math_operation: MathOperationEnum = None) -> int:
+             value: int | float | str = None, key: str = None, math_operation: MathOperationEnum = None) -> int:
         """
         This method is responsible for recording the actions performed on the ZakatTracker.
 
@@ -911,7 +911,7 @@ class Model(ABC):
         - account_id (str): The account number on which the action was performed.
         - ref (int): The reference number of the action.
         - file (int): The file reference number of the action.
-        - value (int): The value associated with the action.
+        - value (int | float | str): The value associated with the action.
         - key (str): The key associated with the action.
         - math_operation (MathOperation): The mathematical operation performed during the action.
 
@@ -1590,7 +1590,7 @@ class DictModel(Model):
         return count
 
     def step(self, action: ActionEnum = None, account_id: int = None, ref: int = None, file: int = None,
-             value: float = None, key: str = None, math_operation: MathOperationEnum = None) -> int:
+             value: int | float | str = None, key: str = None, math_operation: MathOperationEnum = None) -> int:
         if not self.history():
             return 0
         lock = self._vault['lock']
@@ -2176,7 +2176,7 @@ class DictModel(Model):
                 self._vault['account'][account]['log'][ref]['file'][file_ref] = path
                 no_lock = self.nolock()
                 self.lock()
-                self.step(ActionEnum.ADD_FILE, account, ref=ref, file=file_ref)
+                self.step(ActionEnum.ADD_FILE, account, ref=ref, file=file_ref, value=path)
                 if no_lock:
                     self.free(self.lock())
                 return file_ref
@@ -3397,7 +3397,7 @@ class SQLModel(Model):
         return created
 
     def step(self, action: ActionEnum = None, account_id: int = None, ref: int = None, file: int = None,
-             value: float = None, key: str = None, math_operation: MathOperationEnum = None) -> int:
+             value: int | float | str = None, key: str = None, math_operation: MathOperationEnum = None) -> int:
         if not self.history():
             return 0
         lock = self.config.get(key='lock')
@@ -4057,14 +4057,14 @@ class ZakatTracker:
         if restore is True:
             count = len(self.db.vault(Vault.HISTORY))
             if debug:
-                print('history-count', count)
+                print('history-count-0', count)
             assert count == 10
             # try mode
             for _ in range(count):
                 assert self.db.recall(True, debug)
             count = len(self.db.vault(Vault.HISTORY))
             if debug:
-                print('history-count', count)
+                print('history-count-1', count)
             assert count == 10
             _accounts = list(table.keys())
             accounts_limit = len(_accounts) + 1
