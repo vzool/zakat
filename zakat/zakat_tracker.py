@@ -1962,10 +1962,8 @@ class DictModel(Model):
                 if debug:
                     print(
                         f"Transfer(loop) {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).")
-                selected_age = age
                 if rest + target_amount > capital:
                     self._vault['account'][to_account]['box'][age]['capital'] += target_amount
-                    selected_age = Helper.time()
                 self._vault['account'][to_account]['box'][age]['rest'] += target_amount
                 y = self.log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}',
                              account_id=to_account,
@@ -2547,11 +2545,66 @@ class SQLModel(Model):
                 account = Account(id=ref, name=name)
                 return account.id, account.name
 
+    @pony.db_session
     def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
-                 created: int = None, debug: bool = False) -> list[int]:
-        pass
+                 created: int = None,
+                 debug: bool = False) -> list[int]:
+        if debug:
+            print('transfer', f'debug={debug}')
+        if from_account == to_account:
+            raise ValueError(f'Transfer to the same account is forbidden. {to_account}')
+        if unscaled_amount <= 0:
+            return []
+        if not isinstance(to_account, int):
+            raise ValueError(f'The to_account must be an integer, {type(to_account)} was provided.')
+        if not isinstance(from_account, int):
+            raise ValueError(f'The from_account must be an integer, {type(from_account)} was provided.')
 
-    @pony.db_session()
+        if created is None:
+            created = Helper.time()
+        (_, ages) = self.sub(unscaled_amount, desc, from_account, created, debug=debug)
+        times = []
+        source_exchange = self.exchange(from_account, created)
+        target_exchange = self.exchange(to_account, created)
+
+        if debug:
+            print('ages', ages)
+
+        for age, value in ages:
+            target_amount = int(Helper.exchange_calc(value, source_exchange['rate'], target_exchange['rate']))
+            if debug:
+                print('target_amount', target_amount)
+            # Perform the transfer
+            box = Box.get(account=to_account, time=age)
+            if debug:
+                print('box_exists', age)
+            if box:
+                if debug:
+                    print(
+                        f"Transfer(loop) {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).")
+                if box.rest + target_amount > box.capital:
+                    box.capital += target_amount
+                box.rest += target_amount
+                y = self.log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}',
+                             account_id=to_account,
+                             created=None, ref=None, debug=debug)
+                times.append((age+1, y))
+                continue
+            if debug:
+                print(
+                    f"Transfer(func) {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).")
+            y = self.track(
+                unscaled_value=Helper.unscale(int(target_amount)),
+                desc=desc,
+                account=to_account,
+                logging=True,
+                created=age+1,
+                debug=debug,
+            )
+            times.append(y)
+        return times
+
+    @pony.db_session
     def account_exists(self, account: int) -> bool:
         return Account.exists(id=account)
 
@@ -2575,17 +2628,13 @@ class SQLModel(Model):
                 return {b.time: b.to_dict() for b in account.box.select()[:]}
         return {}
 
+    @pony.db_session
     def balance(self, account_id: int = 1, cached: bool = True) -> int:
         if not isinstance(account_id, int):
             raise ValueError(f'The account must be an integer, {type(account_id)} was provided.')
-        with pony.db_session:
-            account = Account.get(id=account_id)
-            if account:
-                if cached:
-                    return account.balance
-                x = 0
-                return [x := x + y.rest for y in account.box][-1]
-        return -1
+        if cached:
+            return Account.get(id=account_id).balance
+        return pony.sum(b.rest for b in Box if b.account.id == account_id)
 
     def box_size(self, account_id: int) -> int:
         with pony.db_session:
@@ -3554,20 +3603,20 @@ class ZakatTracker:
                 )
 
                 if debug:
-                    print('refs', refs)
+                    print('[refs]', refs)
 
                 ages_cache_balance = self.db.balance(account_ages_ref)
                 ages_fresh_balance = self.db.balance(account_ages_ref, False)
                 rest = case[total]['rest']
                 if debug:
-                    print('source', ages_cache_balance, ages_fresh_balance, rest)
+                    print('source', f'cache_balance={ages_cache_balance}, fresh_balance={ages_fresh_balance}, rest={rest}')
                 assert ages_cache_balance == rest
                 assert ages_fresh_balance == rest
 
                 future_cache_balance = self.db.balance(account_future_ref)
                 future_fresh_balance = self.db.balance(account_future_ref, False)
                 if debug:
-                    print('target', future_cache_balance, future_fresh_balance, total)
+                    print('target', f'cache_balance={future_cache_balance}, fresh_balance={future_fresh_balance}, total={total}')
                     print('refs', refs)
                 assert future_cache_balance == total
                 assert future_fresh_balance == total
