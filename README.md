@@ -31,8 +31,6 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
 
 - Data Persistence: Securely save and load your Zakat tracker data for continued use across sessions.
 
-- History Tracking: Optionally enable a detailed history of actions for transparency and review (can be disabled optionally).
-
 ### Models:
 
 <table>

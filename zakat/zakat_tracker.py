@@ -23,13 +23,10 @@ Key Features:
 *   Import of transactions from CSV files
 *   Export of data to JSON format
 *   Persistence of tracker state using camel files
-*   History tracking (optional)
 
 The module also includes a few helper functions and classes:
 
 *   `JSONEncoder`: A custom JSON encoder for serializing enum values.
-*   `Action` (Enum): An enumeration representing different actions in the tracker.
-*   `MathOperation` (Enum): An enumeration representing mathematical operations in the tracker.
 
 The ZakatTracker class is designed to be flexible & extensible, allowing users to customize it to their specific needs.
 
@@ -87,66 +84,25 @@ class WeekDay(Enum):
     Sunday = 6
 
 
-class ActionEnum(Enum):
-    CREATE = auto()
-    TRACK = auto()
-    LOG = auto()
-    SUB = auto()
-    ADD_FILE = auto()
-    REMOVE_FILE = auto()
-    BOX_TRANSFER = auto()
-    EXCHANGE = auto()
-    REPORT = auto()
-    ZAKAT = auto()
-    NAME_ACCOUNT = auto()
-    IMPORT = auto()  # TODO: في حالة استيراد بيانات يجب متابعتها في سجل التاريخ أيضا، حتى إذا تم التراجع يمكن إضافتها مرة أخرى في كلا النموذجين لاحقا
-
-
-class MathOperationEnum(Enum):
-    ADDITION = auto()
-    EQUAL = auto()
-    SUBTRACTION = auto()
+# TODO: في حالة استيراد بيانات يجب متابعتها في سجل التاريخ أيضا، حتى إذا تم التراجع يمكن إضافتها مرة أخرى في كلا
+#  النموذجين لاحقا
 
 
 class Vault(Enum):
     ALL = auto()
     ACCOUNT = auto()
     NAME = auto()
-    HISTORY = auto()
     REPORT = auto()
 
 
 class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
-        if isinstance(obj, ActionEnum) or isinstance(obj, MathOperationEnum):
-            return obj.name  # Serialize as the enum member's name
-        elif isinstance(obj, Decimal):
+        if isinstance(obj, Decimal):
             return float(obj)
         return super().default(obj)
 
 
 camel_registry = CamelRegistry()
-
-
-@camel_registry.dumper(ActionEnum, u'action', version=None)
-def _dump_action(data):
-    return u"{}".format(data.value)
-
-
-@camel_registry.loader(u'action', version=None)
-def _load_action(data, version):
-    return ActionEnum(int(data))
-
-
-@camel_registry.dumper(MathOperationEnum, u'math', version=None)
-def _dump_math(data):
-    return u"{}".format(data.value)
-
-
-@camel_registry.loader(u'math', version=None)
-def _load_math(data, version):
-    return MathOperationEnum(int(data))
-
 
 camel = Camel([camel_registry])
 
@@ -453,18 +409,6 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def steps(self) -> dict:
-        """
-        Returns a copy of the history of steps taken in the ZakatTracker.
-
-        The history is a dictionary where each key is a unique identifier for a step,
-        and the corresponding value is a dictionary containing information about the step.
-
-        Returns:
-        dict: A copy of the history of steps taken in the ZakatTracker.
-        """
-
-    @abstractmethod
     def files(self) -> list[dict[str, str | int]]:
         """
         Retrieves information about files associated with this class.
@@ -589,49 +533,6 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def nolock(self) -> bool:
-        """
-        Check if the vault lock is currently not set.
-
-        Returns:
-        bool: True if the vault lock is not set, False otherwise.
-        """
-
-    @abstractmethod
-    def lock(self) -> int:
-        """
-        Acquires a lock on the ZakatTracker instance.
-
-        Returns:
-        int: The lock ID. This ID can be used to release the lock later.
-        """
-
-    @abstractmethod
-    def free(self, lock: int, auto_save: bool = True) -> bool:
-        """
-        Releases the lock on the database.
-
-        Parameters:
-        lock (int): The lock ID to be released.
-        auto_save (bool): Whether to automatically save the database after releasing the lock.
-
-        Returns:
-        bool: True if the lock is successfully released and (optionally) saved, False otherwise.
-        """
-
-    @abstractmethod
-    def history(self, status: bool = None) -> bool:
-        """
-        Enable or disable history tracking.
-
-        Parameters:
-        status (bool): The status of history tracking. Default is True.
-
-        Returns:
-        None
-        """
-
-    @abstractmethod
     def save(self, path: str = None) -> bool:
         """
         Saves the ZakatTracker's current state to a camel file.
@@ -655,19 +556,6 @@ class Model(ABC):
 
         Returns:
         bool: True if the load operation is successful, False otherwise.
-        """
-
-    @abstractmethod
-    def recall(self, dry: bool = True, debug: bool = False) -> bool:
-        """
-        Revert the last operation.
-
-        Parameters:
-        dry (bool): If True, the function will not modify the data, but will simulate the operation. Default is True.
-        debug (bool): If True, the function will print debug information. Default is False.
-
-        Returns:
-        bool: True if the operation was successful, False otherwise.
         """
 
     @abstractmethod
@@ -894,29 +782,9 @@ class Model(ABC):
         int: The timestamp of the logged transaction.
 
         This method updates the account's balance, count, and log with the transaction details.
-        It also creates a step in the history of the transaction.
 
         Raises:
         ValueError: The log transaction happened again in the same nanosecond time.
-        """
-
-    @abstractmethod
-    def step(self, action: ActionEnum = None, account_id: int = None, ref: int = None, file: int = None,
-             value: int | float | str = None, key: str = None, math_operation: MathOperationEnum = None) -> int:
-        """
-        This method is responsible for recording the actions performed on the ZakatTracker.
-
-        Parameters:
-        - action (Action): The type of action performed.
-        - account_id (str): The account number on which the action was performed.
-        - ref (int): The reference number of the action.
-        - file (int): The file reference number of the action.
-        - value (int | float | str): The value associated with the action.
-        - key (str): The key associated with the action.
-        - math_operation (MathOperation): The mathematical operation performed during the action.
-
-        Returns:
-        - int: The lock time of the recorded action. If no lock was performed, it returns 0.
         """
 
     @abstractmethod
@@ -972,19 +840,6 @@ class Model(ABC):
         Returns:
         - dict[int, tuple[str, str, bool]]: A dictionary where the keys are the timestamps of the snapshots,
         and the values are tuples containing the snapshot's hash, path, and existence status.
-        """
-
-    @abstractmethod
-    def clean_history(self, lock: int | None = None) -> int:
-        """
-        Cleans up the history of actions performed on the ZakatTracker instance.
-
-        Parameters:
-        lock (int, optional): The lock ID is used to clean up the empty history.
-            If not provided, it cleans up the empty history records for all locks.
-
-        Returns:
-        int: The number of locks cleaned up.
         """
 
     @staticmethod
@@ -1507,13 +1362,12 @@ class DictModel(Model):
     It may offer additional features like validation, serialization, or deserialization.
     """
 
-    def __init__(self, db_path: str = "./zakat_db/zakat.camel", history_mode: bool = True):
+    def __init__(self, db_path: str = "./zakat_db/zakat.camel"):
         """
-        Initialize DictModel with database path and history mode.
+        Initialize DictModel with database path.
 
         Parameters:
         db_path (str): The path to the database file. Default is "zakat.camel".
-        history_mode (bool): The mode for tracking history. Default is True.
 
         Returns:
         None
@@ -1523,7 +1377,6 @@ class DictModel(Model):
         self._vault = None
         self.reset()
         self.path(db_path)
-        self.history(history_mode)
 
     def path(self, path: str = None) -> str:
         if path is None:
@@ -1540,8 +1393,6 @@ class DictModel(Model):
         self._vault = {
             'account': {},
             'exchange': {},
-            'history': {},
-            'lock': None,
             'report': {},
         }
 
@@ -1575,68 +1426,12 @@ class DictModel(Model):
             return full_path.resolve() / ignored_filename  # Join with the ignored filename
         return str(full_path.resolve())
 
-    def clean_history(self, lock: int | None = None) -> int:
-        count = 0
-        if lock in self._vault['history']:
-            if len(self._vault['history'][lock]) <= 0:
-                count += 1
-                del self._vault['history'][lock]
-            return count
-        self.free(self.lock())
-        for lock in self._vault['history']:
-            if len(self._vault['history'][lock]) <= 0:
-                count += 1
-                del self._vault['history'][lock]
-        return count
-
-    def step(self, action: ActionEnum = None, account_id: int = None, ref: int = None, file: int = None,
-             value: int | float | str = None, key: str = None, math_operation: MathOperationEnum = None) -> int:
-        if not self.history():
-            return 0
-        lock = self._vault['lock']
-        if self.nolock():
-            lock = self._vault['lock'] = Helper.time()
-            self._vault['history'][lock] = []
-        if action is None:
-            return lock
-        self._vault['history'][lock].append({
-            'action': action,
-            'account': account_id,
-            'ref': ref,
-            'file': file,
-            'key': key,
-            'value': value,
-            'math': math_operation,
-        })
-        return lock
-
-    def history(self, status: bool = None) -> bool:
-        if status is not None:
-            self._history_mode = status
-        return self._history_mode
-
-    def nolock(self) -> bool:
-        return self._vault['lock'] is None
-
-    def lock(self) -> int:
-        return self.step()
-
-    def free(self, lock: int, auto_save: bool = True) -> bool:
-        if lock == self._vault['lock']:
-            self._vault['lock'] = None
-            if auto_save:
-                return self.save(self.path())
-            return True
-        return False
-
     def vault(self, section: Vault = Vault.ALL) -> dict:
         match section:
             case Vault.ACCOUNT:
                 return self._vault['account'].copy()
             case Vault.NAME:
                 return self._vault['name'].copy()
-            case Vault.HISTORY:
-                return self._vault['history'].copy()
             case Vault.REPORT:
                 return self._vault['report'].copy()
         return self._vault.copy()
@@ -1684,9 +1479,6 @@ class DictModel(Model):
                 'human_readable_size': human_readable_size,
             })
         return result
-
-    def steps(self) -> dict:
-        return self._vault['history'].copy()
 
     def account_exists(self, account: int) -> bool:
         if not isinstance(account, int):
@@ -1797,7 +1589,6 @@ class DictModel(Model):
             'ref': ref,
             'file': {},
         }
-        self.step(ActionEnum.LOG, account_id, ref=created, value=value)
         return created
 
     def exchanges(self, account: int) -> dict | None:
@@ -1918,170 +1709,6 @@ class DictModel(Model):
             print('y', y)
         return y
 
-    def recall(self, dry: bool = True, debug: bool = False) -> bool:
-        if not self.nolock() or len(self._vault['history']) <= 0:
-            return False
-        ref = sorted(self._vault['history'].keys())[-1]
-        if debug:
-            print('recall', ref)
-        memory = self._vault['history'][ref]
-        if debug:
-            print('memories', type(memory), memory)
-        limit = len(memory) + 1
-        sub_positive_log_negative = 0
-        for i in range(-1, -limit, -1):
-            x = memory[i]
-            if debug:
-                print('memory', type(x), x, f'dry={dry}')
-            match x['action']:
-                case ActionEnum.CREATE:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if debug:
-                                print('account', self._vault['account'][x['account']])
-                            box_count = len(self._vault['account'][x['account']]['box'])
-                            if debug:
-                                print(f'box_count = {box_count}')
-                            assert box_count == 0
-                            log_count = len(self._vault['account'][x['account']]['log'])
-                            if debug:
-                                print(f'log_count = {log_count}')
-                            assert log_count == 0
-                            history_count = 0
-                            for lock, steps in self._vault['history'].items():
-                                for step in steps:
-                                    if step['account'] == x['account']:
-                                        history_count += 1
-                            if debug:
-                                print(f'history_count = {history_count}')
-                            assert history_count == 0
-                            assert self._vault['account'][x['account']]['balance'] == 0
-                            assert self._vault['account'][x['account']]['count'] == 0
-                            if dry:
-                                continue
-                            del self._vault['account'][x['account']]
-
-                case ActionEnum.TRACK:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if dry:
-                                continue
-                            self._vault['account'][x['account']]['balance'] -= x['value']
-                            self._vault['account'][x['account']]['count'] -= 1
-                            del self._vault['account'][x['account']]['box'][x['ref']]
-
-                case ActionEnum.LOG:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['log']:
-                                if dry:
-                                    continue
-                                if sub_positive_log_negative == -x['value']:
-                                    self._vault['account'][x['account']]['count'] -= 1
-                                    sub_positive_log_negative = 0
-                                box_ref = self._vault['account'][x['account']]['log'][x['ref']]['ref']
-                                if box_ref is not None:
-                                    assert self.box_exists(x['account'], box_ref)
-                                    box_value = self._vault['account'][x['account']]['log'][x['ref']]['value']
-                                    assert box_value < 0
-
-                                    try:
-                                        self._vault['account'][x['account']]['box'][box_ref]['rest'] += -box_value
-                                    except TypeError:
-                                        self._vault['account'][x['account']]['box'][box_ref]['rest'] += Decimal(
-                                            -box_value)
-
-                                    try:
-                                        self._vault['account'][x['account']]['balance'] += -box_value
-                                    except TypeError:
-                                        self._vault['account'][x['account']]['balance'] += Decimal(-box_value)
-
-                                    self._vault['account'][x['account']]['count'] -= 1
-                                file_count = len(self._vault['account'][x['account']]['log'][x['ref']]['file'])
-                                if debug:
-                                    print('file_count = ', file_count)
-                                assert file_count == 0
-                                del self._vault['account'][x['account']]['log'][x['ref']]
-
-                case ActionEnum.SUB:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['box']:
-                                if dry:
-                                    continue
-                                self._vault['account'][x['account']]['box'][x['ref']]['rest'] += x['value']
-                                self._vault['account'][x['account']]['balance'] += x['value']
-                                sub_positive_log_negative = x['value']
-
-                case ActionEnum.ADD_FILE:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['log']:
-                                if x['file'] in self._vault['account'][x['account']]['log'][x['ref']]['file']:
-                                    if dry:
-                                        continue
-                                    del self._vault['account'][x['account']]['log'][x['ref']]['file'][x['file']]
-
-                case ActionEnum.REMOVE_FILE:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['log']:
-                                if dry:
-                                    continue
-                                self._vault['account'][x['account']]['log'][x['ref']]['file'][x['file']] = x['value']
-
-                case ActionEnum.BOX_TRANSFER:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['box']:
-                                if dry:
-                                    continue
-                                self._vault['account'][x['account']]['box'][x['ref']]['rest'] -= x['value']
-
-                case ActionEnum.EXCHANGE:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['exchange']:
-                                if dry:
-                                    continue
-                                del self._vault['account'][x['account']]['exchange'][x['ref']]
-
-                case ActionEnum.REPORT:
-                    if x['ref'] in self._vault['report']:
-                        if dry:
-                            continue
-                        del self._vault['report'][x['ref']]
-
-                case ActionEnum.ZAKAT:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if x['ref'] in self._vault['account'][x['account']]['box']:
-                                if x['key'] in self._vault['account'][x['account']]['box'][x['ref']]:
-                                    if dry:
-                                        continue
-                                    match x['math']:
-                                        case MathOperationEnum.ADDITION:
-                                            self._vault['account'][x['account']]['box'][x['ref']][x['key']] -= x[
-                                                'value']
-                                        case MathOperationEnum.EQUAL:
-                                            self._vault['account'][x['account']]['box'][x['ref']][x['key']] = x['value']
-                                        case MathOperationEnum.SUBTRACTION:
-                                            self._vault['account'][x['account']]['box'][x['ref']][x['key']] += x[
-                                                'value']
-
-                case ActionEnum.NAME_ACCOUNT:
-                    if x['account'] is not None:
-                        if self.account_exists(x['account']):
-                            if dry:
-                                continue
-                            match x['math']:
-                                case MathOperationEnum.EQUAL:
-                                    self._vault['account'][x['account']][x['key']] = x['value']
-
-        if not dry:
-            del self._vault['history'][ref]
-        return True
-
     def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
               created: int = None,
               debug: bool = False) -> int:
@@ -2089,8 +1716,6 @@ class DictModel(Model):
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
         if created is None:
             created = Helper.time()
-        no_lock = self.nolock()
-        self.lock()
         if not self.account_exists(account):
             if debug:
                 print(f"account {account} created")
@@ -2103,10 +1728,7 @@ class DictModel(Model):
                 'hide': False,
                 'zakatable': True,
             }
-            self.step(ActionEnum.CREATE, account)
         if unscaled_value == 0:
-            if no_lock:
-                self.free(self.lock())
             return 0
         value = Helper.scale(unscaled_value)
         if logging:
@@ -2124,9 +1746,6 @@ class DictModel(Model):
         }
         if debug:
             print('created-box', created)
-        self.step(ActionEnum.TRACK, account, ref=created, value=value)
-        if no_lock:
-            self.free(self.lock())
         return created
 
     def exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
@@ -2135,8 +1754,6 @@ class DictModel(Model):
             print('exchange', f'debug={debug}')
         if created is None:
             created = Helper.time()
-        no_lock = self.nolock()
-        self.lock()
         if not isinstance(account, int):
             raise ValueError(f'The account must be an integer, {type(account)} was provided.')
         if rate is not None:
@@ -2147,9 +1764,6 @@ class DictModel(Model):
             if len(self._vault['account'][account]['exchange']) == 0 and rate <= 1:
                 return {"time": created, "rate": 1, "description": None}
             self._vault['account'][account]['exchange'][created] = {"rate": rate, "description": description}
-            self.step(ActionEnum.EXCHANGE, account, ref=created, value=rate)
-            if no_lock:
-                self.free(self.lock())
             if debug:
                 print("exchange-created-1",
                       f'account: {account}, created: {created}, rate:{rate}, description:{description}')
@@ -2174,11 +1788,6 @@ class DictModel(Model):
             if ref in self._vault['account'][account]['log']:
                 file_ref = Helper.time()
                 self._vault['account'][account]['log'][ref]['file'][file_ref] = path
-                no_lock = self.nolock()
-                self.lock()
-                self.step(ActionEnum.ADD_FILE, account, ref=ref, file=file_ref, value=path)
-                if no_lock:
-                    self.free(self.lock())
                 return file_ref
         return 0
 
@@ -2186,13 +1795,7 @@ class DictModel(Model):
         if self.account_exists(account):
             if ref in self._vault['account'][account]['log']:
                 if file_ref in self._vault['account'][account]['log'][ref]['file']:
-                    x = self._vault['account'][account]['log'][ref]['file'][file_ref]
                     del self._vault['account'][account]['log'][ref]['file'][file_ref]
-                    no_lock = self.nolock()
-                    self.lock()
-                    self.step(ActionEnum.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
-                    if no_lock:
-                        self.free(self.lock())
                     return True
         return False
 
@@ -2238,14 +1841,6 @@ class DictModel(Model):
         def set_name(_account: int, _name: str):
             if not self.account_exists(_account):
                 self.track(account=_account)
-            self.step(
-                action=ActionEnum.NAME_ACCOUNT,
-                account_id=_account,
-                value=self._vault['account'][_account]['name'] if 'name' in self._vault['account'][
-                    _account] else None,
-                key='name',
-                math_operation=MathOperationEnum.EQUAL,
-            )
             self._vault['account'][_account]['name'] = _name
             self._vault['name']['account'][_name] = _account
             self._vault['name']['account'][_account] = _name
@@ -2256,7 +1851,7 @@ class DictModel(Model):
 
         if name and ref:
             if name in self._vault['name']['account']:
-                raise 'Name is already used'
+                raise Exception('Name is already used')
             if ref in self._vault['name']['account']:
                 old_name = self._vault['name']['account'][ref]
                 del self._vault['name']['account'][ref]
@@ -2294,8 +1889,6 @@ class DictModel(Model):
             return ref, ref
         if created is None:
             created = Helper.time()
-        no_lock = self.nolock()
-        self.lock()
         self.track(0, '', account)
         value = Helper.scale(unscaled_value)
         self.log(value=-value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
@@ -2314,14 +1907,12 @@ class DictModel(Model):
             rest = self._vault['account'][account]['box'][j]['rest']
             if rest >= target:
                 self._vault['account'][account]['box'][j]['rest'] -= target
-                self.step(ActionEnum.SUB, account, ref=j, value=target)
                 ages.append((j, target))
                 target = 0
                 break
             elif target > rest > 0:
                 chunk = rest
                 target -= chunk
-                self.step(ActionEnum.SUB, account, ref=j, value=chunk)
                 ages.append((j, chunk))
                 self._vault['account'][account]['box'][j]['rest'] = 0
         if target > 0:
@@ -2333,8 +1924,6 @@ class DictModel(Model):
                 created=created,
             )
             ages.append((created, target))
-        if no_lock:
-            self.free(self.lock())
         return created, ages
 
     def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
@@ -2378,7 +1967,6 @@ class DictModel(Model):
                     self._vault['account'][to_account]['box'][age]['capital'] += target_amount
                     selected_age = Helper.time()
                 self._vault['account'][to_account]['box'][age]['rest'] += target_amount
-                self.step(ActionEnum.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
                 y = self.log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}',
                              account_id=to_account,
                              created=None, ref=None, debug=debug)
@@ -2513,11 +2101,8 @@ class DictModel(Model):
         if debug:
             print('######### zakat #######')
             print('parts_exist', parts_exist)
-        no_lock = self.nolock()
-        self.lock()
         report_time = Helper.time()
         self._vault['report'][report_time] = report
-        self.step(ActionEnum.REPORT, ref=report_time)
         created = Helper.time()
         for x in plan:
             target_exchange = self.exchange(x)
@@ -2532,24 +2117,15 @@ class DictModel(Model):
                 j = ids[i]
                 if debug:
                     print('i', i, 'j', j)
-                self.step(ActionEnum.ZAKAT, account_id=x, ref=j, value=self._vault['account'][x]['box'][j]['last'],
-                          key='last',
-                          math_operation=MathOperationEnum.EQUAL)
                 self._vault['account'][x]['box'][j]['last'] = created
                 amount = Helper.exchange_calc(float(plan[x][i]['total']), 1, float(target_exchange['rate']))
                 self._vault['account'][x]['box'][j]['total'] += amount
-                self.step(ActionEnum.ZAKAT, account_id=x, ref=j, value=amount, key='total',
-                          math_operation=MathOperationEnum.ADDITION)
                 self._vault['account'][x]['box'][j]['count'] += plan[x][i]['count']
-                self.step(ActionEnum.ZAKAT, account_id=x, ref=j, value=plan[x][i]['count'], key='count',
-                          math_operation=MathOperationEnum.ADDITION)
                 if not parts_exist:
                     try:
                         self._vault['account'][x]['box'][j]['rest'] -= amount
                     except TypeError:
                         self._vault['account'][x]['box'][j]['rest'] -= Decimal(amount)
-                    # self.step(Action.ZAKAT, account=x, ref=j, value=amount, key='rest',
-                    #            math_operation=MathOperation.SUBTRACTION)
                     self.log(-float(amount), desc='zakat-زكاة', account_id=x, created=None, ref=j, debug=debug)
         if parts_exist:
             for account, part in parts['account'].items():
@@ -2565,8 +2141,6 @@ class DictModel(Model):
                     account=account,
                     debug=debug,
                 )
-        if no_lock:
-            self.free(self.lock())
         return True
 
     def export_json(self, path: str = "data.json") -> bool:
@@ -2623,7 +2197,6 @@ class Account(db.Entity):
     box = pony.Set('Box', cascade_delete=False)
     log = pony.Set('Log', cascade_delete=False)
     exchange = pony.Set('Exchange', cascade_delete=False)
-    history = pony.Set('History', cascade_delete=False)
 
 
 class Box(db.Entity):
@@ -2672,39 +2245,8 @@ class Exchange(db.Entity):
     account = pony.Required(Account, column='account_id')
     time = pony.Required(int, size=64, unique=True)
     rate = pony.Required(Decimal)
-    desc = pony.Required(pony.LongStr)
+    desc = pony.Optional(pony.LongStr)
     record_date = pony.Required(datetime.datetime)
-
-
-class Action(db.Entity):
-    _table_ = 'action'
-    id = pony.PrimaryKey(int, auto=True)
-    name = pony.Required(str, unique=True)
-    created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
-    history = pony.Set('History', cascade_delete=False)
-
-
-class Math(db.Entity):
-    _table_ = 'math'
-    id = pony.PrimaryKey(int, auto=True)
-    name = pony.Required(str, unique=True)
-    created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
-    history = pony.Set('History', cascade_delete=False)
-
-
-class History(db.Entity):
-    _table_ = 'history'
-    id = pony.PrimaryKey(int, auto=True)
-    lock = pony.Required(int, size=64)
-    action = pony.Required(Action, column='action_id')
-    account = pony.Required(Account, column='account_id')
-    ref = pony.Optional(int, size=64)
-    file = pony.Optional(int, size=64)
-    key = pony.Optional(str)
-    value = pony.Optional(str)
-    value_type = pony.Optional(str)
-    math = pony.Optional(Math, column='math_id')
-    created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
 
 
 class Report(db.Entity):
@@ -2731,7 +2273,6 @@ class SQLModel(Model):
         Parameters:
         provider (str, required): The database engine like: (sqlite, postgres, mysql, oracle & cockroach)
         filename (str, optional): The path to the SQLite database file, if database provider is sqlite.
-        history_mode (bool, optional): The mode for tracking history. Default is True.
         debug (bool, optional): Flag to enable debug mode. Default is False.
 
         Examples:
@@ -2748,7 +2289,6 @@ class SQLModel(Model):
 
         self._base_path = None
         self._vault_path = None
-        self._history_mode = None
         self._config_path = None
         self.debug = False
 
@@ -2759,39 +2299,15 @@ class SQLModel(Model):
             self._config_path = str(self.path('config.db'))
         self.config = ConfigManager(db_file=self._config_path)
 
-        history_mode = True
-        if 'history_mode' in db_params:
-            if type(db_params['history_mode']) is not bool:
-                raise 'history_mode should be bool type'
-            history_mode = db_params['history_mode']
-            del db_params['history_mode']
-        self.history(status=history_mode)
-
         if 'debug' in db_params:
             if type(db_params['debug']) is not bool:
-                raise 'debug should be bool type'
+                raise ValueError('debug should be bool type')
             pony.set_sql_debug(db_params['debug'])
             self.debug = db_params['debug']
             del db_params['debug']
 
         db.bind(**db_params)
         db.generate_mapping(create_tables=True)
-        SQLModel.create_db()
-
-    @staticmethod
-    def create_db():
-        with pony.db_session:
-            actions = [(x.value, x.name) for x in ActionEnum]
-            if pony.count(Action.select()) != len(actions):
-                Action.select().delete()
-                for ref, name in actions:
-                    Action(id=ref, name=name)
-
-            maths = [(x.value, x.name) for x in MathOperationEnum]
-            if pony.count(Math.select()) != len(maths):
-                Math.select().delete()
-                for ref, name in maths:
-                    Math(id=ref, name=name)
 
     def path(self, path: str = None) -> str:
         if path is None:
@@ -2823,8 +2339,6 @@ class SQLModel(Model):
             return ref, ref
         if created is None:
             created = Helper.time()
-        no_lock = self.nolock()
-        self.lock()
         self.track(0, '', account)
         value = Helper.scale(unscaled_value)
         self.log(value=-value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
@@ -2841,14 +2355,12 @@ class SQLModel(Model):
                 rest = box.rest
                 if rest >= target:
                     box.rest -= target
-                    self.step(ActionEnum.SUB, account, ref=box.time, value=target)
                     ages.append((box.time, target))
                     target = 0
                     break
                 elif target > rest > 0:
                     chunk = rest
                     target -= chunk
-                    self.step(ActionEnum.SUB, account, ref=box.time, value=chunk)
                     ages.append((box.time, chunk))
                     box.rest = 0
         if target > 0:
@@ -2860,8 +2372,6 @@ class SQLModel(Model):
                 created=created,
             )
             ages.append((created, target))
-        if no_lock:
-            self.free(self.lock())
         return created, ages
 
     def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
@@ -2870,8 +2380,6 @@ class SQLModel(Model):
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
         if created is None:
             created = Helper.time()
-        no_lock = self.nolock()
-        self.lock()
         if not self.account_exists(account):
             if debug:
                 print(f"account {account} created")
@@ -2879,10 +2387,7 @@ class SQLModel(Model):
                 Account(
                     id=account,
                 )
-            self.step(ActionEnum.CREATE, account)
         if unscaled_value == 0:
-            if no_lock:
-                self.free(self.lock())
             return 0
         value = Helper.scale(unscaled_value)
         with pony.db_session:
@@ -2904,9 +2409,6 @@ class SQLModel(Model):
             )
             if debug:
                 print('created-box', created)
-        self.step(ActionEnum.TRACK, account, ref=created, value=value)
-        if no_lock:
-            self.free(self.lock())
         return created
 
     def add_file(self, account: int, ref: int, path: str) -> int:
@@ -2921,11 +2423,6 @@ class SQLModel(Model):
                         record_date=datetime.datetime.now(),
                         path=path,
                     )
-                    no_lock = self.nolock()
-                    self.lock()
-                    self.step(ActionEnum.ADD_FILE, account, ref=ref, file=file_ref)
-                    if no_lock:
-                        self.free(self.lock())
                     return file_ref
         return 0
 
@@ -2935,13 +2432,7 @@ class SQLModel(Model):
                 with pony.db_session:
                     file = File.get(time=file_ref)
                     if file:
-                        x = file.path
                         file.delete()
-                        no_lock = self.nolock()
-                        self.lock()
-                        self.step(ActionEnum.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
-                        if no_lock:
-                            self.free(self.lock())
                         return True
         return False
 
@@ -2975,12 +2466,62 @@ class SQLModel(Model):
     def accounts(self) -> dict:
         pass
 
+    @pony.db_session()
     def exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
                  debug: bool = False) -> dict:
-        pass
+        if debug:
+            print('exchange', f'debug={debug}')
+        if created is None:
+            created = Helper.time()
+        if not isinstance(account, int):
+            raise ValueError(f'The account must be an integer, {type(account)} was provided.')
+        if rate is not None:
+            if rate <= 0:
+                return dict()
+            if not self.account_exists(account):
+                self.track(account=account, debug=debug)
+            if pony.count(Exchange.select(lambda e: e.account.id == account)) and rate <= 1:
+                return {"time": created, "rate": 1, "description": None}
+            Exchange(
+                account=account,
+                rate=rate,
+                desc=description if description else '',
+                time=created,
+                record_date=datetime.datetime.now(),
+            )
+            if debug:
+                print("exchange-created-1",
+                      f'account: {account}, created: {created}, rate:{rate}, description:{description}')
 
+        if self.account_exists(account):
+            exchange = Exchange.select(
+                lambda e: e.account.id == account and e.time <= created
+            ).order_by(pony.desc(Exchange.time)).first()
+            if debug:
+                print('valid_rates', exchange, type(exchange))
+            if exchange:
+                if debug:
+                    print("exchange-read-1",
+                          f'account: {account}, created: {created}, rate:{rate}, description:{description}',
+                          'latest_rate', exchange)
+                return {
+                    "time": exchange.time,
+                    "rate": exchange.rate,
+                    "description": exchange.desc if exchange.desc else None,
+                }
+        if debug:
+            print("exchange-read-0", f'account: {account}, created: {created}, rate:{rate}, description:{description}')
+        return {"time": created, "rate": 1, "description": None}  # إرجاع القيمة الافتراضية مع وصف فارغ
+
+    @pony.db_session()
     def exchanges(self, account: int) -> dict | None:
-        pass
+        if self.account_exists(account):
+            result = {}
+            for exchange in Exchange.select(lambda e: e.account.id == account)[:]:
+                result[exchange.time] = exchange.to_dict()
+            if result:
+                return result
+        return None
 
     def account(self, name: str = None, ref: int = None) -> tuple[int, str] | None:
         if not name and not ref:
@@ -3001,13 +2542,6 @@ class SQLModel(Model):
                 account = Account.get(id=ref)
                 if account:
                     if account.name != name:
-                        self.step(
-                            action=ActionEnum.NAME_ACCOUNT,
-                            account_id=account.id,
-                            value=account.name,
-                            key='name',
-                            math_operation=MathOperationEnum.EQUAL,
-                        )
                         account.name = name
                     return account.id, account.name
                 account = Account(id=ref, name=name)
@@ -3020,9 +2554,6 @@ class SQLModel(Model):
     @pony.db_session()
     def account_exists(self, account: int) -> bool:
         return Account.exists(id=account)
-
-    def steps(self) -> dict:
-        pass
 
     def files(self) -> list[dict[str, str | int]]:
         pass
@@ -3070,25 +2601,6 @@ class SQLModel(Model):
                 return len(account.log)
         return -1
 
-    def nolock(self) -> bool:
-        return self.config.get(key='lock', default=0) == 0
-
-    def lock(self) -> int:
-        return self.step()
-
-    def free(self, lock: int, auto_save: bool = True) -> bool:
-        if lock == self.config.get('lock'):
-            self.config.set('lock', 0)
-            if auto_save:
-                return self.save(self.path())
-            return True
-        return False
-
-    def history(self, status: bool = None) -> bool:
-        if status is not None:
-            self._history_mode = status
-        return self._history_mode
-
     def save(self, path: str = None) -> bool:
         if path is None:
             path = self.path()
@@ -3107,165 +2619,9 @@ class SQLModel(Model):
                 return True
         return False
 
-    @pony.db_session()
-    def recall(self, dry: bool = True, debug: bool = False) -> bool:
-        # return False
-        if not self.nolock() or pony.count(History.select()) <= 0:
-            return False
-        memory = History.select(
-            lambda h: h.lock == pony.max(hh.lock for hh in History)
-        ).order_by(pony.desc(History.id))[:]
-        if debug:
-            print('memories', type(memory), memory)
-        sub_positive_log_negative = 0
-        for x in memory:
-            if debug:
-                print('memory', type(x), x.to_dict())
-            account = Account.get(id=x.account.id)
-            if debug:
-                print(account, ActionEnum(x.action.id), f'dry={dry}')
-            match x.action.id:
-                case ActionEnum.CREATE.value:
-                    box_count = pony.count(Box.select(lambda b: b.account.id == x.account.id))
-                    if debug:
-                        print(f'box_count = {box_count}')
-                    assert box_count == 0
-                    log_count = pony.count(Log.select(lambda l: l.account.id == x.account.id))
-                    if debug:
-                        print(f'log_count = {log_count}')
-                    assert log_count == 0
-                    history_count = pony.count(History.select(lambda h: h.account.id == x.account.id))
-                    if debug:
-                        print(f'history_count = {history_count}')
-                    assert history_count == 0
-                    assert account.balance == 0
-                    assert account.count == 0
-                    if dry:
-                        continue
-                    account.delete()
-
-                case ActionEnum.TRACK.value:
-                    if dry:
-                        continue
-                    account.balance -= int(x.value)
-                    account.count -= 1
-                    Box.get(time=x.ref).delete()
-
-                case ActionEnum.LOG.value:
-                    if dry:
-                        continue
-                    if sub_positive_log_negative == -int(x.value):
-                        account.count -= 1
-                        sub_positive_log_negative = 0
-                    log = Log.get(time=x.ref)
-                    if log.ref:
-                        box = Box.get(time=x.ref)
-                        print('box', box)
-                        assert box
-                        assert box.value < 0
-
-                        try:
-                            box.rest += -box.value
-                        except TypeError:
-                            box.rest += Decimal(-box.value)
-
-                        try:
-                            account.balance += -box.value
-                        except TypeError:
-                            account.balance += Decimal(-box.value)
-
-                        account.count -= 1
-                    file_count = pony.count(File.select(lambda f: f.log.id == log.id))
-                    if debug:
-                        print('file_count = ', file_count)
-                    assert file_count == 0
-                    log.delete()
-
-                case ActionEnum.SUB.value:
-                    box = Box.get(time=x.ref)
-                    if box:
-                        if dry:
-                            continue
-                        box.rest += int(x.value)
-                        account.balance += int(x.value)
-                        sub_positive_log_negative = int(x.value)
-
-                case ActionEnum.ADD_FILE.value:
-                    file = File.get(time=x.file)
-                    if debug:
-                        print(f'file = {file}')
-                    if file:
-                        if dry:
-                            continue
-                        file.delete()
-
-                case ActionEnum.REMOVE_FILE.value:
-                    if dry:
-                        continue
-                    log = Log.get(time=x.ref)
-                    File(
-                        log=log.id,
-                        time=x.file,
-                        record_date=Helper.time_to_datetime(x.file),
-                        path=x.value,
-                    )
-
-        #         case ActionEnum.BOX_TRANSFER.value:
-        #             if x['account'] is not None:
-        #                 if self.account_exists(x['account']):
-        #                     if x['ref'] in self._vault['account'][x['account']]['box']:
-        #                         if dry:
-        #                             continue
-        #                         self._vault['account'][x['account']]['box'][x['ref']]['rest'] -= x['value']
-        #
-        #         case ActionEnum.EXCHANGE.value:
-        #             if x['account'] is not None:
-        #                 if self.account_exists(x['account']):
-        #                     if x['ref'] in self._vault['account'][x['account']]['exchange']:
-        #                         if dry:
-        #                             continue
-        #                         del self._vault['account'][x['account']]['exchange'][x['ref']]
-        #
-        #         case ActionEnum.REPORT.value:
-        #             if x['ref'] in self._vault['report']:
-        #                 if dry:
-        #                     continue
-        #                 del self._vault['report'][x['ref']]
-        #
-        #         case ActionEnum.ZAKAT.value:
-        #             if x['account'] is not None:
-        #                 if self.account_exists(x['account']):
-        #                     if x['ref'] in self._vault['account'][x['account']]['box']:
-        #                         if x['key'] in self._vault['account'][x['account']]['box'][x['ref']]:
-        #                             if dry:
-        #                                 continue
-        #                             match x['math']:
-        #                                 case MathOperationEnum.ADDITION:
-        #                                     self._vault['account'][x['account']]['box'][x['ref']][x['key']] -= x[
-        #                                         'value']
-        #                                 case MathOperationEnum.EQUAL:
-        #                                     self._vault['account'][x['account']]['box'][x['ref']][x['key']] = x['value']
-        #                                 case MathOperationEnum.SUBTRACTION:
-        #                                     self._vault['account'][x['account']]['box'][x['ref']][x['key']] += x[
-        #                                         'value']
-        #
-        #         case ActionEnum.NAME_ACCOUNT.value:
-        #             if x['account'] is not None:
-        #                 if self.account_exists(x['account']):
-        #                     if dry:
-        #                         continue
-        #                     match x['math']:
-        #                         case MathOperationEnum.EQUAL:
-        #                             self._vault['account'][x['account']][x['key']] = x['value']
-        #
-        if not dry:
-            self.clean_history(memory[0].lock)
-        return True
-
     def reset(self) -> None:
         db.drop_all_tables(with_all_data=True)
         db.create_tables()
-        SQLModel.create_db()
 
     def check(self, silver_gram_price: float, unscaled_nisab: float | int | Decimal = None, debug: bool = False,
               now: int = None, cycle: float = None) -> tuple:
@@ -3292,7 +2648,6 @@ class SQLModel(Model):
     def vault(self, section: Vault = Vault.ALL) -> dict:
         account = {}
         name = {}
-        history = {}
         report = {}
         all: bool = section == Vault.ALL
 
@@ -3314,13 +2669,11 @@ class SQLModel(Model):
                         log[l.time] = l.to_dict(with_lazy=True, with_collections=True, related_objects=True)
                     account[k]['log'] = log
 
-                if v['history']:
-                    history = {}
-                    for h in v['history']:
-                        if h.lock not in history:
-                            history[h.lock] = []
-                        history[h.lock].append(h.to_dict())
-                    account[k]['history'] = history
+                if v['exchange']:
+                    exchange = {}
+                    for e in v['exchange']:
+                        exchange[e.time] = e.to_dict(with_lazy=True, with_collections=True, related_objects=True)
+                    account[k]['exchange'] = exchange
 
         if section == Vault.NAME or all:
             for k, v in {
@@ -3329,12 +2682,6 @@ class SQLModel(Model):
             }.items():
                 name[k] = v['name']
                 name[v['name']] = k
-
-        if section == Vault.HISTORY or all:
-            for h in History.select().order_by(History.lock)[:]:
-                if h.lock not in history:
-                    history[h.lock] = []
-                history[h.lock].append(h.to_dict())
 
         if section == Vault.REPORT or all:
             report = Report.select()[:]
@@ -3347,13 +2694,9 @@ class SQLModel(Model):
                 'account': name,
             }
 
-        if section == Vault.HISTORY:
-            return history
-
         return {
             'account': account,
             'name': name,
-            'history': history,
             'report': report,
         }
 
@@ -3393,34 +2736,7 @@ class SQLModel(Model):
                 ref=ref,
                 file={},
             )
-            self.step(ActionEnum.LOG, account_id=account_id, ref=created, value=value)
         return created
-
-    def step(self, action: ActionEnum = None, account_id: int = None, ref: int = None, file: int = None,
-             value: int | float | str = None, key: str = None, math_operation: MathOperationEnum = None) -> int:
-        if not self.history():
-            return 0
-        lock = self.config.get(key='lock')
-        if self.nolock():
-            lock = Helper.time()
-            self.config.set(key='lock', value=lock)
-        if action is None:
-            return lock
-        if not lock or lock == 0:
-            raise ValueError(f'lock({lock}) is empty')
-        with pony.db_session:
-            History(
-                action=action.value,
-                account=account_id,
-                lock=lock,
-                ref=ref,
-                file=file,
-                key=key if key else '',
-                value=str(value) if value else '',
-                value_type=value.__class__.__name__ if value else '',
-                math=math_operation.value if math_operation else None,
-            )
-        return lock
 
     def ref_exists(self, account_id: int, ref_type: str, ref: int) -> bool:
         if not isinstance(account_id, int):
@@ -3444,15 +2760,6 @@ class SQLModel(Model):
         int, tuple[str, str, bool]]:
         pass
 
-    @pony.db_session()
-    def clean_history(self, lock: int | None = None) -> int:
-        count = pony.count(h for h in History if h.lock == lock)
-        if self.debug:
-            print(f'[clean_history] count = {count}')
-        if count > 0:
-            History.select(lambda h: h.lock == lock).delete(bulk=True)
-        return count
-
     @staticmethod
     def test(debug: bool = False) -> bool:
         ConfigManager.test(debug=debug)
@@ -3473,11 +2780,10 @@ class ZakatTracker:
     can calculate Zakat due based on the current silver price.
 
     The class uses a camel file as its database to persist the tracker state,
-    ensuring data integrity across sessions. It also provides options for enabling or
-    disabling history tracking, allowing users to choose their preferred level of detail.
+    ensuring data integrity across sessions.
 
     In addition, the `ZakatTracker` class includes various helper methods like
-    `time`, `time_to_datetime`, `lock`, `free`, `recall`, `export_json`,
+    `time`, `time_to_datetime`, `free`, `export_json`,
     and more. These methods provide additional functionalities and flexibility
     for interacting with and managing the Zakat tracker.
 
@@ -3515,18 +2821,6 @@ class ZakatTracker:
                     - name (str): The current name of the account.
                     - hide (bool): Indicates whether the account is hidden or not.
                     - zakatable (bool): Indicates whether the account is subject to Zakat.
-            - history (dict):
-                - {timestamp} (list): A list of dictionaries storing the history of actions performed.
-                    - {action_dict} (dict):
-                        - action (Action): The type of action (CREATE, TRACK, LOG, SUB, ADD_FILE, REMOVE_FILE,
-                                                               BOX_TRANSFER, EXCHANGE, REPORT, ZAKAT).
-                        - account (str): The account number associated with the action.
-                        - ref (int): The reference number of the transaction.
-                        - file (int): The reference number of the file (if applicable).
-                        - key (str): The key associated with the action (e.g., 'rest', 'total').
-                        - value (int): The value associated with the action.
-                        - math (MathOperation): The mathematical operation performed (if applicable).
-            - lock (int or None): The timestamp indicating the current lock status (None if not locked).
             - report (dict):
                 - {timestamp} (tuple): A tuple storing Zakat report details.
 
@@ -3686,12 +2980,12 @@ class ZakatTracker:
                 # If records are found at the same time with different accounts in the same amount
                 # (one positive and the other negative), this indicates it is a transfer.
                 if len_rows != 2:
-                    raise Exception(f'more than two transactions({len_rows}) at the same time')
+                    raise ValueError(f'more than two transactions({len_rows}) at the same time')
                 (i, account1, desc1, unscaled_value1, date1, rate1, _) = rows[0]
                 (j, account2, desc2, unscaled_value2, date2, rate2, _) = rows[1]
                 if account1 == account2 or desc1 != desc2 or abs(unscaled_value1) != abs(
                         unscaled_value2) or date1 != date2:
-                    raise Exception('invalid transfer')
+                    raise ValueError('invalid transfer')
                 account1_ref, _ = self.db.account(name=account1)
                 account2_ref, _ = self.db.account(name=account2)
                 if rate1 > 0:
@@ -3818,284 +3112,224 @@ class ZakatTracker:
 
         return result
 
-    def _test_core(self, restore=False, debug=False):
-
-        if debug:
-            random.seed(1234567890)
-
-        # lock
-        assert self.db.nolock()
-        lock1 = self.db.lock()
-        if debug:
-            print(f'lock1 = {lock1}')
-        assert lock1 != 0
-        lock2 = self.db.lock()
-        if debug:
-            print(f'lock2 = {lock2}')
-        assert lock1 == lock2
-        assert not self.db.nolock()
-        assert self.db.free(lock1)
-        assert not self.db.free(lock1)
-        assert self.db.nolock()
-        assert self.db.history() is True
-
-        # account numbers & names
-        for index, letter in enumerate('abcdefghijklmnopqrstuvwxyz'):
-            ref, name = self.db.account(name=letter)
-            if debug:
-                print(f'letter = "{letter}", name = "{name}"')
-            assert letter == name
-            if debug:
-                print(f'index = {index + 1}, ref = {ref}')
-            assert index + 1 == ref
-            assert index + 1 in self.db.vault(Vault.ACCOUNT)
-            assert name == self.db.vault(Vault.ACCOUNT)[index + 1]['name']
-        account_z_ref, account_z_name = self.db.account(name='z')
-        assert account_z_ref == 26
-        assert account_z_name == 'z'
-        account_xz_ref, account_xz_name = self.db.account(name='xz')
-        assert account_xz_ref == 27
-        assert account_xz_name == 'xz'
-        assert self.db.account(ref=123) is None
-        use_same_account_name_failed = False
-        try:
-            self.db.account(name='z', ref=321)
-        except:
-            use_same_account_name_failed = True
-        assert use_same_account_name_failed
-        account_zzz_ref_new, account_zzz_name_new = self.db.account(name='zzz', ref=321)
-        assert self.db.account_exists(account_zzz_ref_new)
-        assert account_zzz_ref_new == 321
-        assert account_zzz_name_new == 'zzz'
-        assert account_z_ref in self.db.vault(Vault.NAME)['account']
-        assert self.db.account_exists(account_z_ref)
-        account_zz_ref, account_zz_name = self.db.account(name='zz', ref=321)
-        assert self.db.account_exists(account_zz_ref)
-        assert account_zz_ref == 321
-        assert account_zz_name == 'zz'
-        assert account_zzz_name_new not in self.db.vault(Vault.NAME)['account']
-        account_xx_ref, account_xx_name = self.db.account(name='xx', ref=333)
-        assert self.db.account_exists(account_xx_ref)
-        assert account_xx_ref == 333
-        assert account_xx_name == 'xx'
-        assert self.db.account_exists(account_xx_ref)
-
-        self.db.reset()
-
-        table = {
-            102: [
-                {
-                    'ops': 'track',
-                    'unscaled_value': 10,
-                    'cached_balance': 1000,
-                    'fresh_balance': 1000,
-                    'log_value_sum': 1000,
-                    'box_size': 1,
-                    'log_size': 1,
-                },
-                {
-                    'ops': 'track',
-                    'unscaled_value': 20,
-                    'cached_balance': 3000,
-                    'fresh_balance': 3000,
-                    'log_value_sum': 3000,
-                    'box_size': 2,
-                    'log_size': 2,
-                },
-                {
-                    'ops': 'track',
-                    'unscaled_value': 30,
-                    'cached_balance': 6000,
-                    'fresh_balance': 6000,
-                    'log_value_sum': 6000,
-                    'box_size': 3,
-                    'log_size': 3,
-                },
-                {
-                    'ops': 'sub',
-                    'unscaled_value': 15,
-                    'cached_balance': 4500,
-                    'fresh_balance': 4500,
-                    'log_value_sum': 4500,
-                    'box_size': 3,
-                    'log_size': 4,
-                },
-                {
-                    'ops': 'sub',
-                    'unscaled_value': 50,
-                    'cached_balance': -500,
-                    'fresh_balance': -500,
-                    'log_value_sum': -500,
-                    'box_size': 4,
-                    'log_size': 5,
-                },
-                {
-                    'ops': 'sub',
-                    'unscaled_value': 100,
-                    'cached_balance': -10500,
-                    'fresh_balance': -10500,
-                    'log_value_sum': -10500,
-                    'box_size': 5,
-                    'log_size': 6,
-                },
-            ],
-            201: [
-                {
-                    'ops': 'sub',
-                    'unscaled_value': 90,
-                    'cached_balance': -9000,
-                    'fresh_balance': -9000,
-                    'log_value_sum': -9000,
-                    'box_size': 1,
-                    'log_size': 1,
-                },
-                {
-                    'ops': 'track',
-                    'unscaled_value': 100,
-                    'cached_balance': 1000,
-                    'fresh_balance': 1000,
-                    'log_value_sum': 1000,
-                    'box_size': 2,
-                    'log_size': 2,
-                },
-                {
-                    'ops': 'sub',
-                    'unscaled_value': 190,
-                    'cached_balance': -18000,
-                    'fresh_balance': -18000,
-                    'log_value_sum': -18000,
-                    'box_size': 3,
-                    'log_size': 3,
-                },
-                {
-                    'ops': 'track',
-                    'unscaled_value': 1000,
-                    'cached_balance': 82000,
-                    'fresh_balance': 82000,
-                    'log_value_sum': 82000,
-                    'box_size': 4,
-                    'log_size': 4,
-                },
-            ],
-        }
-        for x in table:
-            for y in table[x]:
-                self.db.lock()
-                if y['ops'] == 'track':
-                    ref = self.db.track(
-                        unscaled_value=y['unscaled_value'],
-                        desc='test-add',
-                        account=x,
-                        logging=True,
-                        created=Helper.time(),
-                        debug=debug,
-                    )
-                elif y['ops'] == 'sub':
-                    (ref, z) = self.db.sub(
-                        unscaled_value=y['unscaled_value'],
-                        desc='test-sub',
-                        account=x,
-                        created=Helper.time(),
-                    )
-                    if debug:
-                        print('_sub', z, Helper.time())
-                assert ref != 0
-                assert len(self.db.vault(Vault.ACCOUNT)[x]['log'][ref]['file']) == 0
-                for i in range(3):
-                    file_ref = self.db.add_file(x, ref, 'file_' + str(i))
-                    sleep(0.0000001)
-                    assert file_ref != 0
-                    if debug:
-                        print('ref', ref, 'file', file_ref)
-                    assert len(self.db.vault(Vault.ACCOUNT)[x]['log'][ref]['file']) == i + 1
-                file_ref = self.db.add_file(x, ref, 'file_' + str(3))
-                assert self.db.remove_file(x, ref, file_ref)
-                daily_logs = self.db.daily_logs(debug=debug)
-                if debug:
-                    print('daily_logs', daily_logs)
-                for k, v in daily_logs.items():
-                    assert k
-                    assert v
-                z = self.db.balance(x)
-                if debug:
-                    print("debug-0", z, y)
-                assert z == y['cached_balance']
-                z = self.db.balance(x, False)
-                if debug:
-                    print("debug-1", z, y['fresh_balance'])
-                assert z == y['fresh_balance']
-                o = self.db.vault(Vault.ACCOUNT)[x]['log']
-                z = 0
-                for i in o:
-                    z += o[i]['value']
-                if debug:
-                    print("debug-2", z, type(z))
-                    print("debug-2", y['log_value_sum'], type(y['log_value_sum']))
-                assert z == y['log_value_sum']
-                if debug:
-                    print('debug-2 - PASSED')
-                assert self.db.box_size(x) == y['box_size']
-                assert self.db.log_size(x) == y['log_size']
-                assert not self.db.nolock()
-                self.db.free(self.db.lock())
-                assert self.db.nolock()
-            assert self.db.boxes(x) != {}
-            assert self.db.logs(x) != {}
-
-            assert not self.db.hide(x)
-            assert self.db.hide(x, False) is False
-            assert self.db.hide(x) is False
-            assert self.db.hide(x, True)
-            assert self.db.hide(x)
-
-            assert self.db.zakatable(x)
-            assert self.db.zakatable(x, False) is False
-            assert self.db.zakatable(x) is False
-            assert self.db.zakatable(x, True)
-            assert self.db.zakatable(x)
-
-        if restore is True:
-            count = len(self.db.vault(Vault.HISTORY))
-            if debug:
-                print('history-count-0', count)
-            assert count == 10
-            # try mode
-            for _ in range(count):
-                assert self.db.recall(True, debug)
-            count = len(self.db.vault(Vault.HISTORY))
-            if debug:
-                print('history-count-1', count)
-            assert count == 10
-            _accounts = list(table.keys())
-            accounts_limit = len(_accounts) + 1
-            for i in range(-1, -accounts_limit, -1):
-                account = _accounts[i]
-                if debug:
-                    print(account, len(table[account]))
-                transaction_limit = len(table[account]) + 1
-                for j in range(-1, -transaction_limit, -1):
-                    row = table[account][j]
-                    if debug:
-                        print(row, self.db.balance(account), self.db.balance(account, False), row['cached_balance'])
-                    assert self.db.balance(account) == self.db.balance(account, False)
-                    assert self.db.balance(account) == row['cached_balance']
-                    assert self.db.recall(False, debug)
-            assert self.db.recall(False, debug) is False
-            count = len(self.db.vault(Vault.HISTORY))
-            if debug:
-                print('history-count', count)
-            assert count == 0
-        self.db.reset()
-
     def test(self, debug: bool = False) -> bool:
         if debug:
             print('test', f'debug={debug}')
+            random.seed(1234567890)
         try:
 
-            self._test_core(False, debug)
-            self._test_core(True, debug)
+            # account numbers & names
+            for index, letter in enumerate('abcdefghijklmnopqrstuvwxyz'):
+                ref, name = self.db.account(name=letter)
+                if debug:
+                    print(f'letter = "{letter}", name = "{name}"')
+                assert letter == name
+                if debug:
+                    print(f'index = {index + 1}, ref = {ref}')
+                assert index + 1 == ref
+                assert index + 1 in self.db.vault(Vault.ACCOUNT)
+                assert name == self.db.vault(Vault.ACCOUNT)[index + 1]['name']
+            account_z_ref, account_z_name = self.db.account(name='z')
+            assert account_z_ref == 26
+            assert account_z_name == 'z'
+            account_xz_ref, account_xz_name = self.db.account(name='xz')
+            assert account_xz_ref == 27
+            assert account_xz_name == 'xz'
+            assert self.db.account(ref=123) is None
+            use_same_account_name_failed = False
+            try:
+                self.db.account(name='z', ref=321)
+            except:
+                use_same_account_name_failed = True
+            assert use_same_account_name_failed
+            account_zzz_ref_new, account_zzz_name_new = self.db.account(name='zzz', ref=321)
+            assert self.db.account_exists(account_zzz_ref_new)
+            assert account_zzz_ref_new == 321
+            assert account_zzz_name_new == 'zzz'
+            assert account_z_ref in self.db.vault(Vault.NAME)['account']
+            assert self.db.account_exists(account_z_ref)
+            account_zz_ref, account_zz_name = self.db.account(name='zz', ref=321)
+            assert self.db.account_exists(account_zz_ref)
+            assert account_zz_ref == 321
+            assert account_zz_name == 'zz'
+            assert account_zzz_name_new not in self.db.vault(Vault.NAME)['account']
+            account_xx_ref, account_xx_name = self.db.account(name='xx', ref=333)
+            assert self.db.account_exists(account_xx_ref)
+            assert account_xx_ref == 333
+            assert account_xx_name == 'xx'
+            assert self.db.account_exists(account_xx_ref)
 
-            assert self.db.history()
+            self.db.reset()
+
+            table = {
+                102: [
+                    {
+                        'ops': 'track',
+                        'unscaled_value': 10,
+                        'cached_balance': 1000,
+                        'fresh_balance': 1000,
+                        'log_value_sum': 1000,
+                        'box_size': 1,
+                        'log_size': 1,
+                    },
+                    {
+                        'ops': 'track',
+                        'unscaled_value': 20,
+                        'cached_balance': 3000,
+                        'fresh_balance': 3000,
+                        'log_value_sum': 3000,
+                        'box_size': 2,
+                        'log_size': 2,
+                    },
+                    {
+                        'ops': 'track',
+                        'unscaled_value': 30,
+                        'cached_balance': 6000,
+                        'fresh_balance': 6000,
+                        'log_value_sum': 6000,
+                        'box_size': 3,
+                        'log_size': 3,
+                    },
+                    {
+                        'ops': 'sub',
+                        'unscaled_value': 15,
+                        'cached_balance': 4500,
+                        'fresh_balance': 4500,
+                        'log_value_sum': 4500,
+                        'box_size': 3,
+                        'log_size': 4,
+                    },
+                    {
+                        'ops': 'sub',
+                        'unscaled_value': 50,
+                        'cached_balance': -500,
+                        'fresh_balance': -500,
+                        'log_value_sum': -500,
+                        'box_size': 4,
+                        'log_size': 5,
+                    },
+                    {
+                        'ops': 'sub',
+                        'unscaled_value': 100,
+                        'cached_balance': -10500,
+                        'fresh_balance': -10500,
+                        'log_value_sum': -10500,
+                        'box_size': 5,
+                        'log_size': 6,
+                    },
+                ],
+                201: [
+                    {
+                        'ops': 'sub',
+                        'unscaled_value': 90,
+                        'cached_balance': -9000,
+                        'fresh_balance': -9000,
+                        'log_value_sum': -9000,
+                        'box_size': 1,
+                        'log_size': 1,
+                    },
+                    {
+                        'ops': 'track',
+                        'unscaled_value': 100,
+                        'cached_balance': 1000,
+                        'fresh_balance': 1000,
+                        'log_value_sum': 1000,
+                        'box_size': 2,
+                        'log_size': 2,
+                    },
+                    {
+                        'ops': 'sub',
+                        'unscaled_value': 190,
+                        'cached_balance': -18000,
+                        'fresh_balance': -18000,
+                        'log_value_sum': -18000,
+                        'box_size': 3,
+                        'log_size': 3,
+                    },
+                    {
+                        'ops': 'track',
+                        'unscaled_value': 1000,
+                        'cached_balance': 82000,
+                        'fresh_balance': 82000,
+                        'log_value_sum': 82000,
+                        'box_size': 4,
+                        'log_size': 4,
+                    },
+                ],
+            }
+            for x in table:
+                for y in table[x]:
+                    if y['ops'] == 'track':
+                        ref = self.db.track(
+                            unscaled_value=y['unscaled_value'],
+                            desc='test-add',
+                            account=x,
+                            logging=True,
+                            created=Helper.time(),
+                            debug=debug,
+                        )
+                    elif y['ops'] == 'sub':
+                        (ref, z) = self.db.sub(
+                            unscaled_value=y['unscaled_value'],
+                            desc='test-sub',
+                            account=x,
+                            created=Helper.time(),
+                        )
+                        if debug:
+                            print('_sub', z, Helper.time())
+                    assert ref != 0
+                    assert len(self.db.vault(Vault.ACCOUNT)[x]['log'][ref]['file']) == 0
+                    for i in range(3):
+                        file_ref = self.db.add_file(x, ref, 'file_' + str(i))
+                        sleep(0.0000001)
+                        assert file_ref != 0
+                        if debug:
+                            print('ref', ref, 'file', file_ref)
+                        assert len(self.db.vault(Vault.ACCOUNT)[x]['log'][ref]['file']) == i + 1
+                    file_ref = self.db.add_file(x, ref, 'file_' + str(3))
+                    assert self.db.remove_file(x, ref, file_ref)
+                    daily_logs = self.db.daily_logs(debug=debug)
+                    if debug:
+                        print('daily_logs', daily_logs)
+                    for k, v in daily_logs.items():
+                        assert k
+                        assert v
+                    z = self.db.balance(x)
+                    if debug:
+                        print("debug-0", z, y)
+                    assert z == y['cached_balance']
+                    z = self.db.balance(x, False)
+                    if debug:
+                        print("debug-1", z, y['fresh_balance'])
+                    assert z == y['fresh_balance']
+                    o = self.db.vault(Vault.ACCOUNT)[x]['log']
+                    z = 0
+                    for i in o:
+                        z += o[i]['value']
+                    if debug:
+                        print("debug-2", z, type(z))
+                        print("debug-2", y['log_value_sum'], type(y['log_value_sum']))
+                    assert z == y['log_value_sum']
+                    if debug:
+                        print('debug-2 - PASSED')
+                    assert self.db.box_size(x) == y['box_size']
+                    assert self.db.log_size(x) == y['log_size']
+                assert self.db.boxes(x) != {}
+                assert self.db.logs(x) != {}
+
+                assert not self.db.hide(x)
+                assert self.db.hide(x, False) is False
+                assert self.db.hide(x) is False
+                assert self.db.hide(x, True)
+                assert self.db.hide(x)
+
+                assert self.db.zakatable(x)
+                assert self.db.zakatable(x, False) is False
+                assert self.db.zakatable(x) is False
+                assert self.db.zakatable(x, True)
+                assert self.db.zakatable(x)
+
+            self.db.reset()
 
             # Not allowed for duplicate transactions in the same account and time
 
@@ -4120,6 +3354,125 @@ class ZakatTracker:
             except:
                 failed = True
             assert failed is True
+
+            self.db.reset()
+
+            # exchange
+
+            account_cash_ref, _ = self.db.account(name='cash')
+            account_bank_ref, _ = self.db.account(name='bank')
+
+            self.db.exchange(account_cash_ref, created=25, rate=3.75, description="2024-06-25", debug=debug)
+            self.db.exchange(account_cash_ref, created=22, rate=3.73, description="2024-06-22", debug=debug)
+            self.db.exchange(account_cash_ref, created=15, rate=3.69, description="2024-06-15", debug=debug)
+            self.db.exchange(account_cash_ref, created=10, rate=3.66, debug=debug)
+
+            for i in range(1, 30):
+                exchange = self.db.exchange(account_cash_ref, created=i, debug=debug)
+                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
+                if debug:
+                    print(f'i={i}, rate={rate}, description={description}, created={created}')
+                assert rate
+                assert created
+                if i < 10:
+                    assert rate == 1
+                elif i == 10:
+                    assert float(rate) == 3.66
+                    assert description is None
+                elif i < 15:
+                    assert float(rate) == 3.66
+                    assert description is None
+                elif i == 15:
+                    assert float(rate) == 3.69
+                    assert description is not None
+                elif i < 22:
+                    assert float(rate) == 3.69
+                    assert description is not None
+                elif i == 22:
+                    assert float(rate) == 3.73
+                    assert description is not None
+                elif i >= 25:
+                    assert float(rate) == 3.75
+                    assert description is not None
+                exchange = self.db.exchange(account_bank_ref, created=i, debug=debug)
+                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
+                if debug:
+                    print(f'i={i}, rate={rate}, description={description}, created={created}')
+                assert created
+                assert rate == 1
+                assert description is None
+
+            assert len(self.db.vault(Vault.ACCOUNT)[account_cash_ref]['exchange']) > 0
+            assert len(self.db.exchanges(account_cash_ref)) > 0
+            # self.db.vault(Vault.ACCOUNT)[account_cash_ref]['exchange'].clear()
+            # assert len(self.db.exchanges(account_cash_ref)) == 0
+
+            self.db.reset()
+
+            # حفظ أسعار الصرف باستخدام التواريخ بالنانو ثانية
+            self.db.exchange(account_cash_ref, created=Helper.day_to_time(25), rate=3.75, description="2024-06-25",
+                             debug=debug)
+            self.db.exchange(account_cash_ref, created=Helper.day_to_time(22), rate=3.73, description="2024-06-22",
+                             debug=debug)
+            self.db.exchange(account_cash_ref, created=Helper.day_to_time(15), rate=3.69, description="2024-06-15",
+                             debug=debug)
+            self.db.exchange(account_cash_ref, created=Helper.day_to_time(10), rate=3.66, debug=debug)
+
+            account_test_ref, _ = self.db.account(name='test')
+
+            for i in [x * 0.12 for x in range(-15, 21)]:
+                if i <= 0:
+                    exchange_count = len(
+                        self.db.exchange(account_test_ref, created=Helper.time(), rate=i, description=f"range({i})",
+                                         debug=debug))
+                    if debug:
+                        print(f'exchange_count = {exchange_count}')
+                    assert exchange_count == 0
+                else:
+                    exchange_count = len(
+                        self.db.exchange(account_test_ref, created=Helper.time(), rate=i, description=f"range({i})",
+                                         debug=debug))
+                    if debug:
+                        print(f'exchange_count = {exchange_count}')
+                    assert exchange_count > 0
+
+            # اختبار النتائج باستخدام التواريخ بالنانو ثانية
+            for i in range(1, 31):
+                timestamp_ns = Helper.day_to_time(i)
+                exchange = self.db.exchange(account_cash_ref, created=timestamp_ns, debug=debug)
+                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
+                if debug:
+                    print(f'i={i}, rate={rate}, description={description}, created={created}')
+                assert rate
+                assert created
+                if i < 10:
+                    assert rate == 1
+                    assert description is None
+                elif i == 10:
+                    assert float(rate) == 3.66
+                    assert description is None
+                elif i < 15:
+                    assert float(rate) == 3.66
+                    assert description is None
+                elif i == 15:
+                    assert float(rate) == 3.69
+                    assert description is not None
+                elif i < 22:
+                    assert float(rate) == 3.69
+                    assert description is not None
+                elif i == 22:
+                    assert float(rate) == 3.73
+                    assert description is not None
+                elif i >= 25:
+                    assert float(rate) == 3.75
+                    assert description is not None
+                exchange = self.db.exchange(account_bank_ref, created=i, debug=debug)
+                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
+                if debug:
+                    print(f'i={i}, rate={rate}, description={description}, created={created}')
+                assert created
+                assert rate == 1
+                assert description is None
 
             self.db.reset()
 
@@ -4241,13 +3594,7 @@ class ZakatTracker:
                         elif ages_rest > 0:
                             assert ages_capital == ages_rest + future_capital
                 self.db.reset()
-                assert len(self.db.vault(Vault.HISTORY)) == 0
 
-            assert self.db.history()
-            assert self.db.history(False) is False
-            assert self.db.history() is False
-            assert self.db.history(True)
-            assert self.db.history()
             if debug:
                 print('####################################################################')
 
@@ -4270,7 +3617,6 @@ class ZakatTracker:
                 ),
             ]
             for z in transaction:
-                self.db.lock()
                 x = z[1]
                 y = z[2]
                 self.db.transfer(
@@ -4314,23 +3660,9 @@ class ZakatTracker:
 
                 assert self.db.box_size(y) == z[11]
                 assert self.db.log_size(y) == z[12]
-                assert self.db.free(self.db.lock())
 
             if debug:
                 pp().pprint(self.db.check(2.17))
-
-            assert not self.db.nolock()
-            history_count = len(self.db.vault(Vault.HISTORY))
-            if debug:
-                print('history-count', history_count)
-            assert history_count == 5
-            assert not self.db.free(Helper.time())
-            assert self.db.free(self.db.lock())
-            assert self.db.nolock()
-            history_count = len(self.db.vault(Vault.HISTORY))
-            if debug:
-                print('history-count', history_count)
-            assert len(self.db.vault(Vault.HISTORY)) == 5
 
             # storage
 
@@ -4340,130 +3672,8 @@ class ZakatTracker:
             self.db.save()
             assert os.path.getsize(_path) > 0
             self.db.reset()
-            assert self.db.recall(False, debug) is False
             self.db.load()
             assert self.db.vault(Vault.ACCOUNT) is not None
-
-            # recall
-
-            assert self.db.nolock()
-            history_count = len(self.db.vault(Vault.HISTORY))
-            if debug:
-                print('history-count', history_count)
-            assert len(self.db.vault(Vault.HISTORY)) == 5
-            assert self.db.recall(False, debug) is True
-            assert len(self.db.vault(Vault.HISTORY)) == 4
-            assert self.db.recall(False, debug) is True
-            assert len(self.db.vault(Vault.HISTORY)) == 3
-            assert self.db.recall(False, debug) is True
-            assert len(self.db.vault(Vault.HISTORY)) == 2
-            assert self.db.recall(False, debug) is True
-            assert len(self.db.vault(Vault.HISTORY)) == 1
-            assert self.db.recall(False, debug) is True
-            assert len(self.db.vault(Vault.HISTORY)) == 0
-            assert self.db.recall(False, debug) is False
-            assert len(self.db.vault(Vault.HISTORY)) == 0
-
-            # exchange
-
-            account_cash_ref, _ = self.db.account(name='cash')
-            account_bank_ref, _ = self.db.account(name='bank')
-
-            self.db.exchange(account_cash_ref, 25, 3.75, "2024-06-25")
-            self.db.exchange(account_cash_ref, 22, 3.73, "2024-06-22")
-            self.db.exchange(account_cash_ref, 15, 3.69, "2024-06-15")
-            self.db.exchange(account_cash_ref, 10, 3.66)
-
-            for i in range(1, 30):
-                exchange = self.db.exchange(account_cash_ref, i)
-                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
-                if debug:
-                    print(i, rate, description, created)
-                assert created
-                if i < 10:
-                    assert rate == 1
-                    assert description is None
-                elif i == 10:
-                    assert rate == 3.66
-                    assert description is None
-                elif i < 15:
-                    assert rate == 3.66
-                    assert description is None
-                elif i == 15:
-                    assert rate == 3.69
-                    assert description is not None
-                elif i < 22:
-                    assert rate == 3.69
-                    assert description is not None
-                elif i == 22:
-                    assert rate == 3.73
-                    assert description is not None
-                elif i >= 25:
-                    assert rate == 3.75
-                    assert description is not None
-                exchange = self.db.exchange(account_bank_ref, i)
-                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
-                if debug:
-                    print(i, rate, description, created)
-                assert created
-                assert rate == 1
-                assert description is None
-
-            assert len(self.db.vault(Vault.ACCOUNT)[account_cash_ref]['exchange']) > 0
-            assert len(self.db.exchanges(account_cash_ref)) > 0
-            self.db.vault(Vault.ACCOUNT)[account_cash_ref]['exchange'].clear()
-            assert len(self.db.exchanges(account_cash_ref)) == 0
-
-            # حفظ أسعار الصرف باستخدام التواريخ بالنانو ثانية
-            self.db.exchange(account_cash_ref, Helper.day_to_time(25), 3.75, "2024-06-25")
-            self.db.exchange(account_cash_ref, Helper.day_to_time(22), 3.73, "2024-06-22")
-            self.db.exchange(account_cash_ref, Helper.day_to_time(15), 3.69, "2024-06-15")
-            self.db.exchange(account_cash_ref, Helper.day_to_time(10), 3.66)
-
-            account_test_ref, _ = self.db.account(name='test')
-
-            for i in [x * 0.12 for x in range(-15, 21)]:
-                if i <= 0:
-                    assert len(self.db.exchange(account_test_ref, Helper.time(), i, f"range({i})")) == 0
-                else:
-                    assert len(self.db.exchange(account_test_ref, Helper.time(), i, f"range({i})")) > 0
-
-            # اختبار النتائج باستخدام التواريخ بالنانو ثانية
-            for i in range(1, 31):
-                timestamp_ns = Helper.day_to_time(i)
-                exchange = self.db.exchange(account_cash_ref, timestamp_ns)
-                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
-                if debug:
-                    print(i, rate, description, created)
-                assert created
-                if i < 10:
-                    assert rate == 1
-                    assert description is None
-                elif i == 10:
-                    assert rate == 3.66
-                    assert description is None
-                elif i < 15:
-                    assert rate == 3.66
-                    assert description is None
-                elif i == 15:
-                    assert rate == 3.69
-                    assert description is not None
-                elif i < 22:
-                    assert rate == 3.69
-                    assert description is not None
-                elif i == 22:
-                    assert rate == 3.73
-                    assert description is not None
-                elif i >= 25:
-                    assert rate == 3.75
-                    assert description is not None
-                exchange = self.db.exchange(account_bank_ref, i)
-                rate, description, created = exchange['rate'], exchange['description'], exchange['time']
-                if debug:
-                    print(i, rate, description, created)
-                assert created
-                assert rate == 1
-                assert description is None
 
             # csv
 
@@ -4792,12 +4002,6 @@ class ZakatTracker:
                     )
                     assert self.db.snapshot()
 
-                    # assert self.nolock()
-                    # history_size = len(self._vault['history'])
-                    # print('history_size', history_size)
-                    # assert history_size == 2
-                    assert self.db.lock()
-                    assert not self.db.nolock()
                     report = self.db.check(2.17, None, debug)
                     (valid, brief, plan) = report
                     if debug:
@@ -4826,42 +4030,6 @@ class ZakatTracker:
                     report = self.db.check(2.17, None, debug)
                     (valid, brief, plan) = report
                     assert valid is False
-
-            history_size = len(self.db.vault(Vault.HISTORY))
-            if debug:
-                print('history_size', history_size)
-            assert history_size == 3
-            assert not self.db.nolock()
-            assert self.db.recall(False, debug) is False
-            self.db.free(self.db.lock())
-            assert self.db.nolock()
-
-            for i in range(3, 0, -1):
-                history_size = len(self.db.vault(Vault.HISTORY))
-                if debug:
-                    print('history_size', history_size)
-                assert history_size == i
-                assert self.db.recall(False, debug) is True
-
-            assert self.db.nolock()
-            assert self.db.recall(False, debug) is False
-
-            history_size = len(self.db.vault(Vault.HISTORY))
-            if debug:
-                print('history_size', history_size)
-            assert history_size == 0
-
-            account_size = len(self.db.vault(Vault.ACCOUNT))
-            if debug:
-                print('account_size', account_size)
-            assert account_size == 0
-
-            report_size = len(self.db.vault(Vault.REPORT))
-            if debug:
-                print('report_size', report_size)
-            assert report_size == 0
-
-            assert self.db.nolock()
             return True
         except Exception as e:
             # pp().pprint(self._vault)
@@ -4883,13 +4051,11 @@ def test(debug: bool = False):
     for model in [
         DictModel(
             db_path=f"./{test_directory}/zakat.camel",
-            history_mode=True,
         ),
         SQLModel(
             provider="sqlite",
             filename=f"./{test_directory}/zakat.sqlite",
             create_db=True,
-            history_mode=True,
             debug=True,
         ),
     ]:
