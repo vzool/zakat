@@ -2466,7 +2466,6 @@ class SQLModel(Model):
     def accounts(self) -> dict:
         pass
 
-    @pony.db_session()
     def exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
                  debug: bool = False) -> dict:
         if debug:
@@ -2480,25 +2479,26 @@ class SQLModel(Model):
                 return dict()
             if not self.account_exists(account):
                 self.track(account=account, debug=debug)
-            if pony.count(Exchange.select(lambda e: e.account.id == account)) and rate <= 1:
-                return {"time": created, "rate": 1, "description": None}
-            Exchange(
-                account=account,
-                rate=rate,
-                desc=description if description else '',
-                time=created,
-                record_date=datetime.datetime.now(),
-            )
+            with pony.db_session:
+                if pony.count(Exchange.select(lambda e: e.account.id == account)) == 0 and rate <= 1:
+                    return {"time": created, "rate": 1, "description": None}
+                Exchange(
+                    account=account,
+                    rate=rate,
+                    desc=description if description else '',
+                    time=created,
+                    record_date=datetime.datetime.now(),
+                )
             if debug:
                 print("exchange-created-1",
                       f'account: {account}, created: {created}, rate:{rate}, description:{description}')
 
-        if self.account_exists(account):
+        with pony.db_session:
             exchange = Exchange.select(
                 lambda e: e.account.id == account and e.time <= created
             ).order_by(pony.desc(Exchange.time)).first()
             if debug:
-                print('valid_rates', exchange, type(exchange))
+                print('valid_rates', exchange, type(exchange), exchange)
             if exchange:
                 if debug:
                     print("exchange-read-1",
