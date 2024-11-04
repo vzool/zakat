@@ -2544,8 +2544,23 @@ class SQLModel(Model):
             return account.name
         return None
 
+    @pony.db_session
     def accounts(self) -> dict:
-        pass
+        return self._accounts()
+
+    def _accounts(self) -> dict:
+        result = {}
+        if self.raw_sql:
+            x = db.execute(f'''
+                SELECT  id, balance
+                FROM    account
+            ''')
+            for ref, balance in x.fetchall():
+                result[ref] = balance
+        else:
+            for account in Account.select()[:]:
+                result[account.id] = account.balance
+        return result
 
     @pony.db_session
     def set_exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
