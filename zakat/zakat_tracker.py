@@ -2303,11 +2303,13 @@ class SQLModel(Model):
         self._base_path = None
         self._vault_path = None
         self._config_path = None
+        self._db_path = None
         self.debug = False
         self.raw_sql = True
 
         if str.lower(db_params['provider']) == 'sqlite' and 'filename' in db_params:
             db_params['filename'] = str(self.path(db_params['filename']))
+            self._db_path = db_params['filename']
             self._config_path = str(self._base_path / 'config.db')
         else:
             self._config_path = str(self.path('config.db'))
@@ -2798,8 +2800,8 @@ class SQLModel(Model):
         if path is None:
             path = self.path()
         db.commit()
-        if path != self.path():
-            shutil.copy(self.path(), path)
+        if path != self._db_path and self._db_path:
+            shutil.copy(self._db_path, path)
         return True
 
     def load(self, path: str = None) -> bool:
