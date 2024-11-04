@@ -2304,6 +2304,7 @@ class SQLModel(Model):
         self._vault_path = None
         self._config_path = None
         self.debug = False
+        self.raw_sql = True
 
         if str.lower(db_params['provider']) == 'sqlite' and 'filename' in db_params:
             db_params['filename'] = str(self.path(db_params['filename']))
@@ -2411,9 +2412,17 @@ class SQLModel(Model):
         if not self._account_exists(account):
             if debug:
                 print(f"account {account} created")
-            Account(
-                id=account,
-            )
+            if self.raw_sql:
+                db.execute(f'''
+                    INSERT INTO "account" (id, hide, zakatable, created_at)
+                    VALUES({account}, 0, 1, "{str(datetime.datetime.now())}");
+                ''')
+            else:
+                Account(
+                    id=account,
+                    hide=False,
+                    zakatable=True,
+                )
         if unscaled_value == 0:
             return 0
         value = Helper.scale(unscaled_value)
@@ -2423,16 +2432,32 @@ class SQLModel(Model):
             print('creating-box', created)
         if self._box_exists(account, created):
             raise ValueError(f"The box transaction happened again in the same nanosecond time({created}).")
-        Box(
-            account=account,
-            time=created,
-            record_date=datetime.datetime.now(),
-            capital=value,
-            count=0,
-            last=None,
-            rest=value,
-            total=0,
-        )
+        if self.raw_sql:
+            db.execute(f'''
+                INSERT INTO "box" (account_id, time, record_date, capital, count, last, rest, total, created_at)
+                            VALUES(
+                                {account},
+                                {created},
+                                "{str(datetime.datetime.now())}",
+                                {value},
+                                0,
+                                NULL,
+                                {value},
+                                0,
+                                "{str(datetime.datetime.now())}"
+                            );
+            ''')
+        else:
+            Box(
+                account=account,
+                time=created,
+                record_date=datetime.datetime.now(),
+                capital=value,
+                count=0,
+                last=None,
+                rest=value,
+                total=0,
+            )
         if debug:
             print('created-box', created)
         return created
@@ -2486,12 +2511,27 @@ class SQLModel(Model):
         return self._zakatable(account_id, status)
 
     def _zakatable(self, account_id: int, status: bool = None) -> bool:
-        account = Account.get(id=account_id)
-        if account:
-            if status is None:
+        if self.raw_sql:
+            if status is not None:
+                db.execute(f'''
+                    UPDATE "account"
+                    SET     zakatable = {1 if status else 0},
+                            updated_at = "{str(datetime.datetime.now())}"
+                    WHERE   id = {account_id};
+                ''')
+            x = db.execute(f'''
+                SELECT  zakatable
+                FROM    "account"
+                WHERE   id = {account_id};
+            ''')
+            return True if x.fetchone()[0] else False
+        else:
+            account = Account.get(id=account_id)
+            if account:
+                if status is None:
+                    return account.zakatable
+                account.zakatable = status
                 return account.zakatable
-            account.zakatable = status
-            return account.zakatable
         return False
 
     @pony.db_session
@@ -2673,6 +2713,13 @@ class SQLModel(Model):
         return self._account_exists(account)
 
     def _account_exists(self, account: int) -> bool:
+        if self.raw_sql:
+            x = db.execute(f'''
+                SELECT  COUNT(*) > 0
+                FROM    "account"
+                WHERE   id = {account};
+            ''')
+            return True if x.fetchone()[0] else False
         return Account.exists(id=account)
 
     def files(self) -> list[dict[str, str | int]]:
@@ -2849,28 +2896,51 @@ class SQLModel(Model):
             print('_log', f'debug={debug}')
         if created is None:
             created = Helper.time()
-        account = Account.get(id=account_id)
-        if account:
-            try:
-                account.balance += value
-            except TypeError:
-                account.balance += Decimal(value)
-            account.count += 1
+        if self.raw_sql:
+            db.execute(f'''
+                UPDATE "account"
+                SET balance = COALESCE(balance, 0) + {value},
+                    count = COALESCE(count, 0) + 1,
+                    updated_at = "{str(datetime.datetime.now())}"
+                WHERE id = {account_id};
+            ''')
+        else:
+            account = Account.get(id=account_id)
+            if account:
+                try:
+                    account.balance += value
+                except TypeError:
+                    account.balance += Decimal(value)
+                account.count += 1
         if debug:
             print('create-log', created)
-        if self.log_exists(account_id, created):
+        if self._log_exists(account_id, created):
             raise ValueError(f"The log transaction happened again in the same nanosecond time({created}).")
         if debug:
             print('created-log', created)
-        Log(
-            account=account_id,
-            time=created,
-            record_date=datetime.datetime.now(),
-            value=value,
-            desc=desc,
-            ref=ref,
-            file={},
-        )
+        if self.raw_sql:
+            db.execute(f'''
+                INSERT INTO "log" (account_id, time, record_date, value, desc, ref, created_at)
+                            VALUES(
+                                {account_id},
+                                {created},
+                                "{str(datetime.datetime.now())}",
+                                {value},
+                                "{desc}",
+                                {ref if ref else 'NULL'},
+                                "{str(datetime.datetime.now())}"
+                            );
+            ''')
+        else:
+            Log(
+                account=account_id,
+                time=created,
+                record_date=datetime.datetime.now(),
+                value=value,
+                desc=desc,
+                ref=ref,
+                file={},
+            )
         return created
 
     def ref_exists(self, account_id: int, ref_type: str, ref: int) -> bool:
