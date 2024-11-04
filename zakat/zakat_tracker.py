@@ -302,16 +302,30 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
-                 debug: bool = False) -> dict:
+    def set_exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
+                     debug: bool = False) -> bool:
         """
-        This method is used to record or retrieve exchange rates for a specific account.
+        This method is used to record exchange rates for a specific account.
 
         Parameters:
         - account (int): The account number for which the exchange rate is being recorded or retrieved.
         - created (int): The timestamp of the exchange rate. If not provided, the current timestamp will be used.
         - rate (float): The exchange rate to be recorded. If not provided, the method will retrieve the latest exchange rate.
         - description (str): A description of the exchange rate.
+        - debug (bool): Whether to print debug information. Default is False.
+
+        Returns:
+        bool: True if exchange is created, False otherwise.
+        """
+
+    @abstractmethod
+    def exchange(self, account: int, created: int = None, debug: bool = False) -> dict:
+        """
+        This method is used to retrieve exchange rates for a specific account.
+
+        Parameters:
+        - account (int): The account number for which the exchange rate is being recorded or retrieved.
+        - created (int): The timestamp of the exchange rate. If not provided, the current timestamp will be used.
         - debug (bool): Whether to print debug information. Default is False.
 
         Returns:
@@ -1748,39 +1762,40 @@ class DictModel(Model):
             print('created-box', created)
         return created
 
-    def exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
-                 debug: bool = False) -> dict:
+    def set_exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
+                     debug: bool = False) -> bool:
         if debug:
             print('exchange', f'debug={debug}')
         if created is None:
             created = Helper.time()
         if not isinstance(account, int):
             raise ValueError(f'The account must be an integer, {type(account)} was provided.')
-        if rate is not None:
-            if rate <= 0:
-                return dict()
-            if not self.account_exists(account):
-                self.track(account=account, debug=debug)
-            if len(self._vault['account'][account]['exchange']) == 0 and rate <= 1:
-                return {"time": created, "rate": 1, "description": None}
-            self._vault['account'][account]['exchange'][created] = {"rate": rate, "description": description}
-            if debug:
-                print("exchange-created-1",
-                      f'account: {account}, created: {created}, rate:{rate}, description:{description}')
+        if rate <= 0:
+            return False
+        if not self.account_exists(account):
+            self.track(account=account, debug=debug)
+        self._vault['account'][account]['exchange'][created] = {"rate": rate, "description": description}
+        if debug:
+            print("exchange-created-1",
+                  f'account: {account}, created: {created}, rate:{rate}, description:{description}')
+        return True
 
+    def exchange(self, account: int, created: int = None, debug: bool = False) -> dict:
+        if not isinstance(account, int):
+            raise ValueError(f'The account must be an integer, {type(account)} was provided.')
+        if created is None:
+            created = Helper.time()
         if self.account_exists(account):
             valid_rates = [(ts, r) for ts, r in self._vault['account'][account]['exchange'].items() if ts <= created]
             if valid_rates:
                 latest_rate = max(valid_rates, key=lambda x: x[0])
                 if debug:
-                    print("exchange-read-1",
-                          f'account: {account}, created: {created}, rate:{rate}, description:{description}',
-                          'latest_rate', latest_rate)
+                    print("exchange-read-1", f'account={account}, created={created}, latest_rate={latest_rate}')
                 result = latest_rate[1]
                 result['time'] = latest_rate[0]
                 return result  # إرجاع قاموس يحتوي على المعدل والوصف
         if debug:
-            print("exchange-read-0", f'account: {account}, created: {created}, rate:{rate}, description:{description}')
+            print("exchange-read-0", f'account: {account}, created: {created}')
         return {"time": created, "rate": 1, "description": None}  # إرجاع القيمة الافتراضية مع وصف فارغ
 
     def add_file(self, account: int, ref: int, path: str) -> int:
@@ -2318,8 +2333,19 @@ class SQLModel(Model):
         self._base_path = base_path
         return str(self._vault_path)
 
+    @pony.db_session
     def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: int = None,
             debug: bool = False) \
+            -> tuple[
+                   int,
+                   list[
+                       tuple[int, int],
+                   ],
+               ] | tuple:
+        return self._sub(unscaled_value, desc, account, created, debug)
+
+    def _sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: int = None,
+             debug: bool = False) \
             -> tuple[
                    int,
                    list[
@@ -2333,36 +2359,35 @@ class SQLModel(Model):
         if not isinstance(account, int):
             raise ValueError(f'The account must be an integer, {type(account)} was provided.')
         if unscaled_value == 0:
-            ref = self.track(unscaled_value, '', account)
+            ref = self._track(unscaled_value, '', account)
             return ref, ref
         if created is None:
             created = Helper.time()
-        self.track(0, '', account)
+        self._track(0, '', account)
         value = Helper.scale(unscaled_value)
-        self.log(value=-value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
+        self._log(value=-value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
         target = value
         ages = []
-        with pony.db_session:
-            selected_account = Account.get(id=account)
-            boxes = selected_account.box.select().order_by(pony.desc(Box.id))[:]
-            if debug:
-                print('boxes', boxes)
-            for box in boxes:
-                if target == 0:
-                    break
-                rest = box.rest
-                if rest >= target:
-                    box.rest -= target
-                    ages.append((box.time, target))
-                    target = 0
-                    break
-                elif target > rest > 0:
-                    chunk = rest
-                    target -= chunk
-                    ages.append((box.time, chunk))
-                    box.rest = 0
+        selected_account = Account.get(id=account)
+        boxes = selected_account.box.select().order_by(pony.desc(Box.id))[:]
+        if debug:
+            print('boxes', boxes)
+        for box in boxes:
+            if target == 0:
+                break
+            rest = box.rest
+            if rest >= target:
+                box.rest -= target
+                ages.append((box.time, target))
+                target = 0
+                break
+            elif target > rest > 0:
+                chunk = rest
+                target -= chunk
+                ages.append((box.time, chunk))
+                box.rest = 0
         if target > 0:
-            self.track(
+            self._track(
                 unscaled_value=Helper.unscale(-target),
                 desc=desc,
                 account=account,
@@ -2372,148 +2397,179 @@ class SQLModel(Model):
             ages.append((created, target))
         return created, ages
 
+    @pony.db_session
     def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
               created: int = None, debug: bool = False) -> int:
+        return self._track(unscaled_value, desc, account, logging, created, debug)
+
+    def _track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
+               created: int = None, debug: bool = False) -> int:
         if debug:
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
         if created is None:
             created = Helper.time()
-        if not self.account_exists(account):
+        if not self._account_exists(account):
             if debug:
                 print(f"account {account} created")
-            with pony.db_session:
-                Account(
-                    id=account,
-                )
+            Account(
+                id=account,
+            )
         if unscaled_value == 0:
             return 0
         value = Helper.scale(unscaled_value)
-        with pony.db_session:
-            if logging:
-                self.log(value=value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
-            if debug:
-                print('creating-box', created)
-            if self.box_exists(account, created):
-                raise ValueError(f"The box transaction happened again in the same nanosecond time({created}).")
-            Box(
-                account=account,
-                time=created,
-                record_date=datetime.datetime.now(),
-                capital=value,
-                count=0,
-                last=None,
-                rest=value,
-                total=0,
-            )
-            if debug:
-                print('created-box', created)
+        if logging:
+            self._log(value=value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
+        if debug:
+            print('creating-box', created)
+        if self._box_exists(account, created):
+            raise ValueError(f"The box transaction happened again in the same nanosecond time({created}).")
+        Box(
+            account=account,
+            time=created,
+            record_date=datetime.datetime.now(),
+            capital=value,
+            count=0,
+            last=None,
+            rest=value,
+            total=0,
+        )
+        if debug:
+            print('created-box', created)
         return created
 
+    @pony.db_session
     def add_file(self, account: int, ref: int, path: str) -> int:
-        if self.account_exists(account):
-            with pony.db_session:
-                log = Log.get(time=ref)
-                if log:
-                    file_ref = Helper.time()
-                    File(
-                        log=log.id,
-                        time=file_ref,
-                        record_date=datetime.datetime.now(),
-                        path=path,
-                    )
-                    return file_ref
+        return self._add_file(account, ref, path)
+
+    def _add_file(self, account: int, ref: int, path: str) -> int:
+        if self._account_exists(account):
+            log = Log.get(time=ref)
+            if log:
+                file_ref = Helper.time()
+                File(
+                    log=log.id,
+                    time=file_ref,
+                    record_date=datetime.datetime.now(),
+                    path=path,
+                )
+                return file_ref
         return 0
 
+    @pony.db_session
     def remove_file(self, account: int, ref: int, file_ref: int) -> bool:
-        if self.account_exists(account):
-            if self.log_exists(account, ref):
-                with pony.db_session:
-                    file = File.get(time=file_ref)
-                    if file:
-                        file.delete()
-                        return True
+        return self._remove_file(account, ref, file_ref)
+
+    def _remove_file(self, account: int, ref: int, file_ref: int) -> bool:
+        if self._account_exists(account):
+            if self._log_exists(account, ref):
+                file = File.get(time=file_ref)
+                if file:
+                    file.delete()
+                    return True
         return False
 
+    @pony.db_session
     def hide(self, account_id: int, status: bool = None) -> bool:
-        with pony.db_session:
-            account = Account.get(id=account_id)
-            if account:
-                if status is None:
-                    return account.hide
-                account.hide = status
+        return self._hide(account_id, status)
+
+    def _hide(self, account_id: int, status: bool = None) -> bool:
+        account = Account.get(id=account_id)
+        if account:
+            if status is None:
                 return account.hide
+            account.hide = status
+            return account.hide
         return False
 
+    @pony.db_session
     def zakatable(self, account_id: int, status: bool = None) -> bool:
-        with pony.db_session:
-            account = Account.get(id=account_id)
-            if account:
-                if status is None:
-                    return account.zakatable
-                account.zakatable = status
+        return self._zakatable(account_id, status)
+
+    def _zakatable(self, account_id: int, status: bool = None) -> bool:
+        account = Account.get(id=account_id)
+        if account:
+            if status is None:
                 return account.zakatable
+            account.zakatable = status
+            return account.zakatable
         return False
 
+    @pony.db_session
     def name(self, account_id: int) -> str | None:
-        with pony.db_session:
-            account = Account.get(id=account_id)
-            if account:
-                return account.name
+        return self._name(account_id)
+
+    def _name(self, account_id: int) -> str | None:
+        account = Account.get(id=account_id)
+        if account:
+            return account.name
         return None
 
     def accounts(self) -> dict:
         pass
 
-    def exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
-                 debug: bool = False) -> dict:
+    @pony.db_session
+    def set_exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
+                     debug: bool = False) -> bool:
+        return self._set_exchange(account, created, rate, description, debug)
+
+    def _set_exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
+                      debug: bool = False) -> bool:
         if debug:
             print('exchange', f'debug={debug}')
         if created is None:
             created = Helper.time()
         if not isinstance(account, int):
             raise ValueError(f'The account must be an integer, {type(account)} was provided.')
-        if rate is not None:
-            if rate <= 0:
-                return dict()
-            if not self.account_exists(account):
-                self.track(account=account, debug=debug)
-            with pony.db_session:
-                if pony.count(Exchange.select(lambda e: e.account.id == account)) == 0 and rate <= 1:
-                    return {"time": created, "rate": 1, "description": None}
-                Exchange(
-                    account=account,
-                    rate=rate,
-                    desc=description if description else '',
-                    time=created,
-                    record_date=datetime.datetime.now(),
-                )
-            if debug:
-                print("exchange-created-1",
-                      f'account: {account}, created: {created}, rate:{rate}, description:{description}')
-
-        with pony.db_session:
-            exchange = Exchange.select(
-                lambda e: e.account.id == account and e.time <= created
-            ).order_by(pony.desc(Exchange.time)).first()
-            if debug:
-                print('valid_rates', exchange, type(exchange), exchange)
-            if exchange:
-                if debug:
-                    print("exchange-read-1",
-                          f'account: {account}, created: {created}, rate:{rate}, description:{description}',
-                          'latest_rate', exchange)
-                return {
-                    "time": exchange.time,
-                    "rate": exchange.rate,
-                    "description": exchange.desc if exchange.desc else None,
-                }
+        if rate <= 0:
+            return False
+        if not self._account_exists(account):
+            self._track(account=account, debug=debug)
+        Exchange(
+            account=account,
+            rate=rate,
+            desc=description if description else '',
+            time=created,
+            record_date=datetime.datetime.now(),
+        )
         if debug:
-            print("exchange-read-0", f'account: {account}, created: {created}, rate:{rate}, description:{description}')
+            print("exchange-created-1",
+                  f'account: {account}, created: {created}, rate:{rate}, description:{description}')
+        return True
+
+    @pony.db_session
+    def exchange(self, account: int, created: int = None, debug: bool = False) -> dict:
+        return self._exchange(account, created, debug)
+
+    def _exchange(self, account: int, created: int = None, debug: bool = False) -> dict:
+        if debug:
+            print('exchange', f'debug={debug}')
+        if not isinstance(account, int):
+            raise ValueError(f'The account must be an integer, {type(account)} was provided.')
+        if created is None:
+            created = Helper.time()
+        exchange = Exchange.select(
+            lambda e: e.account.id == account and e.time <= created
+        ).order_by(pony.desc(Exchange.time)).first()
+        if debug:
+            print('valid_rates', exchange, type(exchange), exchange)
+        if exchange:
+            if debug:
+                print("exchange-read-1", f'account={account}, created={created}, latest_rate={exchange}')
+            return {
+                "time": exchange.time,
+                "rate": exchange.rate,
+                "description": exchange.desc if exchange.desc else None,
+            }
+        if debug:
+            print("exchange-read-0", f'account: {account}, created: {created}')
         return {"time": created, "rate": 1, "description": None}  # إرجاع القيمة الافتراضية مع وصف فارغ
 
     @pony.db_session()
     def exchanges(self, account: int) -> dict | None:
-        if self.account_exists(account):
+        return self._exchanges(account)
+
+    def _exchanges(self, account: int) -> dict | None:
+        if self._account_exists(account):
             result = {}
             for exchange in Exchange.select(lambda e: e.account.id == account)[:]:
                 result[exchange.time] = exchange.to_dict()
@@ -2521,34 +2577,42 @@ class SQLModel(Model):
                 return result
         return None
 
+    @pony.db_session
     def account(self, name: str = None, ref: int = None) -> tuple[int, str] | None:
+        return self._account(name, ref)
+
+    def _account(self, name: str = None, ref: int = None) -> tuple[int, str] | None:
         if not name and not ref:
             return None
-        with pony.db_session:
-            if name and not ref:
-                account = Account.get(name=name)
-                if not account:
-                    account = Account(name=name)
-                    pony.commit()
+        if name and not ref:
+            account = Account.get(name=name)
+            if not account:
+                account = Account(name=name)
+                pony.commit()
+            return account.id, account.name
+        if ref and not name:
+            account = Account.get(id=ref)
+            if not account:
+                return None
+            return account.id, account.name
+        if name and ref:
+            account = Account.get(id=ref)
+            if account:
+                if account.name != name:
+                    account.name = name
                 return account.id, account.name
-            if ref and not name:
-                account = Account.get(id=ref)
-                if not account:
-                    return None
-                return account.id, account.name
-            if name and ref:
-                account = Account.get(id=ref)
-                if account:
-                    if account.name != name:
-                        account.name = name
-                    return account.id, account.name
-                account = Account(id=ref, name=name)
-                return account.id, account.name
+            account = Account(id=ref, name=name)
+            return account.id, account.name
 
     @pony.db_session
     def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
                  created: int = None,
                  debug: bool = False) -> list[int]:
+        return self._transfer(unscaled_amount, from_account, to_account, desc, created, debug)
+
+    def _transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
+                  created: int = None,
+                  debug: bool = False) -> list[int]:
         if debug:
             print('transfer', f'debug={debug}')
         if from_account == to_account:
@@ -2562,10 +2626,10 @@ class SQLModel(Model):
 
         if created is None:
             created = Helper.time()
-        (_, ages) = self.sub(unscaled_amount, desc, from_account, created, debug=debug)
+        (_, ages) = self._sub(unscaled_amount, desc, from_account, created, debug=debug)
         times = []
-        source_exchange = self.exchange(from_account, created)
-        target_exchange = self.exchange(to_account, created)
+        source_exchange = self._exchange(from_account, created)
+        target_exchange = self._exchange(to_account, created)
 
         if debug:
             print('ages', ages)
@@ -2585,20 +2649,20 @@ class SQLModel(Model):
                 if box.rest + target_amount > box.capital:
                     box.capital += target_amount
                 box.rest += target_amount
-                y = self.log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}',
-                             account_id=to_account,
-                             created=None, ref=None, debug=debug)
-                times.append((age+1, y))
+                y = self._log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}',
+                              account_id=to_account,
+                              created=None, ref=None, debug=debug)
+                times.append((age + 1, y))
                 continue
             if debug:
                 print(
                     f"Transfer(func) {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).")
-            y = self.track(
+            y = self._track(
                 unscaled_value=Helper.unscale(int(target_amount)),
                 desc=desc,
                 account=to_account,
                 logging=True,
-                created=age+1,
+                created=age + 1,
                 debug=debug,
             )
             times.append(y)
@@ -2606,6 +2670,9 @@ class SQLModel(Model):
 
     @pony.db_session
     def account_exists(self, account: int) -> bool:
+        return self._account_exists(account)
+
+    def _account_exists(self, account: int) -> bool:
         return Account.exists(id=account)
 
     def files(self) -> list[dict[str, str | int]]:
@@ -2614,40 +2681,55 @@ class SQLModel(Model):
     def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
         pass
 
+    @pony.db_session
     def logs(self, account_id: int) -> dict:
-        with pony.db_session:
-            account = Account.get(id=account_id)
-            if account:
-                return {l.time: l.to_dict() for l in account.log.select()[:]}
+        return self._logs(account_id)
+
+    def _logs(self, account_id: int) -> dict:
+        account = Account.get(id=account_id)
+        if account:
+            return {l.time: l.to_dict() for l in account.log.select()[:]}
         return {}
 
+    @pony.db_session
     def boxes(self, account_id: int) -> dict:
-        with pony.db_session:
-            account = Account.get(id=account_id)
-            if account:
-                return {b.time: b.to_dict() for b in account.box.select()[:]}
+        return self._boxes(account_id)
+
+    def _boxes(self, account_id: int) -> dict:
+        account = Account.get(id=account_id)
+        if account:
+            return {b.time: b.to_dict() for b in account.box.select()[:]}
         return {}
 
     @pony.db_session
     def balance(self, account_id: int = 1, cached: bool = True) -> int:
+        return self._balance(account_id, cached)
+
+    def _balance(self, account_id: int = 1, cached: bool = True) -> int:
         if not isinstance(account_id, int):
             raise ValueError(f'The account must be an integer, {type(account_id)} was provided.')
         if cached:
             return Account.get(id=account_id).balance
         return pony.sum(b.rest for b in Box if b.account.id == account_id)
 
+    @pony.db_session
     def box_size(self, account_id: int) -> int:
-        with pony.db_session:
-            account = Account.get(id=account_id)
-            if account:
-                return len(account.box)
+        return self._box_size(account_id)
+
+    def _box_size(self, account_id: int) -> int:
+        account = Account.get(id=account_id)
+        if account:
+            return len(account.box)
         return -1
 
+    @pony.db_session
     def log_size(self, account_id: int) -> int:
-        with pony.db_session:
-            account = Account.get(id=account_id)
-            if account:
-                return len(account.log)
+        return self._log_size(account_id)
+
+    def _log_size(self, account_id: int) -> int:
+        account = Account.get(id=account_id)
+        if account:
+            return len(account.log)
         return -1
 
     def save(self, path: str = None) -> bool:
@@ -2756,35 +2838,39 @@ class SQLModel(Model):
     def ext() -> str:
         return 'sqlite'
 
+    @pony.db_session
     def log(self, value: float, desc: str = '', account_id: int = 1, created: int = None, ref: int = None,
             debug: bool = False) -> int:
+        return self._log(value, desc, account_id, created, ref, debug)
+
+    def _log(self, value: float, desc: str = '', account_id: int = 1, created: int = None, ref: int = None,
+             debug: bool = False) -> int:
         if debug:
             print('_log', f'debug={debug}')
         if created is None:
             created = Helper.time()
-        with pony.db_session:
-            account = Account.get(id=account_id)
-            if account:
-                try:
-                    account.balance += value
-                except TypeError:
-                    account.balance += Decimal(value)
-                account.count += 1
-            if debug:
-                print('create-log', created)
-            if self.log_exists(account_id, created):
-                raise ValueError(f"The log transaction happened again in the same nanosecond time({created}).")
-            if debug:
-                print('created-log', created)
-            Log(
-                account=account_id,
-                time=created,
-                record_date=datetime.datetime.now(),
-                value=value,
-                desc=desc,
-                ref=ref,
-                file={},
-            )
+        account = Account.get(id=account_id)
+        if account:
+            try:
+                account.balance += value
+            except TypeError:
+                account.balance += Decimal(value)
+            account.count += 1
+        if debug:
+            print('create-log', created)
+        if self.log_exists(account_id, created):
+            raise ValueError(f"The log transaction happened again in the same nanosecond time({created}).")
+        if debug:
+            print('created-log', created)
+        Log(
+            account=account_id,
+            time=created,
+            record_date=datetime.datetime.now(),
+            value=value,
+            desc=desc,
+            ref=ref,
+            file={},
+        )
         return created
 
     def ref_exists(self, account_id: int, ref_type: str, ref: int) -> bool:
@@ -2797,12 +2883,18 @@ class SQLModel(Model):
                 return Log.exists(account=account_id, time=ref)
         return False
 
-    @pony.db_session()
+    @pony.db_session
     def box_exists(self, account_id: int, ref: int) -> bool:
+        return self._box_exists(account_id, ref)
+
+    def _box_exists(self, account_id: int, ref: int) -> bool:
         return self.ref_exists(account_id=account_id, ref_type='box', ref=ref)
 
-    @pony.db_session()
+    @pony.db_session
     def log_exists(self, account_id: int, ref: int) -> bool:
+        return self._log_exists(account_id, ref)
+
+    def _log_exists(self, account_id: int, ref: int) -> bool:
         return self.ref_exists(account_id=account_id, ref_type='log', ref=ref)
 
     def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) -> dict[
@@ -3014,7 +3106,7 @@ class ZakatTracker:
                         decimal_places=scale_decimal_places,
                     ) if scale_decimal_places > 0 else unscaled_value
                     if rate > 0:
-                        self.db.exchange(account=account_ref, created=date, rate=rate)
+                        self.db.set_exchange(account=account_ref, created=date, rate=rate)
                     if value > 0:
                         self.db.track(unscaled_value=value, desc=desc, account=account_ref, logging=True, created=date)
                     elif value < 0:
@@ -3038,9 +3130,9 @@ class ZakatTracker:
                 account1_ref, _ = self.db.account(name=account1)
                 account2_ref, _ = self.db.account(name=account2)
                 if rate1 > 0:
-                    self.db.exchange(account1_ref, created=date1, rate=rate1)
+                    self.db.set_exchange(account1_ref, created=date1, rate=rate1)
                 if rate2 > 0:
-                    self.db.exchange(account2_ref, created=date2, rate=rate2)
+                    self.db.set_exchange(account2_ref, created=date2, rate=rate2)
                 value1 = Helper.unscale(
                     unscaled_value1,
                     decimal_places=scale_decimal_places,
@@ -3411,10 +3503,10 @@ class ZakatTracker:
             account_cash_ref, _ = self.db.account(name='cash')
             account_bank_ref, _ = self.db.account(name='bank')
 
-            self.db.exchange(account_cash_ref, created=25, rate=3.75, description="2024-06-25", debug=debug)
-            self.db.exchange(account_cash_ref, created=22, rate=3.73, description="2024-06-22", debug=debug)
-            self.db.exchange(account_cash_ref, created=15, rate=3.69, description="2024-06-15", debug=debug)
-            self.db.exchange(account_cash_ref, created=10, rate=3.66, debug=debug)
+            self.db.set_exchange(account_cash_ref, created=25, rate=3.75, description="2024-06-25", debug=debug)
+            self.db.set_exchange(account_cash_ref, created=22, rate=3.73, description="2024-06-22", debug=debug)
+            self.db.set_exchange(account_cash_ref, created=15, rate=3.69, description="2024-06-15", debug=debug)
+            self.db.set_exchange(account_cash_ref, created=10, rate=3.66, debug=debug)
 
             for i in range(1, 30):
                 exchange = self.db.exchange(account_cash_ref, created=i, debug=debug)
@@ -3458,32 +3550,34 @@ class ZakatTracker:
 
             self.db.reset()
 
-            # حفظ أسعار الصرف باستخدام التواريخ بالنانو ثانية
-            self.db.exchange(account_cash_ref, created=Helper.day_to_time(25), rate=3.75, description="2024-06-25",
-                             debug=debug)
-            self.db.exchange(account_cash_ref, created=Helper.day_to_time(22), rate=3.73, description="2024-06-22",
-                             debug=debug)
-            self.db.exchange(account_cash_ref, created=Helper.day_to_time(15), rate=3.69, description="2024-06-15",
-                             debug=debug)
-            self.db.exchange(account_cash_ref, created=Helper.day_to_time(10), rate=3.66, debug=debug)
+            account_cash_ref, _ = self.db.account(name='cash')
 
-            account_test_ref, _ = self.db.account(name='test')
+            # حفظ أسعار الصرف باستخدام التواريخ بالنانو ثانية
+            self.db.set_exchange(account_cash_ref, created=Helper.day_to_time(25), rate=3.75, description="2024-06-25",
+                                 debug=debug)
+            self.db.set_exchange(account_cash_ref, created=Helper.day_to_time(22), rate=3.73, description="2024-06-22",
+                                 debug=debug)
+            self.db.set_exchange(account_cash_ref, created=Helper.day_to_time(15), rate=3.69, description="2024-06-15",
+                                 debug=debug)
+            self.db.set_exchange(account_cash_ref, created=Helper.day_to_time(10), rate=3.66, debug=debug)
+
+            account_test_ref, _ = self.db.account(name='test-negative-to-positive')
 
             for i in [x * 0.12 for x in range(-15, 21)]:
                 if i <= 0:
-                    exchange_count = len(
-                        self.db.exchange(account_test_ref, created=Helper.time(), rate=i, description=f"range({i})",
-                                         debug=debug))
+                    assert not self.db.set_exchange(account_test_ref, created=Helper.time(), rate=i,
+                                                    description=f"range({i})", debug=debug)
+                    result = self.db.exchange(account_test_ref, created=Helper.time(), debug=debug)
                     if debug:
-                        print(f'exchange_count = {exchange_count}')
-                    assert exchange_count == 0
+                        print(f'exchange = {result}')
+                    assert result['rate'] == 1
                 else:
-                    exchange_count = len(
-                        self.db.exchange(account_test_ref, created=Helper.time(), rate=i, description=f"range({i})",
-                                         debug=debug))
+                    assert self.db.set_exchange(account_test_ref, created=Helper.time(), rate=i,
+                                                description=f"range({i})", debug=debug)
+                    result = self.db.exchange(account_test_ref, created=Helper.time(), debug=debug)
                     if debug:
-                        print(f'exchange_count = {exchange_count}')
-                    assert exchange_count > 0
+                        print(f'exchange = {result}')
+                    assert result['rate'] != 1
 
             # اختبار النتائج باستخدام التواريخ بالنانو ثانية
             for i in range(1, 31):
@@ -3609,14 +3703,16 @@ class ZakatTracker:
                 ages_fresh_balance = self.db.balance(account_ages_ref, False)
                 rest = case[total]['rest']
                 if debug:
-                    print('source', f'cache_balance={ages_cache_balance}, fresh_balance={ages_fresh_balance}, rest={rest}')
+                    print('source',
+                          f'cache_balance={ages_cache_balance}, fresh_balance={ages_fresh_balance}, rest={rest}')
                 assert ages_cache_balance == rest
                 assert ages_fresh_balance == rest
 
                 future_cache_balance = self.db.balance(account_future_ref)
                 future_fresh_balance = self.db.balance(account_future_ref, False)
                 if debug:
-                    print('target', f'cache_balance={future_cache_balance}, fresh_balance={future_fresh_balance}, total={total}')
+                    print('target',
+                          f'cache_balance={future_cache_balance}, fresh_balance={future_fresh_balance}, total={total}')
                     print('refs', refs)
                 assert future_cache_balance == total
                 assert future_fresh_balance == total
@@ -3900,7 +3996,7 @@ class ZakatTracker:
                         assert t_exchange['rate'] == expected_rate
                     case 2:  # do-exchange
                         _, account, rate = case
-                        self.db.exchange(account, rate=rate, debug=debug)
+                        self.db.set_exchange(account, rate=rate, debug=debug)
                         b_exchange = self.db.exchange(account, created=Helper.time(), debug=debug)
                         if debug:
                             print('b-exchange', b_exchange)
@@ -4041,7 +4137,7 @@ class ZakatTracker:
                         print(f"############# check(rate: {rate}) #############")
                         print('case', case)
                     self.db.reset()
-                    self.db.exchange(account=case[1], created=case[2], rate=rate)
+                    self.db.set_exchange(account=case[1], created=case[2], rate=rate)
                     self.db.track(
                         unscaled_value=case[0],
                         desc='test-check',

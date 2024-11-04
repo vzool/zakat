@@ -5,7 +5,6 @@ from pathlib import Path
 
 from zakat import (
     ZakatTracker,
-    ActionEnum,
     start_file_server,
     find_available_port,
     FileType,
