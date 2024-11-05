@@ -239,11 +239,11 @@ class Model(ABC):
         Example:
         >>> tracker = ZakatTracker()
         >>> ref = tracker.db.track(51, 'desc', 1) # 'account1'
-        >>> tracker.db.hide(1)  # Set the hide status of 'account1' to True
+        >>> tracker.db.hide(1)  # Get the hide status of 'account1', which is False by default
         False
         >>> tracker.db.hide(1, True)  # Set the hide status of 'account1' to True
         True
-        >>> tracker.db.hide(1)  # Get the hide status of 'account1' by default
+        >>> tracker.db.hide(1)  # Get the hide status of 'account1'
         True
         >>> tracker.db.hide(1, False)
         False
@@ -622,6 +622,15 @@ class Model(ABC):
         """
 
     @abstractmethod
+    def file_exists(self) -> bool:
+        """
+        Determines whether the file associated with this object exists.
+
+        Returns:
+        bool: True if the file exists, False otherwise.
+        """
+
+    @abstractmethod
     def import_csv_cache_path(self):
         """
         Generates the cache file path for imported CSV data.
@@ -768,14 +777,14 @@ class Model(ABC):
               False if the snapshot creation fails.
         """
 
-    @staticmethod
     @abstractmethod
-    def ext() -> str:
+    def ext(self) -> str | None:
         """
-        Returns the file extension used by the ZakatTracker class.
+        Returns the file extension of the current object.
 
         Returns:
-        str: The file extension used by the ZakatTracker class, which is 'camel' or 'sqlite'.
+        str | None: The file extension as a string like ('camel', 'sqlite', ..., etc.),
+                    or None if the extension is not available.
         """
 
     @abstractmethod
@@ -1403,6 +1412,9 @@ class DictModel(Model):
         self._base_path = base_path
         return str(self._vault_path)
 
+    def file_exists(self) -> bool:
+        return True
+
     def reset(self) -> None:
         self._vault = {
             'account': {},
@@ -1410,8 +1422,7 @@ class DictModel(Model):
             'report': {},
         }
 
-    @staticmethod
-    def ext() -> str:
+    def ext(self) -> str | None:
         return 'camel'
 
     def base_path(self, *args) -> str:
@@ -2305,12 +2316,14 @@ class SQLModel(Model):
         self._config_path = None
         self._db_path = None
         self.debug = False
+        self._file_exists = False
         self.raw_sql = True
 
         if str.lower(db_params['provider']) == 'sqlite' and 'filename' in db_params:
             db_params['filename'] = str(self.path(db_params['filename']))
             self._db_path = db_params['filename']
             self._config_path = str(self._base_path / 'config.db')
+            self._file_exists = True
         else:
             self._config_path = str(self.path('config.db'))
         self.config = ConfigManager(db_file=self._config_path)
@@ -2335,6 +2348,9 @@ class SQLModel(Model):
         base_path.mkdir(parents=True, exist_ok=True)
         self._base_path = base_path
         return str(self._vault_path)
+
+    def file_exists(self) -> bool:
+        return self._file_exists
 
     @pony.db_session
     def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: int = None,
@@ -2826,7 +2842,13 @@ class SQLModel(Model):
         pass
 
     def import_csv_cache_path(self):
-        pass
+        path = str(self.path())
+        ext = self.ext()
+        ext_len = len(ext)
+        if path.endswith(f'.{ext}'):
+            path = path[:-ext_len - 1]
+        _, filename = os.path.split(f'{path}.import_csv.{ext}.camel')
+        return f'{self._base_path}/{filename}'
 
     def daily_logs(self, weekday: WeekDay = WeekDay.Friday, debug: bool = False):
         return {
@@ -2898,9 +2920,8 @@ class SQLModel(Model):
     def snapshot(self) -> bool:
         pass
 
-    @staticmethod
-    def ext() -> str:
-        return 'sqlite'
+    def ext(self) -> str | None:
+        return 'sqlite' if self._file_exists else None
 
     @pony.db_session
     def log(self, value: float, desc: str = '', account_id: int = 1, created: int = None, ref: int = None,

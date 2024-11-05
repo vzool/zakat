@@ -28,6 +28,9 @@
       <filter id="25e4c73a-b825-408b-bbd9-be5cdcb90453" name="Filter" temporary="false" custom-name="false" type="basic" join-type="AND" />
     </filter-actions>
   </component>
+  <component name="DBNavigator.Project.ExecutionManager">
+    <retain-sticky-names value="false" />
+  </component>
   <component name="DBNavigator.Project.ObjectQuickFilterManager">
     <last-used-operator value="EQUAL" />
     <filters />
