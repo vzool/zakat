@@ -971,6 +971,7 @@ class Helper:
                 Helper.time_diff_ms = ceil(diff)
             sleep(Helper.time_diff_ms)
             new_time = Helper._time(now)
+        Helper.last_time = new_time
         return new_time
 
     @staticmethod
