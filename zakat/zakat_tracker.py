@@ -61,7 +61,7 @@ import datetime
 import hashlib
 from time import sleep
 from pprint import PrettyPrinter as pp
-from math import floor
+from math import floor, ceil
 from enum import Enum, auto
 from decimal import Decimal
 from typing import Dict, Any
@@ -905,7 +905,7 @@ class Helper:
     time_diff_ms = None
 
     @staticmethod
-    def minimum_time_diff_ms() -> float:
+    def minimum_time_diff_ms() -> tuple[float, int]:
         """
         Calculates the minimum time difference between two consecutive calls to
         `Helper._time()` in milliseconds.
@@ -915,12 +915,15 @@ class Helper:
         same value due to clock resolution limitations.
 
         Returns:
-        float: The minimum time difference in milliseconds.
+        tuple[float, int]:
+            - The minimum time difference in milliseconds.
+            - The number of iterations required to measure the difference.
         """
-        return Helper.minimum_time_diff_ns() / 1_000_000
+        diff, i = Helper.minimum_time_diff_ns()
+        return diff / 1_000_000, i
 
     @staticmethod
-    def minimum_time_diff_ns() -> int:
+    def minimum_time_diff_ns() -> tuple[int, int]:
         """
         Calculates the minimum time difference between two consecutive calls to
         `Helper._time()` in nanoseconds.
@@ -929,12 +932,16 @@ class Helper:
         time measurements within the system.
 
         Returns:
-        int: The minimum time difference in nanoseconds.
+        tuple[int, int]:
+            - The minimum time difference in nanoseconds.
+            - The number of iterations required to measure the difference.
         """
+        i = 0
         x = y = Helper._time()
         while x == y:
             y = Helper._time()
-        return y - x
+            i += 1
+        return y - x, i
 
     @staticmethod
     def time(now: datetime = None) -> int:
@@ -955,9 +962,13 @@ class Helper:
             before 1970 will return in negative until 1000AD.
         """
         new_time = Helper._time(now)
+        if Helper.last_time is None:
+            Helper.last_time = new_time
+            return new_time
         while new_time == Helper.last_time:
             if Helper.time_diff_ms is None:
-                Helper.time_diff_ms = Helper.minimum_time_diff_ms()
+                diff, _ = Helper.minimum_time_diff_ms()
+                Helper.time_diff_ms = ceil(diff)
             sleep(Helper.time_diff_ms)
             new_time = Helper._time(now)
         return new_time
@@ -1376,12 +1387,12 @@ class Helper:
 
         # sanity check - forward time difference
 
-        time_diff_ns = Helper.minimum_time_diff_ns()
-        time_diff_ms = Helper.minimum_time_diff_ms()
+        time_diff_ns, time_diff_ns_count = Helper.minimum_time_diff_ns()
+        time_diff_ms, time_diff_ms_count = Helper.minimum_time_diff_ms()
         if debug:
             print(f'is_windows = {Helper.is_windows()}')
-            print(f'time_diff_ns = {time_diff_ns}')
-            print(f'time_diff_ms = {time_diff_ms}')
+            print(f'time_diff_ns = {time_diff_ns}, count = {time_diff_ns_count}')
+            print(f'time_diff_ms = {time_diff_ms}, count = {time_diff_ms_count}')
         limit = 18 if Helper.is_windows() else 1  # for windows >= 18ms, other >= 1
         assert limit >= time_diff_ms > 0
 
