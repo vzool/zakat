@@ -4,6 +4,7 @@ from zakat import ZakatTracker, Helper, DictModel
 
 def test_zakat_tracker():
     durations = {}
+    Helper.test(debug=True)
     for model in [
         DictModel(db_path="./zakat_test_db/zakat.camel"),
         # SQLiteModel(db_path="./zakat_test_db/zakat.sqlite"),
