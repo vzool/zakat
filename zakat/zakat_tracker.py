@@ -1401,7 +1401,7 @@ class Helper:
 
         xlist = []
         limit = 1000
-        for _ in range(limit):
+        for i in range(limit):
             y = Helper.time()
             z = '-'
             if y not in xlist:
@@ -1409,7 +1409,7 @@ class Helper:
             else:
                 z = 'x'
             if debug:
-                print(z, y)
+                print(z, y, f'[{i}/{limit}]')
         xx = len(xlist)
         if debug:
             print('count', xx, ' - unique: ', (xx / limit) * 100, '%')
