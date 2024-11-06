@@ -66,7 +66,7 @@ from enum import Enum, auto
 from decimal import Decimal
 from typing import Dict, Any
 from pathlib import Path
-from time import time_ns
+from time import time_ns, sleep
 from camelx import Camel, CamelRegistry
 import shutil
 from abc import ABC, abstractmethod
@@ -880,6 +880,109 @@ class Model(ABC):
 
 
 class Helper:
+    """
+    A collection of helper functions for various tasks.
+
+    This class provides a set of static methods for common operations including:
+
+    - High-resolution timestamping
+    - Zakat calculations (Islamic obligatory alms-giving)
+    - Currency exchange calculations
+    - Lunar year calculations
+    - Payment validation
+    - Memory size estimation
+    - Numeric scaling and unscaling
+    - Date/time conversions
+    - Human-readable size formatting
+    - File hashing
+    - Time duration formatting
+
+    These functions are designed to be reusable and efficient for various applications.
+    """
+
+    last_time = None
+    time_diff_ms = None
+
+    @staticmethod
+    def minimum_time_diff_ms() -> float:
+        """
+        Calculates the minimum time difference between two consecutive calls to
+        `Helper._time()` in milliseconds.
+
+        This method is used internally to ensure consistent time measurements
+        even when system calls like `datetime.datetime.now()` might return the
+        same value due to clock resolution limitations.
+
+        Returns:
+        float: The minimum time difference in milliseconds.
+        """
+        return Helper.minimum_time_diff_ns() / 1_000_000
+
+    @staticmethod
+    def minimum_time_diff_ns() -> int:
+        """
+        Calculates the minimum time difference between two consecutive calls to
+        `Helper._time()` in nanoseconds.
+
+        This method is used internally to determine the minimum granularity of
+        time measurements within the system.
+
+        Returns:
+        int: The minimum time difference in nanoseconds.
+        """
+        x = y = Helper._time()
+        while x == y:
+            y = Helper._time()
+        return y - x
+
+    @staticmethod
+    def time(now: datetime = None) -> int:
+        """
+        Gets a high-resolution timestamp in nanoseconds.
+
+        This method attempts to obtain a timestamp with a minimum granularity
+        determined by `minimum_time_diff_ms()`. If consecutive calls to
+        `datetime.datetime.now()` return the same value, it waits for a minimum
+        time difference before returning a new timestamp.
+
+        Parameters:
+        now (datetime, optional): A specific datetime object to use as
+            the timestamp. Defaults to None, which uses `datetime.datetime.now()`.
+
+        Returns:
+        int: The timestamp in nanoseconds since the Unix epoch (January 1, 1970),
+            before 1970 will return in negative until 1000AD.
+        """
+        new_time = Helper._time(now)
+        while new_time == Helper.last_time:
+            if Helper.time_diff_ms is None:
+                Helper.time_diff_ms = Helper.minimum_time_diff_ms()
+            sleep(Helper.time_diff_ms)
+            new_time = Helper._time(now)
+        return new_time
+
+    @staticmethod
+    def _time(now: datetime = None) -> int:
+        """
+        Converts a datetime object to a high-resolution timestamp in nanoseconds.
+
+        This method calculates a timestamp by combining the ordinal day (number
+        of days since a reference date) and nanoseconds within the day.
+
+        Parameters:
+        now (datetime, optional): A specific datetime object to use as
+                the timestamp. Defaults to None, which uses `datetime.datetime.now()`.
+
+        Returns:
+        int: The timestamp in nanoseconds since the Unix epoch (January 1, 1970),
+            before 1970 will return in negative until 1000AD.
+        """
+        if now is None:
+            now = datetime.datetime.now()
+        ordinal_day = now.toordinal()
+        ns_in_day = (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds() * 10 ** 9
+        return int((ordinal_day - 719_163) * 86_400_000_000_000 + ns_in_day)
+
     @staticmethod
     def ZakatCut(x: float) -> float:
         """
@@ -1102,25 +1205,6 @@ class Helper:
         return round(return_type(x / (10 ** decimal_places)), decimal_places)
 
     @staticmethod
-    def time(now: datetime = None) -> int:
-        """
-        Generates a timestamp based on the provided datetime object or the current datetime.
-
-        Parameters:
-        now (datetime, optional): The datetime object to generate the timestamp from.
-        If not provided, the current datetime is used.
-
-        Returns:
-        int: The timestamp in positive nanoseconds since the Unix epoch (January 1, 1970),
-            before 1970 will return in negative until 1000AD.
-        """
-        if now is None:
-            now = datetime.datetime.now()
-        ordinal_day = now.toordinal()
-        ns_in_day = (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds() * 10 ** 9
-        return int((ordinal_day - 719_163) * 86_400_000_000_000 + ns_in_day)
-
-    @staticmethod
     def time_to_datetime(ordinal_ns: int) -> datetime:
         """
         Converts an ordinal number (number of days since 1000-01-01) to a datetime object.
@@ -1273,6 +1357,15 @@ class Helper:
 
     @staticmethod
     def test(debug: bool = False):
+
+        # sanity check - forward time difference
+
+        time_diff_ns = Helper.minimum_time_diff_ns()
+        time_diff_ms = Helper.minimum_time_diff_ms()
+        if debug:
+            print(f'time_diff_ns = {time_diff_ns}')
+            print(f'time_diff_ms = {time_diff_ms}')
+        assert 1 >= time_diff_ms > 0
 
         # sanity check - random forward time
 

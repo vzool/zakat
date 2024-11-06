@@ -29,7 +29,7 @@ jobs:
           macos-latest,
           # windows-2016,
           # windows-2019,
-          # windows-latest,
+          windows-latest,
         ]
     steps:
     - uses: actions/checkout@v4
