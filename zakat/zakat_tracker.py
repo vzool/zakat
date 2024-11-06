@@ -896,6 +896,7 @@ class Helper:
     - Human-readable size formatting
     - File hashing
     - Time duration formatting
+    - Checks if the operating system is Windows
 
     These functions are designed to be reusable and efficient for various applications.
     """
@@ -982,6 +983,21 @@ class Helper:
         ordinal_day = now.toordinal()
         ns_in_day = (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds() * 10 ** 9
         return int((ordinal_day - 719_163) * 86_400_000_000_000 + ns_in_day)
+
+    @staticmethod
+    def is_windows() -> bool:
+        """
+        Checks if the operating system is Windows.
+
+        This static method uses two checks to determine if the platform is Windows:
+
+        1. Checks if `sys.platform` is equal to 'win32'.
+        2. Checks if `os.name` is equal to 'nt'.
+
+        Returns:
+        bool: True if the platform is Windows, False otherwise.
+        """
+        return sys.platform == 'win32' or os.name == 'nt'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1363,9 +1379,11 @@ class Helper:
         time_diff_ns = Helper.minimum_time_diff_ns()
         time_diff_ms = Helper.minimum_time_diff_ms()
         if debug:
+            print(f'is_windows = {Helper.is_windows()}')
             print(f'time_diff_ns = {time_diff_ns}')
             print(f'time_diff_ms = {time_diff_ms}')
-        assert 1 >= time_diff_ms > 0
+        limit = 18 if Helper.is_windows() else 1  # for windows >= 18ms, other >= 1
+        assert limit >= time_diff_ms > 0
 
         # sanity check - random forward time
 
