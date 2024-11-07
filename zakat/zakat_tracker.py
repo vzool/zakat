@@ -969,7 +969,7 @@ class Helper:
             if Helper.time_diff_ms is None:
                 diff, _ = Helper.minimum_time_diff_ms()
                 Helper.time_diff_ms = ceil(diff)
-            sleep(Helper.time_diff_ms)
+            sleep(Helper.time_diff_ms / 1_000)
             new_time = Helper._time(now)
         Helper.last_time = new_time
         return new_time
@@ -1417,17 +1417,25 @@ class Helper:
 
         # sanity check - convert date since 1000AD
 
-        for year in range(1000, 9000):
-            ns = Helper.time(datetime.datetime.strptime(f"{year}-12-30 18:30:45", "%Y-%m-%d %H:%M:%S"))
+        month = 12
+        day = 27
+        hour = 18
+        minute = 30
+        second = 45
+        for year in range(1000, 9999):
+            ns = Helper.time(datetime.datetime.strptime(
+                f"{year}-{month}-{day} {hour}:{minute}:{second}", "%Y-%m-%d %H:%M:%S"
+            ))
             date = Helper.time_to_datetime(ns)
             if debug:
-                print(date)
+                print(date,
+                      f'year({date.year} = {year}), month({date.month} = {month}), day({date.day} = {day}), hour({date.hour} = {hour}), minute({date.minute} = {minute})')
             assert date.year == year
-            assert date.month == 12
-            assert date.day == 30
-            assert date.hour == 18
-            assert date.minute == 30
-            assert date.second in [44, 45]
+            assert date.month == month
+            assert date.day == day
+            assert date.hour == hour
+            assert date.minute == minute
+            assert date.second in [second - 1, second]
 
         # human_readable_size
 
