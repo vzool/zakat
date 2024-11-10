@@ -59,14 +59,13 @@ import json
 import random
 import datetime
 import hashlib
-from time import sleep
+from time import sleep, time_ns
 from pprint import PrettyPrinter as pp
 from math import floor, ceil
 from enum import Enum, auto
 from decimal import Decimal
 from typing import Dict, Any
 from pathlib import Path
-from time import time_ns, sleep
 from camelx import Camel, CamelRegistry
 import shutil
 from abc import ABC, abstractmethod
@@ -132,14 +131,14 @@ class Model(ABC):
         The function also creates the necessary directories if the provided path is a file.
 
         Parameters:
-        path (str): The new path to the database file. If not provided, the current path is returned.
+        path (str, Optional): The new path to the database file. If not provided, the current path is returned.
 
         Returns:
         str: The current or new path to the database file.
         """
 
     @abstractmethod
-    def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: int = None,
+    def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: datetime = None,
             debug: bool = False) \
             -> tuple[
                    int,
@@ -152,10 +151,10 @@ class Model(ABC):
 
         Parameters:
         unscaled_value (float | int | Decimal): The amount to be subtracted.
-        desc (str): A description for the transaction. Defaults to an empty string.
-        account (int): The account number from which the value will be subtracted. Defaults to '1'.
-        created (int): The timestamp of the transaction. If not provided, the current timestamp will be used.
-        debug (bool): A flag indicating whether to print debug information. Defaults to False.
+        desc (str, Optional): A description for the transaction. Defaults to an empty string.
+        account (int, Optional): The account number from which the value will be subtracted. Defaults to '1'.
+        created (datetime, Optional): The datetime of the transaction. If not provided, the current datetime will be used.
+        debug (bool, Optional): A flag indicating whether to print debug information. Defaults to False.
 
         Returns:
         tuple: A tuple containing the timestamp of the transaction and a list of tuples representing the age of each transaction.
@@ -170,18 +169,18 @@ class Model(ABC):
 
     @abstractmethod
     def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
-              created: int = None,
+              created: datetime = None,
               debug: bool = False) -> int:
         """
         This function tracks a transaction for a specific account.
 
         Parameters:
         unscaled_value (float | int | Decimal): The value of the transaction. Default is 0.
-        desc (str): The description of the transaction. Default is an empty string.
-        account (int): The account for which the transaction is being tracked. Default is '1'.
-        logging (bool): Whether to log the transaction. Default is True.
-        created (int): The timestamp of the transaction. If not provided, it will be generated. Default is None.
-        debug (bool): Whether to print debug information. Default is False.
+        desc (str, Optional): The description of the transaction. Default is an empty string.
+        account (int, Optional): The account for which the transaction is being tracked. Default is '1'.
+        logging (bool, Optional): Whether to log the transaction. Default is True.
+        created (datetime, Optional): The datetime of the transaction. If not provided, it will be generated. Default is None.
+        debug (bool, Optional): Whether to print debug information. Default is False.
 
         Returns:
         int: The timestamp of the transaction.
@@ -302,31 +301,31 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def set_exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
+    def set_exchange(self, account: int, created: datetime = None, rate: float = None, description: str = None,
                      debug: bool = False) -> bool:
         """
         This method is used to record exchange rates for a specific account.
 
         Parameters:
         - account (int): The account number for which the exchange rate is being recorded or retrieved.
-        - created (int): The timestamp of the exchange rate. If not provided, the current timestamp will be used.
-        - rate (float): The exchange rate to be recorded. If not provided, the method will retrieve the latest exchange rate.
-        - description (str): A description of the exchange rate.
-        - debug (bool): Whether to print debug information. Default is False.
+        - created (datetime, Optional): The datetime of the exchange rate. If not provided, the current datetime will be used.
+        - rate (float, Optional): The exchange rate to be recorded. If not provided, the method will retrieve the latest exchange rate.
+        - description (str, Optional): A description of the exchange rate.
+        - debug (bool, Optional): Whether to print debug information. Default is False.
 
         Returns:
         bool: True if exchange is created, False otherwise.
         """
 
     @abstractmethod
-    def exchange(self, account: int, created: int = None, debug: bool = False) -> dict:
+    def exchange(self, account: int, created: datetime = None, debug: bool = False) -> dict:
         """
         This method is used to retrieve exchange rates for a specific account.
 
         Parameters:
         - account (int): The account number for which the exchange rate is being recorded or retrieved.
-        - created (int): The timestamp of the exchange rate. If not provided, the current timestamp will be used.
-        - debug (bool): Whether to print debug information. Default is False.
+        - created (datetime, Optional): The datetime of the exchange rate. If not provided, the current datetime will be used.
+        - debug (bool, Optional): Whether to print debug information. Default is False.
 
         Returns:
         - dict: A dictionary containing the latest exchange rate and its description. If no exchange rate is found,
@@ -388,7 +387,7 @@ class Model(ABC):
 
     @abstractmethod
     def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
-                 created: int = None,
+                 created: datetime = None,
                  debug: bool = False) -> list[int]:
         """
         Transfers a specified value from one account to another.
@@ -398,8 +397,8 @@ class Model(ABC):
         from_account (int): The account number from which the value will be transferred.
         to_account (int): The account number to which the value will be transferred.
         desc (str, optional): A description for the transaction. Defaults to an empty string.
-        created (int, optional): The timestamp of the transaction. If not provided, the current timestamp will be used.
-        debug (bool): A flag indicating whether to print debug information. Defaults to False.
+        created (datetime, optional): The datetime of the transaction. If not provided, the current datetime will be used.
+        debug (bool, Optional): A flag indicating whether to print debug information. Defaults to False.
 
         Returns:
         list[int]: A list of timestamps corresponding to the transactions made during the transfer.
@@ -459,7 +458,7 @@ class Model(ABC):
         (e.g., KB, MB).
 
         Parameters:
-        ignore_ram (bool): Whether to ignore the RAM size. Default is True
+        ignore_ram (bool, Optional): Whether to ignore the RAM size. Default is True
 
         Returns:
         dict[str, tuple]: A dictionary containing the following statistics:
@@ -511,8 +510,8 @@ class Model(ABC):
         Calculate and return the balance of a specific account.
 
         Parameters:
-        account_id (int): The account number. Default is '1'.
-        cached (bool): If True, use the cached balance. If False, calculate the balance from the box. Default is True.
+        account_id (int, Optional): The account number. Default is '1'.
+        cached (bool, Optional): If True, use the cached balance. If False, calculate the balance from the box. Default is True.
 
         Returns:
         int: The balance of the account.
@@ -566,7 +565,7 @@ class Model(ABC):
         Load the current state of the ZakatTracker object from a camel file.
 
         Parameters:
-        path (str): The path where the camel file is located. If not provided, it will use the default path.
+        path (str, Optional): The path where the camel file is located. If not provided, it will use the default path.
 
         Returns:
         bool: True if the load operation is successful, False otherwise.
@@ -589,18 +588,18 @@ class Model(ABC):
               silver_gram_price: float,
               unscaled_nisab: float | int | Decimal = None,
               debug: bool = False,
-              now: int = None,
+              now: datetime = None,
               cycle: float = None) -> tuple:
         """
         Check the eligibility for Zakat based on the given parameters.
 
         Parameters:
         silver_gram_price (float): The price of a gram of silver.
-        unscaled_nisab (float | int | Decimal): The minimum amount of wealth required for Zakat. If not provided,
+        unscaled_nisab (float | int | Decimal, Optional): The minimum amount of wealth required for Zakat. If not provided,
                         it will be calculated based on the silver_gram_price.
-        debug (bool): Flag to enable debug mode.
-        now (int): The current timestamp. If not provided, it will be calculated using ZakatTracker.time().
-        cycle (float): The time cycle for Zakat. If not provided, it will be calculated using ZakatTracker.TimeCycle().
+        debug (bool, Optional): Flag to enable debug mode.
+        now (datetime, Optional): The current datetime. If not provided, it will be calculated using ZakatTracker.time().
+        cycle (float, Optional): The time cycle for Zakat. If not provided, it will be calculated using ZakatTracker.TimeCycle().
 
         Returns:
         tuple: A tuple containing a boolean indicating the eligibility for Zakat, a list of brief statistics,
@@ -614,8 +613,8 @@ class Model(ABC):
 
         Parameters:
         report (tuple): A tuple containing the validity of the report, the report data, and the zakat plan.
-        parts (dict): A dictionary containing the payment parts for the zakat.
-        debug (bool): A flag indicating whether to print debug information.
+        parts (dict, Optional): A dictionary containing the payment parts for the zakat.
+        debug (bool, Optional): A flag indicating whether to print debug information.
 
         Returns:
         bool: True if the zakat calculation is successful, False otherwise.
@@ -658,8 +657,8 @@ class Model(ABC):
         and the values are dictionaries containing the total value and the logs for that group.
 
         Parameters:
-        weekday (WeekDay): Select the weekday is collected for the week data. Default is WeekDay.Friday.
-        debug (bool): Whether to print debug information. Default is False.
+        weekday (WeekDay, Optional): Select the weekday is collected for the week data. Default is WeekDay.Friday.
+        debug (bool, Optional): Whether to print debug information. Default is False.
 
         Returns:
         dict: A dictionary containing the daily logs.
@@ -734,7 +733,7 @@ class Model(ABC):
         Exports the current state of the ZakatTracker object to a JSON file.
 
         Parameters:
-        path (str): The path where the JSON file will be saved. Default is "data.json".
+        path (str, Optional): The path where the JSON file will be saved. Default is "data.json".
 
         Returns:
         bool: True if the export is successful, False otherwise.
@@ -747,6 +746,9 @@ class Model(ABC):
     def vault(self, section: Vault = Vault.ALL) -> dict:
         """
         Returns a copy of the internal vault in dictionary format.
+
+        Parameters:
+        section (Vault, Optional): The specific section of the vault to retrieve data from. Defaults to Vault.ALL
 
         This method is used to retrieve the current state of the ZakatTracker object.
         It provides a snapshot of the internal data structure, allowing for further
@@ -788,18 +790,18 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def log(self, value: float, desc: str = '', account_id: int = 1, created: int = None, ref: int = None,
+    def log(self, value: float, desc: str = '', account_id: int = 1, created: datetime = None, ref: int = None,
             debug: bool = False) -> int:
         """
         Log a transaction into the account's log.
 
         Parameters:
         value (float): The value of the transaction.
-        desc (str): The description of the transaction.
-        account_id (int): The account to log the transaction into. Default is 1.
-        created (int): The timestamp of the transaction. If not provided, it will be generated.
-        ref (int): The reference of the object.
-        debug (bool): Whether to print debug information. Default is False.
+        desc (str, Optional): The description of the transaction.
+        account_id (int, Optional): The account to log the transaction into. Default is 1.
+        created (datetime, Optional): The datetime of the transaction. If not provided, it will be generated.
+        ref (int, Optional): The reference of the object.
+        debug (bool, Optional): Whether to print debug information. Default is False.
 
         Returns:
         int: The timestamp of the logged transaction.
@@ -857,8 +859,8 @@ class Model(ABC):
         Retrieve a dictionary of snapshots, with their respective hashes, paths, and existence status.
 
         Parameters:
-        - hide_missing (bool): If True, only include snapshots that exist in the dictionary. Default is True.
-        - verified_hash_only (bool): If True, only include snapshots with a valid hash. Default is False.
+        - hide_missing (bool, Optional): If True, only include snapshots that exist in the dictionary. Default is True.
+        - verified_hash_only (bool, Optional): If True, only include snapshots with a valid hash. Default is False.
 
         Returns:
         - dict[int, tuple[str, str, bool]]: A dictionary where the keys are the timestamps of the snapshots,
@@ -941,26 +943,12 @@ class Helper:
         while x == y:
             y = Helper._time()
             i += 1
-        return y - x, i
+        _y = datetime.datetime.fromisoformat(y).timestamp() * (10 ** 9)
+        _x = datetime.datetime.fromisoformat(x).timestamp() * (10 ** 9)
+        return _y - _x, i
 
     @staticmethod
-    def time(now: datetime = None) -> int:
-        """
-        Gets a high-resolution timestamp in nanoseconds.
-
-        This method attempts to obtain a timestamp with a minimum granularity
-        determined by `minimum_time_diff_ms()`. If consecutive calls to
-        `datetime.datetime.now()` return the same value, it waits for a minimum
-        time difference before returning a new timestamp.
-
-        Parameters:
-        now (datetime, optional): A specific datetime object to use as
-            the timestamp. Defaults to None, which uses `datetime.datetime.now()`.
-
-        Returns:
-        int: The timestamp in nanoseconds since the Unix epoch (January 1, 1970),
-            before 1970 will return in negative until 1000AD.
-        """
+    def time(now: datetime = None) -> str:
         new_time = Helper._time(now)
         if Helper.last_time is None:
             Helper.last_time = new_time
@@ -975,26 +963,97 @@ class Helper:
         return new_time
 
     @staticmethod
-    def _time(now: datetime = None) -> int:
-        """
-        Converts a datetime object to a high-resolution timestamp in nanoseconds.
-
-        This method calculates a timestamp by combining the ordinal day (number
-        of days since a reference date) and nanoseconds within the day.
-
-        Parameters:
-        now (datetime, optional): A specific datetime object to use as
-                the timestamp. Defaults to None, which uses `datetime.datetime.now()`.
-
-        Returns:
-        int: The timestamp in nanoseconds since the Unix epoch (January 1, 1970),
-            before 1970 will return in negative until 1000AD.
-        """
+    def _time(now: datetime = None) -> str:
         if now is None:
             now = datetime.datetime.now()
-        ordinal_day = now.toordinal()
-        ns_in_day = (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds() * 10 ** 9
-        return int((ordinal_day - 719_163) * 86_400_000_000_000 + ns_in_day)
+        return now.isoformat()
+
+    @staticmethod
+    def time_to_datetime(time_s: str) -> datetime:
+        return datetime.datetime.fromisoformat(time_s)
+
+    @staticmethod
+    def datetime_to_milliseconds(dt: datetime) -> int:
+        """
+        Converts a datetime object to milliseconds since the Unix epoch.
+
+        Parameters:
+        dt: The datetime object to convert.
+
+        Returns:
+        The number of milliseconds since the Unix epoch.
+        """
+        return int(dt.timestamp() * 1000)
+
+    @staticmethod
+    def time_to_milliseconds(time_s: str) -> datetime:
+        return Helper.datetime_to_milliseconds(Helper.time_to_datetime(time_s))
+
+    @staticmethod
+    def iso8601_to_int(iso_format: str, strict: bool = True, debug: bool = False) -> int:
+        """
+        Converts an ISO 8601 formatted string or a valid integer to a compact integer representation.
+
+        Parameters:
+        iso_format: The datetime string in ISO 8601 format (e.g., "2023-11-10T15:23:56.123456") or
+                    a valid integer representation of a datetime.
+        strict: (bool, Optional) A boolean flag controlling parsing behavior. Defaults to True.
+            - If True, only accepts valid ISO 8601 formatted strings.
+            - If False, attempts to convert integers directly and also allows basic string parsing for digits-only strings.
+        debug (bool, Optional): Flag to enable debug mode.
+
+        Returns:
+        An integer representing the datetime information from the ISO 8601 string or the original integer if strict is False and input is already an integer.
+
+        Raises:
+        ValueError: If the input string is not in a valid ISO 8601 format (in strict mode) or if the input
+                  is an invalid integer string (in non-strict mode).
+
+        This function converts a datetime string in ISO 8601 format to a compact integer representation.
+        The integer is constructed by packing the year, month, day, hour, minute, second, and microsecond
+        components of the datetime object into a single integer using a positional encoding scheme.
+        Each component is scaled by a factor of 10 raised to a power that reflects its position in the
+        date and time representation.
+
+        **Note:** This representation does not include timezone information.
+
+        **Strict vs. Non-Strict Mode:**
+
+        - In strict mode (default), the function only accepts valid ISO 8601 formatted strings.
+        - In non-strict mode, the function also attempts to convert integers directly and allows basic string
+        parsing for strings that consist only of digits. This can be useful for handling potential inconsistencies
+        in input data formats. However, use caution with non-strict mode as it might lead to unexpected
+        behavior if the input data is not well-controlled.
+
+        **Example Usage:**
+
+        ```python
+            iso_str = "2023-11-10T15:23:56.123456"
+            int_representation = Myclass.iso8601_to_int(iso_str)
+            print(int_representation)
+
+            # In non-strict mode, this would also work:
+            int_value = 20231110152356
+            int_representation = Myclass.iso8601_to_int(int_value, strict=False)
+            print(int_representation)
+        ```
+        """
+        if debug:
+            print(f'iso8601_to_int(iso_format={iso_format}: {iso_format.__class__.__name__}, strict={strict})')
+        if not strict:
+            if type(iso_format) is int:
+                return int(iso_format)
+            if type(iso_format) is str:
+                if iso_format.isdigit():
+                    return int(iso_format)
+        dt = datetime.datetime.fromisoformat(iso_format) if type(iso_format) is str else iso_format
+        return ((dt.year * 10 ** 16) +
+                (dt.month * 10 ** 14) +
+                (dt.day * 10 ** 12) +
+                (dt.hour * 10 ** 10) +
+                (dt.minute * 10 ** 8) +
+                (dt.second * 10 ** 6) +
+                dt.microsecond)
 
     @staticmethod
     def is_windows() -> bool:
@@ -1046,19 +1105,19 @@ class Helper:
     @staticmethod
     def TimeCycle(days: int = 355) -> int:
         """
-        Calculates the approximate duration of a lunar year in nanoseconds.
+        Calculates the approximate duration of a lunar year in milliseconds.
 
         This function calculates the approximate duration of a lunar year based on the given number of days.
-        It converts the given number of days into nanoseconds for use in high-precision timing applications.
+        It converts the given number of days into milliseconds for use in high-precision timing applications.
 
         Parameters:
-        days: The number of days in a lunar year. Defaults to 355,
+        days (int, Optional): The number of days in a lunar year. Defaults to 355,
               which is an approximation of the average length of a lunar year.
 
         Returns:
-        The approximate duration of a lunar year in nanoseconds.
+        The approximate duration of a lunar year in milliseconds.
         """
-        return int(60 * 60 * 24 * days * 1e9)  # Lunar Year in nanoseconds
+        return int(60 * 60 * 24 * days * 1e3)  # Lunar Year in milliseconds
 
     @staticmethod
     def Nisab(gram_price: float, gram_quantity: float = 595) -> float:
@@ -1072,7 +1131,7 @@ class Helper:
 
         Parameters:
         - gram_price (float): The price per gram of Nisab.
-        - gram_quantity (float): The quantity of grams in a Nisab. Default is 595 grams of silver.
+        - gram_quantity (float, Optional): The quantity of grams in a Nisab. Default is 595 grams of silver.
 
         Returns:
         - float: The total value of Nisab based on the given price per gram.
@@ -1086,7 +1145,7 @@ class Helper:
 
         Parameters:
         parts (dict): A dictionary containing payment parts information.
-        debug (bool): Flag to enable debug mode.
+        debug (bool, Optional): Flag to enable debug mode.
 
         Returns:
         int: Returns 0 if the payment parts are valid, otherwise returns the error code.
@@ -1190,9 +1249,9 @@ class Helper:
         facilitate precise scaling operations, particularly useful in financial or scientific calculations.
 
         Parameters:
-        x: The numeric value to scale. Can be a floating-point number, integer, or decimal.
-        decimal_places: The exponent for the scaling factor (10**y). Defaults to 2, meaning the input is scaled
-            by a factor of 100 (e.g., converts 1.23 to 123).
+        x (float | int | Decimal): The numeric value to scale. Can be a floating-point number, integer, or decimal.
+        decimal_places (int, Optional): The exponent for the scaling factor (10**y).
+            Defaults to 2, meaning the input is scaled by a factor of 100 (e.g., converts 1.23 to 123).
 
         Returns:
         The scaled value, rounded to the nearest integer.
@@ -1218,9 +1277,9 @@ class Helper:
         Unscales an integer by a power of 10.
 
         Parameters:
-        x: The integer to unscale.
-        return_type: The desired type for the returned value. Can be float, int, or Decimal. Defaults to float.
-        decimal_places: The power of 10 to use. Defaults to 2.
+        x (int): The integer to unscale.
+        return_type (type, Optional): The desired type for the returned value. Can be float, int, or Decimal. Defaults to float.
+        decimal_places (int, Optional): The power of 10 to use. Defaults to 2.
 
         Returns:
         The unscaled number, converted to the specified return_type.
@@ -1231,23 +1290,6 @@ class Helper:
         if return_type not in (float, Decimal):
             raise TypeError(f'Invalid return_type({return_type}). Supported types are float, int, and Decimal.')
         return round(return_type(x / (10 ** decimal_places)), decimal_places)
-
-    @staticmethod
-    def time_to_datetime(ordinal_ns: int) -> datetime:
-        """
-        Converts an ordinal number (number of days since 1000-01-01) to a datetime object.
-
-        Parameters:
-        ordinal_ns (int): The ordinal number of days since 1000-01-01.
-
-        Returns:
-        datetime: The corresponding datetime object.
-        """
-        ordinal_day = ordinal_ns // 86_400_000_000_000 + 719_163
-        ns_in_day = ordinal_ns % 86_400_000_000_000
-        d = datetime.datetime.fromordinal(ordinal_day)
-        t = datetime.timedelta(seconds=ns_in_day // 10 ** 9)
-        return datetime.datetime.combine(d, datetime.time()) + t
 
     @staticmethod
     def human_readable_size(size: float, decimal_places: int = 2) -> str:
@@ -1366,14 +1408,14 @@ class Helper:
         return time_lapsed, spoken_time_separator.join(spoken_time_part)
 
     @staticmethod
-    def day_to_time(day: int, month: int = 6, year: int = 2024) -> int:  # افتراض أن الشهر هو يونيو والسنة 2024
+    def day_to_time(day: int, month: int = 6, year: int = 2024) -> str:  # افتراض أن الشهر هو يونيو والسنة 2024
         """
         Convert a specific day, month, and year into a timestamp.
 
         Parameters:
         day (int): The day of the month.
-        month (int): The month of the year. Default is 6 (June).
-        year (int): The year. Default is 2024.
+        month (int, Optional): The month of the year. Default is 6 (June).
+        year (int, Optional): The year. Default is 2024.
 
         Returns:
         int: The timestamp representing the given day, month, and year.
@@ -1423,10 +1465,10 @@ class Helper:
         minute = 30
         second = 45
         for year in range(1000, 9999):
-            ns = Helper.time(datetime.datetime.strptime(
+            s = Helper.time(datetime.datetime.strptime(
                 f"{year}-{month}-{day} {hour}:{minute}:{second}", "%Y-%m-%d %H:%M:%S"
             ))
-            date = Helper.time_to_datetime(ns)
+            date = Helper.time_to_datetime(s)
             if debug:
                 print(date,
                       f'year({date.year} = {year}), month({date.month} = {month}), day({date.day} = {day}), hour({date.hour} = {hour}), minute({date.minute} = {minute})')
@@ -1435,7 +1477,7 @@ class Helper:
             assert date.day == day
             assert date.hour == hour
             assert date.minute == minute
-            assert date.second in [second - 1, second]
+            assert date.second == second
 
         # human_readable_size
 
@@ -1928,7 +1970,12 @@ class DictModel(Model):
         if created is None:
             created = Helper.time()
         if self.account_exists(account):
-            valid_rates = [(ts, r) for ts, r in self._vault['account'][account]['exchange'].items() if ts <= created]
+            valid_rates = [
+                (ts, r)
+                for ts, r in self._vault['account'][account]['exchange'].items()
+                if Helper.iso8601_to_int(ts, strict=False, debug=debug) <=
+                   Helper.iso8601_to_int(created, strict=False, debug=debug)
+            ]
             if valid_rates:
                 latest_rate = max(valid_rates, key=lambda x: x[0])
                 if debug:
@@ -2100,8 +2147,8 @@ class DictModel(Model):
             created = Helper.time()
         (_, ages) = self.sub(unscaled_amount, desc, from_account, created, debug=debug)
         times = []
-        source_exchange = self.exchange(from_account, created)
-        target_exchange = self.exchange(to_account, created)
+        source_exchange = self.exchange(from_account, created, debug=debug)
+        target_exchange = self.exchange(to_account, created, debug=debug)
 
         if debug:
             print('ages', ages)
@@ -2150,7 +2197,7 @@ class DictModel(Model):
         if debug:
             print('check', f'debug={debug}')
         if now is None:
-            now = Helper.time()
+            now = Helper.time_to_milliseconds(Helper.time())
         if cycle is None:
             cycle = Helper.TimeCycle()
         if unscaled_nisab is None:
@@ -2174,15 +2221,17 @@ class DictModel(Model):
                 rest = float(_box[j]['rest'])
                 if rest <= 0:
                     continue
-                exchange = self.exchange(x, created=Helper.time())
+                exchange = self.exchange(x, created=Helper.time_to_datetime(Helper.time()), debug=debug)
                 rest = Helper.exchange_calc(rest, float(exchange['rate']), 1)
                 brief[0] += rest
                 index = limit + i - 1
-                epoch = (now - j) / cycle
+                jj = j if type(j) is int else Helper.time_to_milliseconds(j)
+                epoch = (now - jj) / cycle
                 if debug:
                     print(f"Epoch: {epoch}", _box[j])
-                if _box[j]['last'] > 0:
-                    epoch = (now - _box[j]['last']) / cycle
+                last = _box[j]['last'] if type(_box[j]['last']) is int else Helper.time_to_milliseconds(_box[j]['last'])
+                if last > 0:
+                    epoch = (now - last) / cycle
                 if debug:
                     print(f"Epoch: {epoch}")
                 epoch = floor(epoch)
@@ -2260,7 +2309,7 @@ class DictModel(Model):
         self._vault['report'][report_time] = report
         created = Helper.time()
         for x in plan:
-            target_exchange = self.exchange(x)
+            target_exchange = self.exchange(x, debug=debug)
             if debug:
                 print(plan[x])
                 print('-------------')
@@ -2288,7 +2337,7 @@ class DictModel(Model):
                     continue
                 if debug:
                     print('zakat-part', account, part['rate'])
-                target_exchange = self.exchange(account)
+                target_exchange = self.exchange(account, debug=debug)
                 amount = Helper.exchange_calc(part['part'], part['rate'], target_exchange['rate'])
                 self.sub(
                     unscaled_value=Helper.unscale(int(amount)),
@@ -2358,8 +2407,7 @@ class Box(db.Entity):
     _table_ = 'box'
     id = pony.PrimaryKey(int, auto=True)
     account = pony.Required(Account, column='account_id')
-    time = pony.Required(int, size=64, unique=True)
-    record_date = pony.Required(datetime.datetime)
+    record_date = pony.Required(datetime.datetime, unique=True)
     capital = pony.Required(int, size=64)
     count = pony.Optional(int, size=64, default=0)
     last = pony.Optional(datetime.datetime)
@@ -2373,8 +2421,7 @@ class Log(db.Entity):
     _table_ = 'log'
     id = pony.PrimaryKey(int, auto=True)
     account = pony.Required(Account, column='account_id')
-    time = pony.Required(int, size=64, unique=True)
-    record_date = pony.Required(datetime.datetime)
+    record_date = pony.Required(datetime.datetime, unique=True)
     value = pony.Required(int, size=64)
     desc = pony.Required(pony.LongStr)
     ref = pony.Optional(int, size=64)
@@ -2386,8 +2433,7 @@ class File(db.Entity):
     _table_ = 'file'
     id = pony.PrimaryKey(int, auto=True)
     log = pony.Required(Log, column='log_id')
-    time = pony.Required(int, size=64, unique=True)
-    record_date = pony.Required(datetime.datetime)
+    record_date = pony.Required(datetime.datetime, unique=True)
     path = pony.Required(pony.LongStr)
     name = pony.Optional(pony.LongStr)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
@@ -2398,17 +2444,15 @@ class Exchange(db.Entity):
     _table_ = 'exchange'
     id = pony.PrimaryKey(int, auto=True)
     account = pony.Required(Account, column='account_id')
-    time = pony.Required(int, size=64, unique=True)
+    record_date = pony.Required(datetime.datetime, unique=True)
     rate = pony.Required(Decimal)
     desc = pony.Optional(pony.LongStr)
-    record_date = pony.Required(datetime.datetime)
 
 
 class Report(db.Entity):
     _table_ = 'report'
     id = pony.PrimaryKey(int, auto=True)
-    time = pony.Required(int, size=64, unique=True)
-    record_date = pony.Required(datetime.datetime)
+    record_date = pony.Required(datetime.datetime, unique=True)
     details = pony.Required(pony.Json)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
 
@@ -3218,7 +3262,7 @@ class ZakatTracker:
         """
         self.db = model
 
-    def build_payment_parts(self, scaled_demand: int, positive_only: bool = True) -> dict:
+    def build_payment_parts(self, scaled_demand: int, positive_only: bool = True, debug: bool = False) -> dict:
         """
         Build payment parts for the Zakat distribution.
 
@@ -3248,7 +3292,7 @@ class ZakatTracker:
             if positive_only and y <= 0:
                 continue
             total += float(y)
-            exchange = self.db.exchange(account=x)
+            exchange = self.db.exchange(account=x, debug=debug)
             parts['account'][x] = {'balance': y, 'rate': exchange['rate'], 'part': 0}
         parts['total'] = total
         return parts
@@ -3907,7 +3951,7 @@ class ZakatTracker:
                 },
             }
 
-            selected_time = Helper.time() - Helper.TimeCycle()
+            selected_time = Helper.datetime_to_milliseconds(Helper.time_to_datetime(Helper.time())) - Helper.TimeCycle()
             account_ages_ref, _ = self.db.account(name='ages')
             account_future_ref, _ = self.db.account(name='future')
 
@@ -4046,7 +4090,7 @@ class ZakatTracker:
                 assert self.db.log_size(y) == z[12]
 
             if debug:
-                pp().pprint(self.db.check(2.17))
+                pp().pprint(self.db.check(2.17, debug=debug))
 
             # storage
 
@@ -4110,10 +4154,10 @@ class ZakatTracker:
 
                 # payment parts
 
-                positive_parts = self.build_payment_parts(100, positive_only=True)
+                positive_parts = self.build_payment_parts(100, positive_only=True, debug=debug)
                 assert Helper.check_payment_parts(positive_parts) != 0
                 assert Helper.check_payment_parts(positive_parts) != 0
-                all_parts = self.build_payment_parts(300, positive_only=False)
+                all_parts = self.build_payment_parts(300, positive_only=False, debug=debug)
                 assert Helper.check_payment_parts(all_parts) != 0
                 assert Helper.check_payment_parts(all_parts) != 0
                 if debug:
@@ -4139,7 +4183,7 @@ class ZakatTracker:
                         }
                         j = ''
                         for x, y in part['account'].items():
-                            x_exchange = self.db.exchange(x)
+                            x_exchange = self.db.exchange(x, debug=debug)
                             zz = Helper.exchange_calc(z, 1, x_exchange['rate'])
                             if exceed and zz <= demand:
                                 i += 1
@@ -4174,7 +4218,7 @@ class ZakatTracker:
                         print('check_payment_parts', result, f'exceed: {exceed}')
                     assert result == 0
 
-                    report = self.db.check(2.17, None, debug)
+                    report = self.db.check(2.17, debug=debug)
                     (valid, brief, plan) = report
                     if debug:
                         print('valid', valid)
@@ -4266,7 +4310,7 @@ class ZakatTracker:
             # Transfer all in many chunks randomly from B to A
             a_SAR_balance = 137125
             b_USD_balance = 50100
-            b_USD_exchange = self.db.exchange(account_b_USD_ref)
+            b_USD_exchange = self.db.exchange(account_b_USD_ref, debug=debug)
             amounts = ZakatTracker.create_random_list(b_USD_balance, max_value=1000)
             if debug:
                 print('amounts', amounts)
@@ -4362,13 +4406,13 @@ class ZakatTracker:
                 if debug:
                     print('rate', rate, 'values', values)
                 for case in [
-                    (a, account_safe_ref, Helper.time() - Helper.TimeCycle(), [
+                    (a, account_safe_ref, Helper.time_to_milliseconds(Helper.time()) - Helper.TimeCycle(), [
                         {account_safe_ref: {0: {'below_nisab': x}}},
                     ], False, m),
-                    (b, account_safe_ref, Helper.time() - Helper.TimeCycle(), [
+                    (b, account_safe_ref, Helper.time_to_milliseconds(Helper.time()) - Helper.TimeCycle(), [
                         {account_safe_ref: {0: {'count': 1, 'total': y}}},
                     ], True, n),
-                    (c, account_cave_ref, Helper.time() - (Helper.TimeCycle() * 3), [
+                    (c, account_cave_ref, Helper.time_to_milliseconds(Helper.time()) - (Helper.TimeCycle() * 3), [
                         {account_cave_ref: {0: {'count': 3, 'total': z}}},
                     ], True, o),
                 ]:
@@ -4386,7 +4430,7 @@ class ZakatTracker:
                     )
                     assert self.db.snapshot()
 
-                    report = self.db.check(2.17, None, debug)
+                    report = self.db.check(2.17, debug=debug)
                     (valid, brief, plan) = report
                     if debug:
                         print('brief', brief)
@@ -4411,7 +4455,7 @@ class ZakatTracker:
                     if debug:
                         print('zakat-result', result, case[4])
                     assert result == case[4]
-                    report = self.db.check(2.17, None, debug)
+                    report = self.db.check(2.17, debug=debug)
                     (valid, brief, plan) = report
                     assert valid is False
             return True
@@ -4443,11 +4487,11 @@ def test(debug: bool = False):
             debug=True,
         ),
     ]:
-        start = Helper.time()
+        start = time_ns()
         assert model.test(debug=debug)
         ledger = ZakatTracker(model=model)
         assert ledger.test(debug=debug)
-        durations[model.__class__.__name__] = Helper.time() - start
+        durations[model.__class__.__name__] = time_ns() - start
     if debug:
         print("#########################")
         print("######## TEST DONE ########")
