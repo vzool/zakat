@@ -1,4 +1,4 @@
-import os
+from time import time_ns
 from zakat import ZakatTracker, Helper, DictModel
 
 
@@ -11,9 +11,9 @@ def test_zakat_tracker():
     ]:
         assert model.test(debug=True)
         ledger = ZakatTracker(model=model)
-        start = Helper.time()
+        start = time_ns()
         assert ledger.test(debug=True)
-        durations[model.__class__.__name__] = Helper.time() - start
+        durations[model.__class__.__name__] = time_ns() - start
     print("#########################")
     print("######## TEST DONE ########")
     print("#########################")
