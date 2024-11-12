@@ -138,12 +138,12 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: datetime = None,
+    def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: str = None,
             debug: bool = False) \
             -> tuple[
-                   int,
+                   str,
                    list[
-                       tuple[int, int],
+                       tuple[str, int],
                    ],
                ] | tuple:
         """
@@ -153,24 +153,24 @@ class Model(ABC):
         unscaled_value (float | int | Decimal): The amount to be subtracted.
         desc (str, Optional): A description for the transaction. Defaults to an empty string.
         account (int, Optional): The account number from which the value will be subtracted. Defaults to '1'.
-        created (datetime, Optional): The datetime of the transaction. If not provided, the current datetime will be used.
+        created (str, Optional): The datetime of the transaction in iso8601. If not provided, the current datetime will be used.
         debug (bool, Optional): A flag indicating whether to print debug information. Defaults to False.
 
         Returns:
-        tuple: A tuple containing the timestamp of the transaction and a list of tuples representing the age of each transaction.
+        tuple: A tuple containing the datetime of the transaction in iso8601 and a list of tuples representing the age of each transaction.
 
         If the amount to subtract is greater than the account's balance,
         the remaining amount will be transferred to a new transaction with a negative value.
 
         Raises:
-        ValueError: The box transaction happened again in the same nanosecond time.
-        ValueError: The log transaction happened again in the same nanosecond time.
+        ValueError: The box transaction happened again in the same time.
+        ValueError: The log transaction happened again in the same time.
         """
 
     @abstractmethod
     def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
-              created: datetime = None,
-              debug: bool = False) -> int:
+              created: str = None,
+              debug: bool = False) -> str | None:
         """
         This function tracks a transaction for a specific account.
 
@@ -179,21 +179,21 @@ class Model(ABC):
         desc (str, Optional): The description of the transaction. Default is an empty string.
         account (int, Optional): The account for which the transaction is being tracked. Default is '1'.
         logging (bool, Optional): Whether to log the transaction. Default is True.
-        created (datetime, Optional): The datetime of the transaction. If not provided, it will be generated. Default is None.
+        created (str, Optional): The datetime of the transaction in iso8601. If not provided, it will be generated. Default is None.
         debug (bool, Optional): Whether to print debug information. Default is False.
 
         Returns:
-        int: The timestamp of the transaction.
+        str | None: The datetime of the transaction in iso8601, or None.
 
         This function creates a new account if it doesn't exist, logs the transaction if logging is True, and updates the account's balance and box.
 
         Raises:
-        ValueError: The log transaction happened again in the same nanosecond time.
-        ValueError: The box transaction happened again in the same nanosecond time.
+        ValueError: The log transaction happened again in the same time.
+        ValueError: The box transaction happened again in the same time.
         """
 
     @abstractmethod
-    def add_file(self, account: int, ref: int, path: str) -> int:
+    def add_file(self, account: int, ref: int, path: str) -> str | None:
         """
         Adds a file reference to a specific transaction log entry in the vault.
 
@@ -203,18 +203,18 @@ class Model(ABC):
         path (str): The path of the file to be added.
 
         Returns:
-        int: The reference of the added file. If the account or transaction log entry does not exist, returns 0.
+        str | None: The reference of the added file in iso8601. If the account or transaction log entry does not exist, returns None.
         """
 
     @abstractmethod
-    def remove_file(self, account: int, ref: int, file_ref: int) -> bool:
+    def remove_file(self, account: int, ref: str, file_ref: str) -> bool:
         """
         Removes a file reference from a specific transaction log entry in the vault.
 
         Parameters:
         account (int): The account number associated with the transaction log.
-        ref (int): The reference to the transaction log entry.
-        file_ref (int): The reference of the file to be removed.
+        ref (str): The reference to the transaction log entry in iso8601.
+        file_ref (str): The reference of the file to be removed in iso8601.
 
         Returns:
         bool: True if the file reference is successfully removed, False otherwise.
@@ -301,14 +301,14 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def set_exchange(self, account: int, created: datetime = None, rate: float = None, description: str = None,
+    def set_exchange(self, account: int, created: str = None, rate: float = None, description: str = None,
                      debug: bool = False) -> bool:
         """
         This method is used to record exchange rates for a specific account.
 
         Parameters:
         - account (int): The account number for which the exchange rate is being recorded or retrieved.
-        - created (datetime, Optional): The datetime of the exchange rate. If not provided, the current datetime will be used.
+        - created (datetime, str): The datetime of the exchange rate in iso8601. If not provided, the current datetime will be used.
         - rate (float, Optional): The exchange rate to be recorded. If not provided, the method will retrieve the latest exchange rate.
         - description (str, Optional): A description of the exchange rate.
         - debug (bool, Optional): Whether to print debug information. Default is False.
@@ -318,13 +318,13 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def exchange(self, account: int, created: datetime = None, debug: bool = False) -> dict:
+    def exchange(self, account: int, created: str = None, debug: bool = False) -> dict:
         """
         This method is used to retrieve exchange rates for a specific account.
 
         Parameters:
         - account (int): The account number for which the exchange rate is being recorded or retrieved.
-        - created (datetime, Optional): The datetime of the exchange rate. If not provided, the current datetime will be used.
+        - created (str, Optional): The datetime of the exchange rate in iso8601. If not provided, the current datetime will be used.
         - debug (bool, Optional): Whether to print debug information. Default is False.
 
         Returns:
@@ -387,8 +387,8 @@ class Model(ABC):
 
     @abstractmethod
     def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
-                 created: datetime = None,
-                 debug: bool = False) -> list[int]:
+                 created: str = None,
+                 debug: bool = False) -> list[str]:
         """
         Transfers a specified value from one account to another.
 
@@ -397,16 +397,16 @@ class Model(ABC):
         from_account (int): The account number from which the value will be transferred.
         to_account (int): The account number to which the value will be transferred.
         desc (str, optional): A description for the transaction. Defaults to an empty string.
-        created (datetime, optional): The datetime of the transaction. If not provided, the current datetime will be used.
+        created (str, optional): The datetime of the transaction in iso8601. If not provided, the current datetime will be used.
         debug (bool, Optional): A flag indicating whether to print debug information. Defaults to False.
 
         Returns:
-        list[int]: A list of timestamps corresponding to the transactions made during the transfer.
+        list[str]: A list of datetime in iso8601 corresponding to the transactions made during the transfer.
 
         Raises:
         ValueError: Transfer to the same account is forbidden.
-        ValueError: The box transaction happened again in the same nanosecond time.
-        ValueError: The log transaction happened again in the same nanosecond time.
+        ValueError: The box transaction happened again in the same time.
+        ValueError: The log transaction happened again in the same time.
         """
 
     @abstractmethod
@@ -588,7 +588,7 @@ class Model(ABC):
               silver_gram_price: float,
               unscaled_nisab: float | int | Decimal = None,
               debug: bool = False,
-              now: datetime = None,
+              now: str = None,
               cycle: float = None) -> tuple:
         """
         Check the eligibility for Zakat based on the given parameters.
@@ -598,7 +598,7 @@ class Model(ABC):
         unscaled_nisab (float | int | Decimal, Optional): The minimum amount of wealth required for Zakat. If not provided,
                         it will be calculated based on the silver_gram_price.
         debug (bool, Optional): Flag to enable debug mode.
-        now (datetime, Optional): The current datetime. If not provided, it will be calculated using ZakatTracker.time().
+        now (str, Optional): The current datetime in iso8601. If not provided, it will be calculated using ZakatTracker.time().
         cycle (float, Optional): The time cycle for Zakat. If not provided, it will be calculated using ZakatTracker.TimeCycle().
 
         Returns:
@@ -790,8 +790,8 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def log(self, value: float, desc: str = '', account_id: int = 1, created: datetime = None, ref: int = None,
-            debug: bool = False) -> int:
+    def log(self, value: float, desc: str = '', account_id: int = 1, created: str = None, ref: int = None,
+            debug: bool = False) -> str:
         """
         Log a transaction into the account's log.
 
@@ -799,7 +799,7 @@ class Model(ABC):
         value (float): The value of the transaction.
         desc (str, Optional): The description of the transaction.
         account_id (int, Optional): The account to log the transaction into. Default is 1.
-        created (datetime, Optional): The datetime of the transaction. If not provided, it will be generated.
+        created (str, Optional): The datetime of the transaction in iso8601. If not provided, it will be generated.
         ref (int, Optional): The reference of the object.
         debug (bool, Optional): Whether to print debug information. Default is False.
 
@@ -809,44 +809,44 @@ class Model(ABC):
         This method updates the account's balance, count, and log with the transaction details.
 
         Raises:
-        ValueError: The log transaction happened again in the same nanosecond time.
+        ValueError: The log transaction happened again in the same time.
         """
 
     @abstractmethod
-    def ref_exists(self, account_id: int, ref_type: str, ref: int) -> bool:
+    def ref_exists(self, account_id: int, ref_type: str, ref: str) -> bool:
         """
         Check if a specific reference (transaction) exists in the vault for a given account and reference type.
 
         Parameters:
         account_id (int): The account number for which to check the existence of the reference.
         ref_type (str): The type of reference (e.g., 'box', 'log', etc.).
-        ref (int): The reference (transaction) number to check for existence.
+        ref (str): The reference (transaction) datetime in iso8601 to check for existence.
 
         Returns:
         bool: True if the reference exists for the given account and reference type, False otherwise.
         """
 
     @abstractmethod
-    def box_exists(self, account_id: int, ref: int) -> bool:
+    def box_exists(self, account_id: int, ref: str) -> bool:
         """
         Check if a specific box (transaction) exists in the vault for a given account and reference.
 
         Parameters:
         - account_id (int): The account number for which to check the existence of the box.
-        - ref (int): The reference (transaction) number to check for existence.
+        - ref (str): The reference (transaction) datetime in iso8601 to check for existence.
 
         Returns:
         - bool: True if the box exists for the given account and reference, False otherwise.
         """
 
     @abstractmethod
-    def log_exists(self, account_id: int, ref: int) -> bool:
+    def log_exists(self, account_id: int, ref: str) -> bool:
         """
         Checks if a specific transaction log entry exists for a given account.
 
         Parameters:
         account_id (int): The account number associated with the transaction log.
-        ref (int): The reference to the transaction log entry.
+        ref (str): The reference to the transaction log entry in iso8601.
 
         Returns:
         bool: True if the transaction log entry exists, False otherwise.
@@ -958,7 +958,7 @@ class Helper:
                 diff, _ = Helper.minimum_time_diff_ms()
                 Helper.time_diff_ms = ceil(diff)
             sleep(Helper.time_diff_ms / 1_000)
-            new_time = Helper._time(now)
+            new_time = Helper._time()
         Helper.last_time = new_time
         return new_time
 
@@ -1730,14 +1730,14 @@ class DictModel(Model):
             stream.write(camel.dump(cache))
         return True
 
-    def ref_exists(self, account_id: int, ref_type: str, ref: int) -> bool:
+    def ref_exists(self, account_id: int, ref_type: str, ref: str) -> bool:
         if not isinstance(account_id, int):
             raise ValueError(f'The account_id must be an integer, {type(account_id)} was provided.')
         if account_id in self._vault['account']:
             return ref in self._vault['account'][account_id][ref_type]
         return False
 
-    def box_exists(self, account_id: int, ref: int) -> bool:
+    def box_exists(self, account_id: int, ref: str) -> bool:
         return self.ref_exists(account_id, 'box', ref)
 
     def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) \
@@ -1761,11 +1761,11 @@ class DictModel(Model):
                 result[ref] = (file_hash, path, exists)
         return result
 
-    def log_exists(self, account_id: int, ref: int) -> bool:
+    def log_exists(self, account_id: int, ref: str) -> bool:
         return self.ref_exists(account_id, 'log', ref)
 
-    def log(self, value: float, desc: str = '', account_id: int = 1, created: int = None, ref: int = None,
-            debug: bool = False) -> int:
+    def log(self, value: float, desc: str = '', account_id: int = 1, created: str = None, ref: int = None,
+            debug: bool = False) -> str:
         if debug:
             print('_log', f'debug={debug}')
         if created is None:
@@ -1778,7 +1778,7 @@ class DictModel(Model):
         if debug:
             print('create-log', created)
         if self.log_exists(account_id, created):
-            raise ValueError(f"The log transaction happened again in the same nanosecond time({created}).")
+            raise ValueError(f"The log transaction happened again in the same time({created}).")
         if debug:
             print('created-log', created)
         self._vault['account'][account_id]['log'][created] = {
@@ -1908,8 +1908,8 @@ class DictModel(Model):
         return y
 
     def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
-              created: int = None,
-              debug: bool = False) -> int:
+              created: str = None,
+              debug: bool = False) -> str | None:
         if debug:
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
         if created is None:
@@ -1927,14 +1927,14 @@ class DictModel(Model):
                 'zakatable': True,
             }
         if unscaled_value == 0:
-            return 0
+            return None
         value = Helper.scale(unscaled_value)
         if logging:
             self.log(value=value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
         if debug:
             print('creating-box', created)
         if self.box_exists(account, created):
-            raise ValueError(f"The box transaction happened again in the same nanosecond time({created}).")
+            raise ValueError(f"The box transaction happened again in the same time({created}).")
         self._vault['account'][account]['box'][created] = {
             'capital': value,
             'count': 0,
@@ -1946,7 +1946,7 @@ class DictModel(Model):
             print('created-box', created)
         return created
 
-    def set_exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
+    def set_exchange(self, account: int, created: str = None, rate: float = None, description: str = None,
                      debug: bool = False) -> bool:
         if debug:
             print('exchange', f'debug={debug}')
@@ -1964,7 +1964,7 @@ class DictModel(Model):
                   f'account: {account}, created: {created}, rate:{rate}, description:{description}')
         return True
 
-    def exchange(self, account: int, created: int = None, debug: bool = False) -> dict:
+    def exchange(self, account: int, created: str = None, debug: bool = False) -> dict:
         if not isinstance(account, int):
             raise ValueError(f'The account must be an integer, {type(account)} was provided.')
         if created is None:
@@ -1987,15 +1987,15 @@ class DictModel(Model):
             print("exchange-read-0", f'account: {account}, created: {created}')
         return {"time": created, "rate": 1, "description": None}  # إرجاع القيمة الافتراضية مع وصف فارغ
 
-    def add_file(self, account: int, ref: int, path: str) -> int:
+    def add_file(self, account: int, ref: int, path: str) -> str | None:
         if self.account_exists(account):
             if ref in self._vault['account'][account]['log']:
                 file_ref = Helper.time()
                 self._vault['account'][account]['log'][ref]['file'][file_ref] = path
                 return file_ref
-        return 0
+        return None
 
-    def remove_file(self, account: int, ref: int, file_ref: int) -> bool:
+    def remove_file(self, account: int, ref: str, file_ref: str) -> bool:
         if self.account_exists(account):
             if ref in self._vault['account'][account]['log']:
                 if file_ref in self._vault['account'][account]['log'][ref]['file']:
@@ -2074,12 +2074,12 @@ class DictModel(Model):
             set_name(account, name)
         return self._vault['name']['account'][name], name
 
-    def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: int = None,
+    def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: str = None,
             debug: bool = False) \
             -> tuple[
-                   int,
+                   str,
                    list[
-                       tuple[int, int],
+                       tuple[str, int],
                    ],
                ] | tuple:
         if debug:
@@ -2131,8 +2131,8 @@ class DictModel(Model):
         return created, ages
 
     def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
-                 created: int = None,
-                 debug: bool = False) -> list[int]:
+                 created: str = None,
+                 debug: bool = False) -> list[str]:
         if debug:
             print('transfer', f'debug={debug}')
         if from_account == to_account:
@@ -2192,12 +2192,11 @@ class DictModel(Model):
               silver_gram_price: float,
               unscaled_nisab: float | int | Decimal = None,
               debug: bool = False,
-              now: int = None,
+              now: str = None,
               cycle: float = None) -> tuple:
         if debug:
             print('check', f'debug={debug}')
-        if now is None:
-            now = Helper.time_to_milliseconds(Helper.time())
+        now_ms = Helper.time_to_milliseconds(Helper.time() if now is None else now)
         if cycle is None:
             cycle = Helper.TimeCycle()
         if unscaled_nisab is None:
@@ -2221,17 +2220,17 @@ class DictModel(Model):
                 rest = float(_box[j]['rest'])
                 if rest <= 0:
                     continue
-                exchange = self.exchange(x, created=Helper.time_to_datetime(Helper.time()), debug=debug)
+                exchange = self.exchange(x, debug=debug)
                 rest = Helper.exchange_calc(rest, float(exchange['rate']), 1)
                 brief[0] += rest
                 index = limit + i - 1
                 jj = j if type(j) is int else Helper.time_to_milliseconds(j)
-                epoch = (now - jj) / cycle
+                epoch = (now_ms - jj) / cycle
                 if debug:
                     print(f"Epoch: {epoch}", _box[j])
                 last = _box[j]['last'] if type(_box[j]['last']) is int else Helper.time_to_milliseconds(_box[j]['last'])
                 if last > 0:
-                    epoch = (now - last) / cycle
+                    epoch = (now_ms - last) / cycle
                 if debug:
                     print(f"Epoch: {epoch}")
                 epoch = floor(epoch)
@@ -2624,7 +2623,7 @@ class SQLModel(Model):
         if debug:
             print('creating-box', created)
         if self._box_exists(account, created):
-            raise ValueError(f"The box transaction happened again in the same nanosecond time({created}).")
+            raise ValueError(f"The box transaction happened again in the same time({created}).")
         if self.raw_sql:
             db.execute(f'''
                 INSERT INTO "box" (account_id, time, record_date, capital, count, last, rest, total, created_at)
@@ -3128,7 +3127,7 @@ class SQLModel(Model):
         if debug:
             print('create-log', created)
         if self._log_exists(account_id, created):
-            raise ValueError(f"The log transaction happened again in the same nanosecond time({created}).")
+            raise ValueError(f"The log transaction happened again in the same time({created}).")
         if debug:
             print('created-log', created)
         if self.raw_sql:
