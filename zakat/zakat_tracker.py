@@ -192,13 +192,13 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def add_file(self, account: int, ref: int, path: str) -> str | None:
+    def add_file(self, account: int, ref: str, path: str) -> str | None:
         """
         Adds a file reference to a specific transaction log entry in the vault.
 
         Parameters:
         account (int): The account number associated with the transaction log.
-        ref (int): The reference to the transaction log entry.
+        ref (str): The reference to the transaction log entry in iso8601.
         path (str): The path of the file to be added.
 
         Returns:
@@ -1986,7 +1986,7 @@ class DictModel(Model):
             print("exchange-read-0", f'account: {account}, created: {created}')
         return {"time": created, "rate": 1, "description": None}  # إرجاع القيمة الافتراضية مع وصف فارغ
 
-    def add_file(self, account: int, ref: int, path: str) -> str | None:
+    def add_file(self, account: int, ref: str, path: str) -> str | None:
         if self.account_exists(account):
             if ref in self._vault['account'][account]['log']:
                 file_ref = Helper.time()
@@ -2521,22 +2521,22 @@ class SQLModel(Model):
         return self._file_exists
 
     @pony.db_session
-    def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: int = None,
+    def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: str = None,
             debug: bool = False) \
             -> tuple[
-                   int,
+                   str,
                    list[
-                       tuple[int, int],
+                       tuple[str, int],
                    ],
                ] | tuple:
         return self._sub(unscaled_value, desc, account, created, debug)
 
-    def _sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: int = None,
+    def _sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: int = 1, created: str = None,
              debug: bool = False) \
             -> tuple[
-                   int,
+                   str,
                    list[
-                       tuple[int, int],
+                       tuple[str, int],
                    ],
                ] | tuple:
         if debug:
@@ -2586,11 +2586,11 @@ class SQLModel(Model):
 
     @pony.db_session
     def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
-              created: int = None, debug: bool = False) -> int:
+              created: str = None, debug: bool = False) -> str | None:
         return self._track(unscaled_value, desc, account, logging, created, debug)
 
     def _track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: int = 1, logging: bool = True,
-               created: int = None, debug: bool = False) -> int:
+               created: str = None, debug: bool = False) -> str | None:
         if debug:
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
         if created is None:
@@ -2610,7 +2610,7 @@ class SQLModel(Model):
                     zakatable=True,
                 )
         if unscaled_value == 0:
-            return 0
+            return None
         value = Helper.scale(unscaled_value)
         if logging:
             self._log(value=value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
@@ -2620,11 +2620,10 @@ class SQLModel(Model):
             raise ValueError(f"The box transaction happened again in the same time({created}).")
         if self.raw_sql:
             db.execute(f'''
-                INSERT INTO "box" (account_id, time, record_date, capital, count, last, rest, total, created_at)
+                INSERT INTO "box" (account_id, record_date, capital, count, last, rest, total, created_at)
                             VALUES(
                                 {account},
-                                {created},
-                                "{str(datetime.datetime.now())}",
+                                "{created}",
                                 {value},
                                 0,
                                 NULL,
@@ -2636,8 +2635,7 @@ class SQLModel(Model):
         else:
             Box(
                 account=account,
-                time=created,
-                record_date=datetime.datetime.now(),
+                record_date=Helper.time_to_datetime(created),
                 capital=value,
                 count=0,
                 last=None,
@@ -2649,31 +2647,30 @@ class SQLModel(Model):
         return created
 
     @pony.db_session
-    def add_file(self, account: int, ref: int, path: str) -> int:
+    def add_file(self, account: int, ref: str, path: str) -> str | None:
         return self._add_file(account, ref, path)
 
-    def _add_file(self, account: int, ref: int, path: str) -> int:
+    def _add_file(self, account: int, ref: str, path: str) -> str | None:
         if self._account_exists(account):
-            log = Log.get(time=ref)
+            log = Log.get(record_date=ref)
             if log:
                 file_ref = Helper.time()
                 File(
                     log=log.id,
-                    time=file_ref,
-                    record_date=datetime.datetime.now(),
+                    record_date=file_ref,
                     path=path,
                 )
                 return file_ref
-        return 0
+        return None
 
     @pony.db_session
-    def remove_file(self, account: int, ref: int, file_ref: int) -> bool:
+    def remove_file(self, account: int, ref: str, file_ref: str) -> bool:
         return self._remove_file(account, ref, file_ref)
 
-    def _remove_file(self, account: int, ref: int, file_ref: int) -> bool:
+    def _remove_file(self, account: int, ref: str, file_ref: str) -> bool:
         if self._account_exists(account):
             if self._log_exists(account, ref):
-                file = File.get(time=file_ref)
+                file = File.get(record_date=file_ref)
                 if file:
                     file.delete()
                     return True
@@ -2749,11 +2746,11 @@ class SQLModel(Model):
         return result
 
     @pony.db_session
-    def set_exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
+    def set_exchange(self, account: int, created: str = None, rate: float = None, description: str = None,
                      debug: bool = False) -> bool:
         return self._set_exchange(account, created, rate, description, debug)
 
-    def _set_exchange(self, account: int, created: int = None, rate: float = None, description: str = None,
+    def _set_exchange(self, account: int, created: str = None, rate: float = None, description: str = None,
                       debug: bool = False) -> bool:
         if debug:
             print('exchange', f'debug={debug}')
@@ -2769,8 +2766,7 @@ class SQLModel(Model):
             account=account,
             rate=rate,
             desc=description if description else '',
-            time=created,
-            record_date=datetime.datetime.now(),
+            record_date=Helper.time_to_datetime(created),
         )
         if debug:
             print("exchange-created-1",
@@ -2778,10 +2774,10 @@ class SQLModel(Model):
         return True
 
     @pony.db_session
-    def exchange(self, account: int, created: int = None, debug: bool = False) -> dict:
+    def exchange(self, account: int, created: str = None, debug: bool = False) -> dict:
         return self._exchange(account, created, debug)
 
-    def _exchange(self, account: int, created: int = None, debug: bool = False) -> dict:
+    def _exchange(self, account: int, created: str = None, debug: bool = False) -> dict:
         if debug:
             print('exchange', f'debug={debug}')
         if not isinstance(account, int):
@@ -2847,13 +2843,13 @@ class SQLModel(Model):
 
     @pony.db_session
     def transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
-                 created: int = None,
-                 debug: bool = False) -> list[int]:
+                 created: str = None,
+                 debug: bool = False) -> list[str]:
         return self._transfer(unscaled_amount, from_account, to_account, desc, created, debug)
 
     def _transfer(self, unscaled_amount: float | int | Decimal, from_account: int, to_account: int, desc: str = '',
-                  created: int = None,
-                  debug: bool = False) -> list[int]:
+                  created: str = None,
+                  debug: bool = False) -> list[str]:
         if debug:
             print('transfer', f'debug={debug}')
         if from_account == to_account:
@@ -3003,7 +2999,7 @@ class SQLModel(Model):
         db.create_tables()
 
     def check(self, silver_gram_price: float, unscaled_nisab: float | int | Decimal = None, debug: bool = False,
-              now: int = None, cycle: float = None) -> tuple:
+              now: str = None, cycle: float = None) -> tuple:
         pass
 
     def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
@@ -3045,19 +3041,19 @@ class SQLModel(Model):
                 if v['box']:
                     box = {}
                     for b in v['box']:
-                        box[b.time] = b.to_dict()
+                        box[b.record_date] = b.to_dict()
                     account[k]['box'] = box
 
                 if v['log']:
                     log = {}
                     for l in v['log']:
-                        log[l.time] = l.to_dict(with_lazy=True, with_collections=True, related_objects=True)
+                        log[l.record_date] = l.to_dict(with_lazy=True, with_collections=True, related_objects=True)
                     account[k]['log'] = log
 
                 if v['exchange']:
                     exchange = {}
                     for e in v['exchange']:
-                        exchange[e.time] = e.to_dict(with_lazy=True, with_collections=True, related_objects=True)
+                        exchange[e.record_date] = e.to_dict(with_lazy=True, with_collections=True, related_objects=True)
                     account[k]['exchange'] = exchange
 
         if section == Vault.NAME or all:
@@ -3092,12 +3088,12 @@ class SQLModel(Model):
         return 'sqlite' if self._file_exists else None
 
     @pony.db_session
-    def log(self, value: float, desc: str = '', account_id: int = 1, created: int = None, ref: int = None,
-            debug: bool = False) -> int:
+    def log(self, value: float, desc: str = '', account_id: int = 1, created: str = None, ref: int = None,
+            debug: bool = False) -> str:
         return self._log(value, desc, account_id, created, ref, debug)
 
-    def _log(self, value: float, desc: str = '', account_id: int = 1, created: int = None, ref: int = None,
-             debug: bool = False) -> int:
+    def _log(self, value: float, desc: str = '', account_id: int = 1, created: str = None, ref: int = None,
+             debug: bool = False) -> str:
         if debug:
             print('_log', f'debug={debug}')
         if created is None:
@@ -3126,11 +3122,10 @@ class SQLModel(Model):
             print('created-log', created)
         if self.raw_sql:
             db.execute(f'''
-                INSERT INTO "log" (account_id, time, record_date, value, desc, ref, created_at)
+                INSERT INTO "log" (account_id, record_date, value, desc, ref, created_at)
                             VALUES(
                                 {account_id},
-                                {created},
-                                "{str(datetime.datetime.now())}",
+                                "{created}",
                                 {value},
                                 "{desc}",
                                 {ref if ref else 'NULL'},
@@ -3140,8 +3135,7 @@ class SQLModel(Model):
         else:
             Log(
                 account=account_id,
-                time=created,
-                record_date=datetime.datetime.now(),
+                record_date=Helper.time_to_datetime(created),
                 value=value,
                 desc=desc,
                 ref=ref,
@@ -3149,28 +3143,28 @@ class SQLModel(Model):
             )
         return created
 
-    def ref_exists(self, account_id: int, ref_type: str, ref: int) -> bool:
+    def ref_exists(self, account_id: int, ref_type: str, ref: str) -> bool:
         if not isinstance(account_id, int):
             raise ValueError(f'The account_id must be an integer, {type(account_id)} was provided.')
         match ref_type:
             case 'box':
-                return Box.exists(account=account_id, time=ref)
+                return Box.exists(account=account_id, record_date=ref)
             case 'log':
-                return Log.exists(account=account_id, time=ref)
+                return Log.exists(account=account_id, record_date=ref)
         return False
 
     @pony.db_session
-    def box_exists(self, account_id: int, ref: int) -> bool:
+    def box_exists(self, account_id: int, ref: str) -> bool:
         return self._box_exists(account_id, ref)
 
-    def _box_exists(self, account_id: int, ref: int) -> bool:
+    def _box_exists(self, account_id: int, ref: str) -> bool:
         return self.ref_exists(account_id=account_id, ref_type='box', ref=ref)
 
     @pony.db_session
-    def log_exists(self, account_id: int, ref: int) -> bool:
+    def log_exists(self, account_id: int, ref: str) -> bool:
         return self._log_exists(account_id, ref)
 
-    def _log_exists(self, account_id: int, ref: int) -> bool:
+    def _log_exists(self, account_id: int, ref: str) -> bool:
         return self.ref_exists(account_id=account_id, ref_type='log', ref=ref)
 
     def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) -> dict[
@@ -3355,9 +3349,9 @@ class ZakatTracker:
                     except:
                         pass
                 # TODO: not allowed for negative dates in the future after enhance time functions
-                if date == 0:
+                if date == 0 or date == '' or date is None:
                     bad[i] = row + ['invalid date']
-                if value == 0:
+                if value == 0 or value == '' or value is None:
                     bad[i] = row + ['invalid value']
                     continue
                 if date not in data:
@@ -3693,14 +3687,14 @@ class ZakatTracker:
                         )
                         if debug:
                             print('_sub', z, Helper.time())
-                    assert ref != 0
+                    assert ref != None
                     assert len(self.db.vault(Vault.ACCOUNT)[x]['log'][ref]['file']) == 0
                     for i in range(3):
                         file_ref = self.db.add_file(x, ref, 'file_' + str(i))
                         sleep(0.0000001)
-                        assert file_ref != 0
                         if debug:
                             print('ref', ref, 'file', file_ref)
+                        assert file_ref != None
                         assert len(self.db.vault(Vault.ACCOUNT)[x]['log'][ref]['file']) == i + 1
                     file_ref = self.db.add_file(x, ref, 'file_' + str(3))
                     assert self.db.remove_file(x, ref, file_ref)
