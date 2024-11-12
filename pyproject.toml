@@ -19,7 +19,6 @@ classifiers = [
 ]
 dependencies=[
   'camelx',
-  'vzool-config',
   'pony',
 ]
 

@@ -69,7 +69,6 @@ from pathlib import Path
 from camelx import Camel, CamelRegistry
 import shutil
 from abc import ABC, abstractmethod
-from vzool_config import ConfigManager
 import pony.orm as pony
 
 
@@ -2487,7 +2486,6 @@ class SQLModel(Model):
 
         self._base_path = None
         self._vault_path = None
-        self._config_path = None
         self._db_path = None
         self.debug = False
         self._file_exists = False
@@ -2496,11 +2494,7 @@ class SQLModel(Model):
         if str.lower(db_params['provider']) == 'sqlite' and 'filename' in db_params:
             db_params['filename'] = str(self.path(db_params['filename']))
             self._db_path = db_params['filename']
-            self._config_path = str(self._base_path / 'config.db')
             self._file_exists = True
-        else:
-            self._config_path = str(self.path('config.db'))
-        self.config = ConfigManager(db_file=self._config_path)
 
         if 'debug' in db_params:
             if type(db_params['debug']) is not bool:
@@ -3185,7 +3179,6 @@ class SQLModel(Model):
 
     @staticmethod
     def test(debug: bool = False) -> bool:
-        ConfigManager.test(debug=debug)
         return True
 
 

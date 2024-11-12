@@ -24,7 +24,6 @@ setup(
     ),
     requires=[
         'camelx',
-        'vzool-config',
         'pony',
     ],
 )

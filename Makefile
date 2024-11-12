@@ -40,7 +40,6 @@ deps:
 	python3 -m pip install --upgrade twine
 	python3 -m pip install --upgrade pyyaml
 	python3 -m pip install --upgrade camelx
-	python3 -m pip install --upgrade vzool-config
 	python3 -m pip install --upgrade pony
 	python3 -m pip install --upgrade pytest==8.2.2
 	python3 -m pip install --upgrade pytest-runner==6.0.1
