@@ -2555,24 +2555,60 @@ class SQLModel(Model):
         self._log(value=-value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
         target = value
         ages = []
-        selected_account = Account.get(id=account)
-        boxes = selected_account.box.select().order_by(pony.desc(Box.id))[:]
-        if debug:
-            print('boxes', boxes)
-        for box in boxes:
-            if target == 0:
-                break
-            rest = box.rest
-            if rest >= target:
-                box.rest -= target
-                ages.append((box.time, target))
-                target = 0
-                break
-            elif target > rest > 0:
-                chunk = rest
-                target -= chunk
-                ages.append((box.time, chunk))
-                box.rest = 0
+        if self.raw_sql:
+            x = db.execute(f'''
+                SELECT      id, rest, record_date
+                FROM        box
+                WHERE       account_id = {account}
+                ORDER BY    id DESC;
+            ''')
+            boxes = x.fetchall()
+            if debug:
+                print('boxes', boxes)
+            for ref, rest, record_date in boxes:
+                if debug:
+                    print(f'ref={ref}, rest={rest}, record_date={record_date}')
+                if target == 0:
+                    break
+                if rest >= target:
+                    rest -= target
+                    ages.append((record_date, target))
+                    target = 0
+                    db.execute(f'''
+                        UPDATE  box
+                        SET     rest = {rest}
+                        WHERE   id = {ref};
+                    ''')
+                    break
+                elif target > rest > 0:
+                    chunk = rest
+                    target -= chunk
+                    ages.append((record_date, chunk))
+                    rest = 0
+                    db.execute(f'''
+                        UPDATE  box
+                        SET     rest = {rest}
+                        WHERE   id = {ref};
+                    ''')
+        else:
+            selected_account = Account.get(id=account)
+            boxes = selected_account.box.select().order_by(pony.desc(Box.id))[:]
+            if debug:
+                print('boxes', boxes)
+            for box in boxes:
+                if target == 0:
+                    break
+                rest = box.rest
+                if rest >= target:
+                    box.rest -= target
+                    ages.append((box.record_date, target))
+                    target = 0
+                    break
+                elif target > rest > 0:
+                    chunk = rest
+                    target -= chunk
+                    ages.append((box.record_date, chunk))
+                    box.rest = 0
         if target > 0:
             self._track(
                 unscaled_value=Helper.unscale(-target),
@@ -2652,9 +2688,29 @@ class SQLModel(Model):
 
     def _add_file(self, account: int, ref: str, path: str) -> str | None:
         if self._account_exists(account):
+            file_ref = Helper.time()
+            if self.raw_sql:
+                x = db.execute(f'''
+                        SELECT  id
+                        FROM    "log"
+                        WHERE   record_date = "{ref}";
+                    ''')
+                log_id = x.fetchone()[0]
+                print(f'log_id = {log_id}')
+                if log_id:
+                    db.execute(f'''
+                        INSERT INTO "file" (log_id, record_date, path, name, created_at)
+                                    VALUES(
+                                        {log_id},
+                                        "{file_ref}",
+                                        "{path}",
+                                        "",
+                                        "{str(datetime.datetime.now())}"
+                                    );
+                    ''')
+                    return file_ref
             log = Log.get(record_date=ref)
             if log:
-                file_ref = Helper.time()
                 File(
                     log=log.id,
                     record_date=file_ref,
@@ -2670,6 +2726,20 @@ class SQLModel(Model):
     def _remove_file(self, account: int, ref: str, file_ref: str) -> bool:
         if self._account_exists(account):
             if self._log_exists(account, ref):
+                if self.raw_sql:
+                    x = db.execute(f'''
+                        SELECT  id
+                        FROM    "file"
+                        WHERE   record_date = "{file_ref}";
+                    ''')
+                    file_id = x.fetchone()[0]
+                    if file_id:
+                        db.execute(f'''
+                            DELETE FROM "file"
+                            WHERE   id = {file_id};
+                        ''')
+                        return True
+                    return False
                 file = File.get(record_date=file_ref)
                 if file:
                     file.delete()
@@ -2793,7 +2863,7 @@ class SQLModel(Model):
             if debug:
                 print("exchange-read-1", f'account={account}, created={created}, latest_rate={exchange}')
             return {
-                "time": exchange.time,
+                "time": exchange.record_date,
                 "rate": exchange.rate,
                 "description": exchange.desc if exchange.desc else None,
             }
@@ -2932,7 +3002,7 @@ class SQLModel(Model):
     def _logs(self, account_id: int) -> dict:
         account = Account.get(id=account_id)
         if account:
-            return {l.time: l.to_dict() for l in account.log.select()[:]}
+            return {l.record_date: l.to_dict() for l in account.log.select()[:]}
         return {}
 
     @pony.db_session
@@ -2942,7 +3012,7 @@ class SQLModel(Model):
     def _boxes(self, account_id: int) -> dict:
         account = Account.get(id=account_id)
         if account:
-            return {b.time: b.to_dict() for b in account.box.select()[:]}
+            return {b.record_date: b.to_dict() for b in account.box.select()[:]}
         return {}
 
     @pony.db_session
@@ -3148,8 +3218,24 @@ class SQLModel(Model):
             raise ValueError(f'The account_id must be an integer, {type(account_id)} was provided.')
         match ref_type:
             case 'box':
+                if self.raw_sql:
+                    x = db.execute(f'''
+                        SELECT  COUNT(*)
+                        FROM    "box"
+                        WHERE   account_id = {account_id}   AND
+                                record_date = "{ref}";
+                    ''')
+                    return True if x.fetchone()[0] else False
                 return Box.exists(account=account_id, record_date=ref)
             case 'log':
+                if self.raw_sql:
+                    x = db.execute(f'''
+                        SELECT  COUNT(*)
+                        FROM    "log"
+                        WHERE   account_id = {account_id}   AND
+                                record_date = "{ref}";
+                    ''')
+                    return True if x.fetchone()[0] else False
                 return Log.exists(account=account_id, record_date=ref)
         return False
 
@@ -3684,6 +3770,7 @@ class ZakatTracker:
                             desc='test-sub',
                             account=x,
                             created=Helper.time(),
+                            debug=debug,
                         )
                         if debug:
                             print('_sub', z, Helper.time())
