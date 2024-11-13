@@ -1625,7 +1625,7 @@ class Helper:
             assert result_datetime.month == expected.month
             assert result_datetime.day == expected.day
             assert result_datetime.hour == expected.hour
-            # assert result_datetime.minute == expected.minute
+            assert result_datetime.minute == expected.minute
             assert result_datetime.second == expected.second
             assert result_datetime.microsecond == expected.microsecond
 
