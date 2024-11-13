@@ -2445,6 +2445,7 @@ class Exchange(db.Entity):
     record_date = pony.Required(datetime.datetime, unique=True)
     rate = pony.Required(Decimal)
     desc = pony.Optional(pony.LongStr)
+    created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
 
 
 class Report(db.Entity):
@@ -2832,12 +2833,24 @@ class SQLModel(Model):
             return False
         if not self._account_exists(account):
             self._track(account=account, debug=debug)
-        Exchange(
-            account=account,
-            rate=rate,
-            desc=description if description else '',
-            record_date=Helper.time_to_datetime(created),
-        )
+        if self.raw_sql:
+            db.execute(f'''
+                INSERT INTO exchange (account_id, record_date, rate, desc, created_at)
+                            VALUES(
+                                {account},
+                                "{created}",
+                                {rate},
+                                "{description if description else ''}",
+                                "{str(datetime.datetime.now())}"
+                            );
+            ''')
+        else:
+            Exchange(
+                account=account,
+                rate=rate,
+                desc=description if description else '',
+                record_date=Helper.time_to_datetime(created),
+            )
         if debug:
             print("exchange-created-1",
                   f'account: {account}, created: {created}, rate:{rate}, description:{description}')
@@ -2854,19 +2867,38 @@ class SQLModel(Model):
             raise ValueError(f'The account must be an integer, {type(account)} was provided.')
         if created is None:
             created = Helper.time()
-        exchange = Exchange.select(
-            lambda e: e.account.id == account and e.time <= created
-        ).order_by(pony.desc(Exchange.time)).first()
-        if debug:
-            print('valid_rates', exchange, type(exchange), exchange)
-        if exchange:
+        if self.raw_sql:
+            x = db.execute(f'''
+                SELECT      record_date, rate, desc
+                FROM        exchange
+                WHERE       account_id = {account}                          AND
+                            datetime(record_date) <= datetime("{created}")
+                ORDER BY    record_date DESC
+                LIMIT       1;
+            ''')
+            exchange = x.fetchone()
             if debug:
-                print("exchange-read-1", f'account={account}, created={created}, latest_rate={exchange}')
-            return {
-                "time": exchange.record_date,
-                "rate": exchange.rate,
-                "description": exchange.desc if exchange.desc else None,
-            }
+                print('valid_rates', exchange, type(exchange), exchange)
+            if exchange:
+                return {
+                    "time": exchange[0],
+                    "rate": exchange[1],
+                    "description": exchange[2] if exchange[2] else None,
+                }
+        else:
+            exchange = Exchange.select(
+                lambda e: e.account.id == account and e.record_date <= created
+            ).order_by(pony.desc(Exchange.record_date)).first()
+            if debug:
+                print('valid_rates', exchange, type(exchange), exchange)
+            if exchange:
+                if debug:
+                    print("exchange-read-1", f'account={account}, created={created}, latest_rate={exchange}')
+                return {
+                    "time": exchange.record_date,
+                    "rate": exchange.rate,
+                    "description": exchange.desc if exchange.desc else None,
+                }
         if debug:
             print("exchange-read-0", f'account: {account}, created: {created}')
         return {"time": created, "rate": 1, "description": None}  # إرجاع القيمة الافتراضية مع وصف فارغ
@@ -2879,7 +2911,7 @@ class SQLModel(Model):
         if self._account_exists(account):
             result = {}
             for exchange in Exchange.select(lambda e: e.account.id == account)[:]:
-                result[exchange.time] = exchange.to_dict()
+                result[exchange.record_date] = exchange.to_dict()
             if result:
                 return result
         return None
@@ -2946,7 +2978,7 @@ class SQLModel(Model):
             if debug:
                 print('target_amount', target_amount)
             # Perform the transfer
-            box = Box.get(account=to_account, time=age)
+            box = Box.get(account=to_account, record_date=age)
             if debug:
                 print('box_exists', age)
             if box:
