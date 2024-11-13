@@ -165,6 +165,7 @@ class Model(ABC):
         Raises:
         ValueError: The box transaction happened again in the same time.
         ValueError: The log transaction happened again in the same time.
+        ValueError: The created must be a str, <class 'xxx'> was provided.
         """
 
     @abstractmethod
@@ -190,6 +191,7 @@ class Model(ABC):
         Raises:
         ValueError: The log transaction happened again in the same time.
         ValueError: The box transaction happened again in the same time.
+        ValueError: The created must be a str, <class 'xxx'> was provided.
         """
 
     @abstractmethod
@@ -407,6 +409,7 @@ class Model(ABC):
         ValueError: Transfer to the same account is forbidden.
         ValueError: The box transaction happened again in the same time.
         ValueError: The log transaction happened again in the same time.
+        ValueError: The created must be a str, <class 'xxx'> was provided.
         """
 
     @abstractmethod
@@ -810,6 +813,7 @@ class Model(ABC):
 
         Raises:
         ValueError: The log transaction happened again in the same time.
+        ValueError: The created must be a str, <class 'xxx'> was provided.
         """
 
     @abstractmethod
@@ -983,10 +987,34 @@ class Helper:
         Returns:
         The number of milliseconds since the Unix epoch.
         """
-        return int(dt.timestamp() * 1000)
+        return int(dt.timestamp() * 1_000)
 
     @staticmethod
-    def time_to_milliseconds(time_s: str) -> datetime:
+    def milliseconds_to_datetime(timestamp_ms: int) -> datetime:
+        """
+        Converts a timestamp in milliseconds to a datetime object.
+
+        Parameters:
+        timestamp_ms: An integer representing the timestamp in milliseconds.
+
+        Returns:
+        The function converts the millisecond timestamp to seconds by dividing by 1000 and then
+        uses the `datetime.datetime.fromtimestamp` method to create a datetime object.
+        """
+        return datetime.datetime.fromtimestamp(timestamp_ms // 1_000)
+
+    @staticmethod
+    def time_to_milliseconds(time_s: str) -> int:
+        """
+        Converts a time string to a timestamp in milliseconds.
+
+        Parameters:
+        time_s: A string representing the time in a format supported by `datetime.datetime.strptime`.
+
+        Returns:
+        The function first converts the time string to a datetime object using the `Helper.time_to_datetime` method.
+        Then, it converts the datetime object to milliseconds using the `Helper.datetime_to_milliseconds` method.
+        """
         return Helper.datetime_to_milliseconds(Helper.time_to_datetime(time_s))
 
     @staticmethod
@@ -1882,6 +1910,8 @@ class DictModel(Model):
             print('_log', f'debug={debug}')
         if created is None:
             created = Helper.time()
+        if not isinstance(created, str):
+            raise ValueError(f'The created must be a str, {type(created)} was provided.')
         try:
             self._vault['account'][account_id]['balance'] += value
         except TypeError:
@@ -2026,6 +2056,8 @@ class DictModel(Model):
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
         if created is None:
             created = Helper.time()
+        if not isinstance(created, str):
+            raise ValueError(f'The created must be a str, {type(created)} was provided.')
         if not self.account_exists(account):
             if debug:
                 print(f"account {account} created")
@@ -2205,6 +2237,8 @@ class DictModel(Model):
             return ref, ref
         if created is None:
             created = Helper.time()
+        if not isinstance(created, str):
+            raise ValueError(f'The created must be a str, {type(created)} was provided.')
         self.track(0, '', account)
         value = Helper.scale(unscaled_value)
         self.log(value=-value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
@@ -2257,6 +2291,8 @@ class DictModel(Model):
             raise ValueError(f'The from_account must be an integer, {type(from_account)} was provided.')
         if created is None:
             created = Helper.time()
+        if not isinstance(created, str):
+            raise ValueError(f'The created must be a str, {type(created)} was provided.')
         (_, ages) = self.sub(unscaled_amount, desc, from_account, created, debug=debug)
         times = []
         source_exchange = self.exchange(from_account, created, debug=debug)
@@ -2664,6 +2700,8 @@ class SQLModel(Model):
             return ref, ref
         if created is None:
             created = Helper.time()
+        if not isinstance(created, str):
+            raise ValueError(f'The created must be a str, {type(created)} was provided.')
         self._track(0, '', account)
         value = Helper.scale(unscaled_value)
         self._log(value=-value, desc=desc, account_id=account, created=created, ref=None, debug=debug)
@@ -2745,6 +2783,8 @@ class SQLModel(Model):
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
         if created is None:
             created = Helper.time()
+        if not isinstance(created, str):
+            raise ValueError(f'The created must be a str, {type(created)} was provided.')
         if not self._account_exists(account):
             if debug:
                 print(f"account {account} created")
@@ -3146,7 +3186,7 @@ class SQLModel(Model):
                 desc=desc,
                 account=to_account,
                 logging=True,
-                created=age + 1,
+                created=new_age,
                 debug=debug,
             )
             times.append(y)
@@ -3345,6 +3385,8 @@ class SQLModel(Model):
             print('_log', f'debug={debug}')
         if created is None:
             created = Helper.time()
+        if not isinstance(created, str):
+            raise ValueError(f'The created must be a str, {type(created)} was provided.')
         if self.raw_sql:
             db.execute(f'''
                 UPDATE "account"
@@ -4215,7 +4257,7 @@ class ZakatTracker:
                         desc=f"test-{x} ages",
                         account=account_ages_ref,
                         logging=True,
-                        created=selected_time * x[1],
+                        created=Helper.time(Helper.milliseconds_to_datetime(selected_time * x[1])),
                     )
 
                 unscaled_total = Helper.unscale(total)
@@ -4676,7 +4718,7 @@ class ZakatTracker:
                         desc='test-check',
                         account=case[1],
                         logging=True,
-                        created=case[2],
+                        created=Helper.time(Helper.milliseconds_to_datetime(case[2])),
                     )
                     assert self.db.snapshot()
 
