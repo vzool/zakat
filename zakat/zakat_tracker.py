@@ -1541,27 +1541,37 @@ class Helper:
             print('count', xx, ' - unique: ', (xx / limit) * 100, '%')
         assert limit == xx
 
-        # sanity check - convert date since 1000AD
+        # sanity check - convert date since 1AD
 
         month = 12
         day = 27
         hour = 18
         minute = 30
         second = 45
-        for year in range(1000, 9999):
+        microsecond = 306090
+        for year in range(1, 9999):
             s = Helper.time(datetime.datetime.strptime(
-                f"{year}-{month}-{day} {hour}:{minute}:{second}", "%Y-%m-%d %H:%M:%S"
+                f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}.{microsecond:06d}",
+                "%Y-%m-%d %H:%M:%S.%f",
             ))
-            date = Helper.time_to_datetime(s)
+
+            d = Helper.time_to_datetime(s)
+            ms = Helper.datetime_to_milliseconds(d)
+            dd = Helper.milliseconds_to_datetime(ms)
+            int_val = Helper.iso8601_to_int(dd.isoformat())
+            iso_val = Helper.int_to_iso8601(int_val)
+            date = Helper.time_to_datetime(iso_val)
             if debug:
                 print(date,
-                      f'year({date.year} = {year}), month({date.month} = {month}), day({date.day} = {day}), hour({date.hour} = {hour}), minute({date.minute} = {minute})')
+                      f'year({date.year} = {year}), month({date.month} = {month}), day({date.day} = {day}), hour({date.hour} = {hour}), minute({date.minute} = {minute}), second({date.second} = {second}), microsecond({date.microsecond} = {microsecond})')
             assert date.year == year
             assert date.month == month
             assert date.day == day
             assert date.hour == hour
             assert date.minute == minute
             assert date.second == second
+            # TODO: datetime_to_milliseconds & milliseconds_to_datetime not support microsecond
+            # assert date.microsecond == microsecond
 
         # sanity check - datetime to int
 
