@@ -70,6 +70,7 @@ from camelx import Camel, CamelRegistry
 import shutil
 from abc import ABC, abstractmethod
 import pony.orm as pony
+import calendar
 
 
 class WeekDay(Enum):
@@ -1055,6 +1056,62 @@ class Helper:
                 dt.microsecond)
 
     @staticmethod
+    def int_to_iso8601(timestamp: int, extra_ms: int = None) -> str:
+        """
+        Converts an integer timestamp to an ISO 8601 formatted string.
+
+        Parameters:
+        timestamp: An integer representing a timestamp in the format YYYYMMDDHHMMSSuuuuuu.
+        extra_ms: An optional integer representing additional milliseconds to add to the timestamp.
+
+        Returns:
+        A string representing the timestamp in ISO 8601 format (e.g., '2023-11-19T12:34:56.789012').
+
+        This function first extracts the year, month, day, hour, minute, second, and microsecond components from the integer timestamp.
+        If an `extra_ms` value is provided, it's added to the microseconds, and any resulting overflow is propagated to
+        the higher time units (seconds, minutes, hours, days, months, and years).
+        The function then constructs an ISO 8601 formatted string using the adjusted time components and returns it.
+        """
+        microseconds = timestamp % 10 ** 6
+        seconds = (timestamp // 10 ** 6) % 10 ** 2
+        minutes = (timestamp // 10 ** 8) - ((timestamp // 10 ** 10) * 10 ** 2)
+        hours = (timestamp // 10 ** 10) - ((timestamp // 10 ** 12) * 10 ** 2)
+        day = (timestamp // 10 ** 12) - ((timestamp // 10 ** 14) * 10 ** 2)
+        month = (timestamp // 10 ** 14) - ((timestamp // 10 ** 16) * 10 ** 2)
+        year = timestamp // 10 ** 16
+
+        if extra_ms is not None:
+            microseconds += extra_ms
+            if microseconds >= 1_000_000:
+                seconds += microseconds // 1_000_000
+                microseconds %= 1_000_000
+
+            if seconds >= 60:
+                minutes += seconds // 60
+                seconds %= 60
+
+            if minutes >= 60:
+                hours += minutes // 60
+                minutes %= 60
+
+            if hours >= 24:
+                day += hours // 24
+                hours %= 24
+
+                # Handle day overflow, considering month length
+                max_days_in_month = calendar.monthrange(year, month)[1]
+                if day > max_days_in_month:
+                    month += 1
+                    day = 1
+                    if month > 12:
+                        year += 1
+                        month = 1
+
+        return datetime.datetime.fromisoformat(
+            f"{year:04d}-{month:02d}-{day:02d}T{hours:02d}:{minutes:02d}:{seconds:02d}.{microseconds:06d}",
+        ).isoformat()
+
+    @staticmethod
     def is_windows() -> bool:
         """
         Checks if the operating system is Windows.
@@ -1477,6 +1534,62 @@ class Helper:
             assert date.hour == hour
             assert date.minute == minute
             assert date.second == second
+
+        # sanity check - datetime to int
+
+        for usecase, expected in {
+            # microsecond
+            datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0): datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=0, microsecond=1),
+            # second
+            datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=0, microsecond=999999): datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=1, microsecond=0),
+            # minute
+            datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=59, microsecond=999999): datetime.datetime(year=1, month=1, day=1, hour=0, minute=1, second=0, microsecond=0),
+            # hour
+            datetime.datetime(year=1, month=1, day=1, hour=0, minute=59, second=59, microsecond=999999): datetime.datetime(year=1, month=1, day=1, hour=1, minute=0, second=0, microsecond=0),
+            # day
+            datetime.datetime(year=1, month=1, day=1, hour=23, minute=59, second=59, microsecond=999999): datetime.datetime(year=1, month=1, day=2, hour=0, minute=0, second=0, microsecond=0),
+            # month
+            datetime.datetime(year=1, month=1, day=31, hour=23, minute=59, second=59, microsecond=999999): datetime.datetime(year=1, month=2, day=1, hour=0, minute=0, second=0, microsecond=0),
+            # year
+            datetime.datetime(year=1, month=12, day=31, hour=23, minute=59, second=59, microsecond=999999): datetime.datetime(year=2, month=1, day=1, hour=0, minute=0, second=0, microsecond=0),
+        }.items():
+
+            if debug:
+                print('usecase', usecase)
+                print('expected', expected)
+
+            usecase_datetime = datetime.datetime.fromisoformat(
+                Helper.int_to_iso8601(Helper.iso8601_to_int(usecase.isoformat())))
+            assert usecase_datetime.year == usecase.year
+            assert usecase_datetime.month == usecase.month
+            assert usecase_datetime.day == usecase.day
+            assert usecase_datetime.hour == usecase.hour
+            assert usecase_datetime.minute == usecase.minute
+            assert usecase_datetime.second == usecase.second
+            assert usecase_datetime.microsecond == usecase.microsecond
+
+            expected_datetime = datetime.datetime.fromisoformat(
+                Helper.int_to_iso8601(Helper.iso8601_to_int(expected.isoformat())))
+            assert expected_datetime.year == expected.year
+            assert expected_datetime.month == expected.month
+            assert expected_datetime.day == expected.day
+            assert expected_datetime.hour == expected.hour
+            assert expected_datetime.minute == expected.minute
+            assert expected_datetime.second == expected.second
+            assert expected_datetime.microsecond == expected.microsecond
+
+            result_datetime = datetime.datetime.fromisoformat(
+                Helper.int_to_iso8601(Helper.iso8601_to_int(usecase.isoformat()), extra_ms=1))
+            if debug:
+                print('result', result_datetime)
+                print('===========================================')
+            assert result_datetime.year == expected.year
+            assert result_datetime.month == expected.month
+            assert result_datetime.day == expected.day
+            assert result_datetime.hour == expected.hour
+            # assert result_datetime.minute == expected.minute
+            assert result_datetime.second == expected.second
+            assert result_datetime.microsecond == expected.microsecond
 
         # human_readable_size
 
@@ -2978,21 +3091,53 @@ class SQLModel(Model):
             if debug:
                 print('target_amount', target_amount)
             # Perform the transfer
-            box = Box.get(account=to_account, record_date=age)
-            if debug:
-                print('box_exists', age)
-            if box:
+            new_age = Helper.int_to_iso8601(Helper.iso8601_to_int(age), extra_ms=1)
+            if self.raw_sql:
+                x = db.execute(f'''
+                    SELECT  id, rest, capital
+                    FROM    box
+                    WHERE   account_id = {to_account}                   AND
+                            datetime(record_date) = datetime("{age}")
+                    LIMIT   1; 
+                ''')
+                box = x.fetchone()
                 if debug:
-                    print(
-                        f"Transfer(loop) {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).")
-                if box.rest + target_amount > box.capital:
-                    box.capital += target_amount
-                box.rest += target_amount
-                y = self._log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}',
-                              account_id=to_account,
-                              created=None, ref=None, debug=debug)
-                times.append((age + 1, y))
-                continue
+                    print('box_exists', box)
+                if box:
+                    if debug:
+                        print(
+                            f"Transfer(loop) {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).")
+                    ref, rest, capital = box
+                    if rest + target_amount > capital:
+                        capital += target_amount
+                    rest += target_amount
+                    db.execute(f'''
+                        UPDATE  box
+                        SET     capital = {capital},
+                                rest = {rest}
+                        WHERE   id = {ref};
+                    ''')
+                    y = self._log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}',
+                                  account_id=to_account,
+                                  created=new_age, ref=None, debug=debug)
+                    times.append((new_age, y))
+                    continue
+            else:
+                box = Box.get(account=to_account, record_date=age)
+                if debug:
+                    print('box_exists', box)
+                if box:
+                    if debug:
+                        print(
+                            f"Transfer(loop) {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).")
+                    if box.rest + target_amount > box.capital:
+                        box.capital += target_amount
+                    box.rest += target_amount
+                    y = self._log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}',
+                                  account_id=to_account,
+                                  created=new_age, ref=None, debug=debug)
+                    times.append((new_age, y))
+                    continue
             if debug:
                 print(
                     f"Transfer(func) {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).")
