@@ -1541,7 +1541,7 @@ class Helper:
             print('count', xx, ' - unique: ', (xx / limit) * 100, '%')
         assert limit == xx
 
-        # sanity check - convert date since 1AD
+        # sanity check - convert date since 1AD to 9999AD
 
         month = 12
         day = 27
@@ -1549,47 +1549,61 @@ class Helper:
         minute = 30
         second = 45
         microsecond = 306090
-        for year in range(1, 9999):
-            s = Helper.time(datetime.datetime.strptime(
-                f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}.{microsecond:06d}",
-                "%Y-%m-%d %H:%M:%S.%f",
-            ))
-
-            d = Helper.time_to_datetime(s)
-            ms = Helper.datetime_to_milliseconds(d)
-            dd = Helper.milliseconds_to_datetime(ms)
-            int_val = Helper.iso8601_to_int(dd.isoformat())
-            iso_val = Helper.int_to_iso8601(int_val)
-            date = Helper.time_to_datetime(iso_val)
-            if debug:
-                print(date,
-                      f'year({date.year} = {year}), month({date.month} = {month}), day({date.day} = {day}), hour({date.hour} = {hour}), minute({date.minute} = {minute}), second({date.second} = {second}), microsecond({date.microsecond} = {microsecond})')
-            assert date.year == year
-            assert date.month == month
-            assert date.day == day
-            assert date.hour == hour
-            assert date.minute == minute
-            assert date.second == second
-            # TODO: datetime_to_milliseconds & milliseconds_to_datetime not support microsecond
-            # assert date.microsecond == microsecond
+        for unix_timestamp in [True, False]:
+            for year in range(1, 9999):
+                s = Helper.time(datetime.datetime.strptime(
+                    f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}.{microsecond:06d}",
+                    "%Y-%m-%d %H:%M:%S.%f",
+                ))
+                d = Helper.time_to_datetime(s)
+                ms = Helper.datetime_to_milliseconds(d)
+                dd = Helper.milliseconds_to_datetime(ms)
+                int_val = Helper.iso8601_to_int(dd.isoformat() if unix_timestamp else d.isoformat())
+                iso_val = Helper.int_to_iso8601(int_val)
+                date = Helper.time_to_datetime(iso_val)
+                if debug:
+                    print(date,
+                          f'year({date.year} = {year}), month({date.month} = {month}), day({date.day} = {day}), hour({date.hour} = {hour}), minute({date.minute} = {minute}), second({date.second} = {second}), microsecond({date.microsecond} = {microsecond})')
+                assert date.year == year
+                assert date.month == month
+                assert date.day == day
+                assert date.hour == hour
+                assert date.minute == minute
+                assert date.second == second
+                # datetime_to_milliseconds & milliseconds_to_datetime not support microsecond
+                if not unix_timestamp:
+                    assert date.microsecond == microsecond
 
         # sanity check - datetime to int
 
         for usecase, expected in {
             # microsecond
-            datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0): datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=0, microsecond=1),
+            datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0): datetime.datetime(
+                year=1, month=1, day=1, hour=0, minute=0, second=0, microsecond=1),
             # second
-            datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=0, microsecond=999999): datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=1, microsecond=0),
+            datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=0,
+                              microsecond=999999): datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=1,
+                                                                     microsecond=0),
             # minute
-            datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=59, microsecond=999999): datetime.datetime(year=1, month=1, day=1, hour=0, minute=1, second=0, microsecond=0),
+            datetime.datetime(year=1, month=1, day=1, hour=0, minute=0, second=59,
+                              microsecond=999999): datetime.datetime(year=1, month=1, day=1, hour=0, minute=1, second=0,
+                                                                     microsecond=0),
             # hour
-            datetime.datetime(year=1, month=1, day=1, hour=0, minute=59, second=59, microsecond=999999): datetime.datetime(year=1, month=1, day=1, hour=1, minute=0, second=0, microsecond=0),
+            datetime.datetime(year=1, month=1, day=1, hour=0, minute=59, second=59,
+                              microsecond=999999): datetime.datetime(year=1, month=1, day=1, hour=1, minute=0, second=0,
+                                                                     microsecond=0),
             # day
-            datetime.datetime(year=1, month=1, day=1, hour=23, minute=59, second=59, microsecond=999999): datetime.datetime(year=1, month=1, day=2, hour=0, minute=0, second=0, microsecond=0),
+            datetime.datetime(year=1, month=1, day=1, hour=23, minute=59, second=59,
+                              microsecond=999999): datetime.datetime(year=1, month=1, day=2, hour=0, minute=0, second=0,
+                                                                     microsecond=0),
             # month
-            datetime.datetime(year=1, month=1, day=31, hour=23, minute=59, second=59, microsecond=999999): datetime.datetime(year=1, month=2, day=1, hour=0, minute=0, second=0, microsecond=0),
+            datetime.datetime(year=1, month=1, day=31, hour=23, minute=59, second=59,
+                              microsecond=999999): datetime.datetime(year=1, month=2, day=1, hour=0, minute=0, second=0,
+                                                                     microsecond=0),
             # year
-            datetime.datetime(year=1, month=12, day=31, hour=23, minute=59, second=59, microsecond=999999): datetime.datetime(year=2, month=1, day=1, hour=0, minute=0, second=0, microsecond=0),
+            datetime.datetime(year=1, month=12, day=31, hour=23, minute=59, second=59,
+                              microsecond=999999): datetime.datetime(year=2, month=1, day=1, hour=0, minute=0, second=0,
+                                                                     microsecond=0),
         }.items():
 
             if debug:
@@ -1616,18 +1630,18 @@ class Helper:
             assert expected_datetime.second == expected.second
             assert expected_datetime.microsecond == expected.microsecond
 
-            result_datetime = datetime.datetime.fromisoformat(
+            result = datetime.datetime.fromisoformat(
                 Helper.int_to_iso8601(Helper.iso8601_to_int(usecase.isoformat()), extra_ms=1))
             if debug:
-                print('result', result_datetime)
+                print('result', result)
                 print('===========================================')
-            assert result_datetime.year == expected.year
-            assert result_datetime.month == expected.month
-            assert result_datetime.day == expected.day
-            assert result_datetime.hour == expected.hour
-            assert result_datetime.minute == expected.minute
-            assert result_datetime.second == expected.second
-            assert result_datetime.microsecond == expected.microsecond
+            assert result.year == expected.year
+            assert result.month == expected.month
+            assert result.day == expected.day
+            assert result.hour == expected.hour
+            assert result.minute == expected.minute
+            assert result.second == expected.second
+            assert result.microsecond == expected.microsecond
 
         # human_readable_size
 
