@@ -592,7 +592,12 @@ class Model(ABC):
               unscaled_nisab: float | int | Decimal = None,
               debug: bool = False,
               now: str = None,
-              cycle: float = None) -> tuple:
+              cycle: float = None,
+              ) -> tuple[
+        bool,
+        list[int],
+        dict[int, dict[int, dict[str, Any]]],
+    ]:
         """
         Check the eligibility for Zakat based on the given parameters.
 
@@ -2365,7 +2370,12 @@ class DictModel(Model):
               unscaled_nisab: float | int | Decimal = None,
               debug: bool = False,
               now: str = None,
-              cycle: float = None) -> tuple:
+              cycle: float = None,
+              ) -> tuple[
+        bool,
+        list[int],
+        dict[int, dict[int, dict[str, Any]]],
+    ]:
         if debug:
             print('check', f'debug={debug}')
         now_ms = Helper.time_to_milliseconds(Helper.time() if now is None else now)
@@ -3309,9 +3319,50 @@ class SQLModel(Model):
         db.drop_all_tables(with_all_data=True)
         db.create_tables()
 
-    def check(self, silver_gram_price: float, unscaled_nisab: float | int | Decimal = None, debug: bool = False,
-              now: str = None, cycle: float = None) -> tuple:
-        pass
+    @pony.db_session
+    def check(self,
+              silver_gram_price: float,
+              unscaled_nisab: float | int | Decimal = None,
+              debug: bool = False,
+              now: str = None,
+              cycle: float = None,
+              ) -> tuple[
+        bool,
+        list[int],
+        dict[int, dict[int, dict[str, Any]]],
+    ]:
+        return self._check(silver_gram_price, unscaled_nisab, debug, now, cycle)
+
+    def _check(self,
+               silver_gram_price: float,
+               unscaled_nisab: float | int | Decimal = None,
+               debug: bool = False,
+               now: str = None,
+               cycle: float = None,
+               ) -> tuple[
+        bool,
+        list[int],
+        dict[int, dict[int, dict[str, Any]]],
+    ]:
+        if debug:
+            print('check', f'debug={debug}')
+        now = Helper.time() if now is None else now
+        if cycle is None:
+            cycle = Helper.TimeCycle()
+        if unscaled_nisab is None:
+            unscaled_nisab = Helper.Nisab(silver_gram_price)
+        nisab = Helper.scale(unscaled_nisab)
+        plan = {}
+        below_nisab = 0
+        brief = [0, 0, 0]
+        valid = False
+        if debug:
+            print(f'now = [{now}]')
+        boxes = Box.select(lambda b: b.rest > 0)[:]
+        if debug:
+            print(f'boxes = {boxes}')
+        #
+
 
     def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
         pass
