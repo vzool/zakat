@@ -2742,13 +2742,12 @@ class SQLModel(Model):
         target = value
         ages = []
         if self.raw_sql:
-            x = db.execute(f'''
+            boxes = db.execute(f'''
                 SELECT      id, rest, record_date
                 FROM        box
                 WHERE       account_id = {account}
                 ORDER BY    id DESC;
-            ''')
-            boxes = x.fetchall()
+            ''').fetchall()
             if debug:
                 print('boxes', boxes)
             for ref, rest, record_date in boxes:
@@ -2878,18 +2877,17 @@ class SQLModel(Model):
         if self._account_exists(account):
             file_ref = Helper.time()
             if self.raw_sql:
-                x = db.execute(f'''
+                log = db.execute(f'''
                         SELECT  id
                         FROM    "log"
                         WHERE   record_date = "{ref}";
-                    ''')
-                log_id = x.fetchone()[0]
-                print(f'log_id = {log_id}')
-                if log_id:
+                    ''').fetchone()
+                print(f'log = {log}')
+                if log:
                     db.execute(f'''
                         INSERT INTO "file" (log_id, record_date, path, name, created_at)
                                     VALUES(
-                                        {log_id},
+                                        {log[0]},
                                         "{file_ref}",
                                         "{path}",
                                         "",
@@ -2915,16 +2913,15 @@ class SQLModel(Model):
         if self._account_exists(account):
             if self._log_exists(account, ref):
                 if self.raw_sql:
-                    x = db.execute(f'''
+                    file = db.execute(f'''
                         SELECT  id
                         FROM    "file"
                         WHERE   record_date = "{file_ref}";
-                    ''')
-                    file_id = x.fetchone()[0]
-                    if file_id:
+                    ''').fetchone()
+                    if file:
                         db.execute(f'''
                             DELETE FROM "file"
-                            WHERE   id = {file_id};
+                            WHERE   id = {file[0]};
                         ''')
                         return True
                     return False
@@ -2960,12 +2957,14 @@ class SQLModel(Model):
                             updated_at = "{str(datetime.datetime.now())}"
                     WHERE   id = {account_id};
                 ''')
-            x = db.execute(f'''
+            account = db.execute(f'''
                 SELECT  zakatable
                 FROM    "account"
                 WHERE   id = {account_id};
-            ''')
-            return True if x.fetchone()[0] else False
+            ''').fetchone()
+            if not account:
+                return False
+            return True if account[0] else False
         else:
             account = Account.get(id=account_id)
             if account:
@@ -3055,15 +3054,14 @@ class SQLModel(Model):
         if created is None:
             created = Helper.time()
         if self.raw_sql:
-            x = db.execute(f'''
+            exchange = db.execute(f'''
                 SELECT      record_date, rate, desc
                 FROM        exchange
                 WHERE       account_id = {account}                          AND
                             datetime(record_date) <= datetime("{created}")
                 ORDER BY    record_date DESC
                 LIMIT       1;
-            ''')
-            exchange = x.fetchone()
+            ''').fetchone()
             if debug:
                 print('valid_rates', exchange, type(exchange), exchange)
             if exchange:
@@ -3167,14 +3165,13 @@ class SQLModel(Model):
             # Perform the transfer
             new_age = Helper.int_to_iso8601(Helper.iso8601_to_int(age), extra_ms=1)
             if self.raw_sql:
-                x = db.execute(f'''
+                box = db.execute(f'''
                     SELECT  id, rest, capital
                     FROM    box
                     WHERE   account_id = {to_account}                   AND
                             datetime(record_date) = datetime("{age}")
                     LIMIT   1; 
-                ''')
-                box = x.fetchone()
+                ''').fetchone()
                 if debug:
                     print('box_exists', box)
                 if box:
@@ -3236,8 +3233,10 @@ class SQLModel(Model):
                 SELECT  COUNT(*) > 0
                 FROM    "account"
                 WHERE   id = {account};
-            ''')
-            return True if x.fetchone()[0] else False
+            ''').fetchone()
+            if not x:
+                return False
+            return True if x[0] else False
         return Account.exists(id=account)
 
     def files(self) -> list[dict[str, str | int]]:
@@ -3347,6 +3346,11 @@ class SQLModel(Model):
         if debug:
             print('check', f'debug={debug}')
         now = Helper.time() if now is None else now
+        if debug:
+            print(f'now = [{now}]')
+        now_ms = Helper.time_to_milliseconds(now)
+        if debug:
+            print(f'now_ms = [{now_ms}]')
         if cycle is None:
             cycle = Helper.TimeCycle()
         if unscaled_nisab is None:
@@ -3356,13 +3360,94 @@ class SQLModel(Model):
         below_nisab = 0
         brief = [0, 0, 0]
         valid = False
-        if debug:
-            print(f'now = [{now}]')
-        boxes = Box.select(lambda b: b.rest > 0)[:]
+        if not self.raw_sql:
+            raise Exception('Not Implemented')
+        boxes = db.execute(f'''
+            SELECT      b.id, b.rest, b.record_date, b.last, b.account_id, b.capital, b.total, b.count, l.desc
+            From        box AS b
+            LEFT JOIN   log AS l ON l.record_date = b.record_date 
+            WHERE       b.rest > 0										AND
+                        datetime(b.record_date) <= datetime("{now}")
+            ORDER BY	b.record_date DESC;
+        ''').fetchall()
         if debug:
             print(f'boxes = {boxes}')
-        #
-
+        index = 0
+        for ref, rest, record_date, last, account_id, capital, box_total, count, desc in boxes:
+            if debug:
+                print(f'ref = {ref}, rest = {rest}, record_date = {record_date}, last = {last}, account_id = {account_id}, capital = {capital}, total = {box_total}, count = {count}, desc = {desc}')
+            exchange = self.exchange(account_id, debug=debug)
+            rest = Helper.exchange_calc(rest, float(exchange['rate']), 1)
+            brief[0] += rest
+            j = Helper.time_to_milliseconds(record_date)
+            epoch = (now_ms - j) / cycle
+            last_ms = Helper.time_to_milliseconds(last) if last else 0
+            if last_ms > 0:
+                epoch = (now_ms - last_ms) / cycle
+            if debug:
+                print(f"Epoch: {epoch}")
+            epoch = floor(epoch)
+            if debug:
+                print(f"Epoch: {epoch}", type(epoch), epoch == 0, 1 - epoch, epoch)
+            if epoch == 0:
+                continue
+            if debug:
+                print("Epoch - PASSED")
+            brief[1] += rest
+            x = account_id
+            if rest >= nisab:
+                total = 0
+                for _ in range(epoch):
+                    total += Helper.ZakatCut(float(rest) - float(total))
+                if total > 0:
+                    if x not in plan:
+                        plan[x] = {}
+                    valid = True
+                    brief[2] += total
+                    plan[x][index] = {
+                        'total': total,
+                        'count': epoch,
+                        'box_time': record_date,
+                        'box_capital': capital,
+                        'box_rest': rest,
+                        'box_last': last,
+                        'box_total': box_total,
+                        'box_count': count,
+                        'box_log': desc,
+                        'exchange_rate': exchange['rate'],
+                        'exchange_time': exchange['time'],
+                        'exchange_desc': exchange['description'],
+                    }
+                else:
+                    chunk = Helper.ZakatCut(float(rest))
+                    if chunk > 0:
+                        if x not in plan:
+                            plan[x] = {}
+                        # if j not in plan[x].keys():
+                        #     plan[x][index] = {}
+                        below_nisab += rest
+                        brief[2] += chunk
+                        plan[x][index] = {
+                            'below_nisab': chunk,
+                            'total': chunk,
+                            'count': epoch,
+                            'box_time': record_date,
+                            'box_capital': capital,
+                            'box_rest': rest,
+                            'box_last': last,
+                            'box_total': box_total,
+                            'box_count': count,
+                            'box_log': desc,
+                            'exchange_rate': exchange['rate'],
+                            'exchange_time': exchange['time'],
+                            'exchange_desc': exchange['description'],
+                        }
+                index += 1
+            #
+        valid = valid or below_nisab >= nisab
+        if debug:
+            print(f"below_nisab({below_nisab}) >= nisab({nisab})")
+        return valid, brief, plan
 
     def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
         pass
@@ -3513,23 +3598,27 @@ class SQLModel(Model):
         match ref_type:
             case 'box':
                 if self.raw_sql:
-                    x = db.execute(f'''
+                    box = db.execute(f'''
                         SELECT  COUNT(*)
                         FROM    "box"
                         WHERE   account_id = {account_id}   AND
                                 record_date = "{ref}";
-                    ''')
-                    return True if x.fetchone()[0] else False
+                    ''').fetchone()
+                    if not box:
+                        return False
+                    return box[0] > 0
                 return Box.exists(account=account_id, record_date=ref)
             case 'log':
                 if self.raw_sql:
-                    x = db.execute(f'''
+                    log = db.execute(f'''
                         SELECT  COUNT(*)
                         FROM    "log"
                         WHERE   account_id = {account_id}   AND
                                 record_date = "{ref}";
-                    ''')
-                    return True if x.fetchone()[0] else False
+                    ''').fetchone()
+                    if not log:
+                        return False
+                    return log[0] > 0
                 return Log.exists(account=account_id, record_date=ref)
         return False
 
