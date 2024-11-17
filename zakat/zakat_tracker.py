@@ -2823,7 +2823,7 @@ class SQLModel(Model):
                 print(f"account {account} created")
             if self.raw_sql:
                 db.execute(f'''
-                    INSERT INTO "account" (id, hide, zakatable, created_at)
+                    INSERT INTO account (id, hide, zakatable, created_at)
                     VALUES({account}, 0, 1, "{str(datetime.datetime.now())}");
                 ''')
             else:
@@ -2843,7 +2843,7 @@ class SQLModel(Model):
             raise ValueError(f"The box transaction happened again in the same time({created}).")
         if self.raw_sql:
             db.execute(f'''
-                INSERT INTO "box" (account_id, record_date, capital, count, last, rest, total, created_at)
+                INSERT INTO box (account_id, record_date, capital, count, last, rest, total, created_at)
                             VALUES(
                                 {account},
                                 "{created}",
@@ -2879,13 +2879,13 @@ class SQLModel(Model):
             if self.raw_sql:
                 log = db.execute(f'''
                         SELECT  id
-                        FROM    "log"
+                        FROM    log
                         WHERE   record_date = "{ref}";
                     ''').fetchone()
                 print(f'log = {log}')
                 if log:
                     db.execute(f'''
-                        INSERT INTO "file" (log_id, record_date, path, name, created_at)
+                        INSERT INTO file (log_id, record_date, path, name, created_at)
                                     VALUES(
                                         {log[0]},
                                         "{file_ref}",
@@ -2915,12 +2915,12 @@ class SQLModel(Model):
                 if self.raw_sql:
                     file = db.execute(f'''
                         SELECT  id
-                        FROM    "file"
+                        FROM    file
                         WHERE   record_date = "{file_ref}";
                     ''').fetchone()
                     if file:
                         db.execute(f'''
-                            DELETE FROM "file"
+                            DELETE FROM file
                             WHERE   id = {file[0]};
                         ''')
                         return True
@@ -2952,14 +2952,14 @@ class SQLModel(Model):
         if self.raw_sql:
             if status is not None:
                 db.execute(f'''
-                    UPDATE "account"
+                    UPDATE  account
                     SET     zakatable = {1 if status else 0},
                             updated_at = "{str(datetime.datetime.now())}"
                     WHERE   id = {account_id};
                 ''')
             account = db.execute(f'''
                 SELECT  zakatable
-                FROM    "account"
+                FROM    account
                 WHERE   id = {account_id};
             ''').fetchone()
             if not account:
@@ -3231,7 +3231,7 @@ class SQLModel(Model):
         if self.raw_sql:
             x = db.execute(f'''
                 SELECT  COUNT(*) > 0
-                FROM    "account"
+                FROM    account
                 WHERE   id = {account};
             ''').fetchone()
             if not x:
@@ -3549,11 +3549,11 @@ class SQLModel(Model):
             raise ValueError(f'The created must be a str, {type(created)} was provided.')
         if self.raw_sql:
             db.execute(f'''
-                UPDATE "account"
-                SET balance = COALESCE(balance, 0) + {value},
-                    count = COALESCE(count, 0) + 1,
-                    updated_at = "{str(datetime.datetime.now())}"
-                WHERE id = {account_id};
+                UPDATE  account
+                SET     balance = COALESCE(balance, 0) + {value},
+                        count = COALESCE(count, 0) + 1,
+                        updated_at = "{str(datetime.datetime.now())}"
+                WHERE   id = {account_id};
             ''')
         else:
             account = Account.get(id=account_id)
@@ -3571,7 +3571,7 @@ class SQLModel(Model):
             print('created-log', created)
         if self.raw_sql:
             db.execute(f'''
-                INSERT INTO "log" (account_id, record_date, value, desc, ref, created_at)
+                INSERT INTO log (account_id, record_date, value, desc, ref, created_at)
                             VALUES(
                                 {account_id},
                                 "{created}",
@@ -3600,7 +3600,7 @@ class SQLModel(Model):
                 if self.raw_sql:
                     box = db.execute(f'''
                         SELECT  COUNT(*)
-                        FROM    "box"
+                        FROM    box
                         WHERE   account_id = {account_id}   AND
                                 record_date = "{ref}";
                     ''').fetchone()
@@ -3612,7 +3612,7 @@ class SQLModel(Model):
                 if self.raw_sql:
                     log = db.execute(f'''
                         SELECT  COUNT(*)
-                        FROM    "log"
+                        FROM    log
                         WHERE   account_id = {account_id}   AND
                                 record_date = "{ref}";
                     ''').fetchone()
