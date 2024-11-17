@@ -3420,6 +3420,7 @@ class SQLModel(Model):
                         'exchange_time': exchange['time'],
                         'exchange_desc': exchange['description'],
                     }
+                    index += 1
                 else:
                     chunk = Helper.ZakatCut(float(rest))
                     if chunk > 0:
@@ -3444,7 +3445,9 @@ class SQLModel(Model):
                             'exchange_time': exchange['time'],
                             'exchange_desc': exchange['description'],
                         }
-                index += 1
+                        index += 1
+                    #
+                #
             #
         valid = valid or below_nisab >= nisab
         if debug:
