@@ -2455,25 +2455,27 @@ class DictModel(Model):
                             plan[x][index] = {}
                         below_nisab += rest
                         brief[2] += chunk
-                        plan[x][index]['below_nisab'] = chunk
-                        plan[x][index]['total'] = chunk
-                        plan[x][index]['count'] = epoch
-                        plan[x][index]['box_time'] = j
-                        plan[x][index]['box_capital'] = _box[j]['capital']
-                        plan[x][index]['box_rest'] = _box[j]['rest']
-                        plan[x][index]['box_last'] = _box[j]['last']
-                        plan[x][index]['box_total'] = _box[j]['total']
-                        plan[x][index]['box_count'] = _box[j]['count']
-                        plan[x][index]['box_log'] = _log[j]['desc']
-                        plan[x][index]['exchange_rate'] = exchange['rate']
-                        plan[x][index]['exchange_time'] = exchange['time']
-                        plan[x][index]['exchange_desc'] = exchange['description']
+                        plan[x][index] = {
+                            'below_nisab': chunk,
+                            'total': chunk,
+                            'count': epoch,
+                            'box_time': j,
+                            'box_capital': _box[j]['capital'],
+                            'box_rest': _box[j]['rest'],
+                            'box_last': _box[j]['last'],
+                            'box_total': _box[j]['total'],
+                            'box_count': _box[j]['count'],
+                            'box_log': _log[j]['desc'],
+                            'exchange_rate': exchange['rate'],
+                            'exchange_time': exchange['time'],
+                            'exchange_desc': exchange['description'],
+                        }
         valid = valid or below_nisab >= nisab
         if debug:
             print(f"below_nisab({below_nisab}) >= nisab({nisab})")
         return valid, brief, plan
 
-    def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
+    def zakat(self, report: tuple, parts: dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
         if debug:
             print('zakat', f'debug={debug}')
         valid, _, plan = report
