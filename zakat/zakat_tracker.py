@@ -4257,6 +4257,7 @@ class ZakatTracker:
             }
             for x in table:
                 for y in table[x]:
+                    ref = None
                     if y['ops'] == 'track':
                         ref = self.db.track(
                             unscaled_value=y['unscaled_value'],
@@ -4276,14 +4277,14 @@ class ZakatTracker:
                         )
                         if debug:
                             print('_sub', z, Helper.time())
-                    assert ref != None
+                    assert ref is not None
                     assert len(self.db.vault(Vault.ACCOUNT)[x]['log'][ref]['file']) == 0
                     for i in range(3):
                         file_ref = self.db.add_file(x, ref, 'file_' + str(i))
                         sleep(0.0000001)
                         if debug:
                             print('ref', ref, 'file', file_ref)
-                        assert file_ref != None
+                        assert file_ref is not None
                         assert len(self.db.vault(Vault.ACCOUNT)[x]['log'][ref]['file']) == i + 1
                     file_ref = self.db.add_file(x, ref, 'file_' + str(3))
                     assert self.db.remove_file(x, ref, file_ref)
