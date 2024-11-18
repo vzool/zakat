@@ -615,7 +615,12 @@ class Model(ABC):
         """
 
     @abstractmethod
-    def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
+    def zakat(
+        self,
+        report: tuple,
+        parts: dict[str, dict[str, dict[str, float]] | bool | int | float] = None,
+        debug: bool = False,
+    ) -> bool:
         """
         Perform Zakat calculation based on the given report and optional parts.
 
@@ -1228,7 +1233,10 @@ class Helper:
         return gram_price * gram_quantity
 
     @staticmethod
-    def check_payment_parts(parts: dict, debug: bool = False) -> int:
+    def check_payment_parts(
+        parts: dict[str, dict[str, dict[str, float]] | bool | int | float],
+        debug: bool = False,
+    ) -> int:
         """
         Checks the validity of payment parts.
 
@@ -2475,7 +2483,12 @@ class DictModel(Model):
             print(f"below_nisab({below_nisab}) >= nisab({nisab})")
         return valid, brief, plan
 
-    def zakat(self, report: tuple, parts: dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
+    def zakat(
+        self,
+        report: tuple,
+        parts: dict[str, dict[str, dict[str, float]] | bool | int | float] = None,
+        debug: bool = False,
+    ) -> bool:
         if debug:
             print('zakat', f'debug={debug}')
         valid, _, plan = report
@@ -3351,6 +3364,8 @@ class SQLModel(Model):
         if debug:
             print(f'now = [{now}]')
         now_ms = Helper.time_to_milliseconds(now)
+        if not self.raw_sql:
+            raise Exception('Not Implemented')
         if debug:
             print(f'now_ms = [{now_ms}]')
         if cycle is None:
@@ -3362,8 +3377,6 @@ class SQLModel(Model):
         below_nisab = 0
         brief = [0, 0, 0]
         valid = False
-        if not self.raw_sql:
-            raise Exception('Not Implemented')
         boxes = db.execute(f'''
             SELECT      b.id, b.rest, b.record_date, b.last, b.account_id, b.capital, b.total, b.count, l.desc
             From        box AS b
@@ -3377,7 +3390,8 @@ class SQLModel(Model):
         index = 0
         for ref, rest, record_date, last, account_id, capital, box_total, count, desc in boxes:
             if debug:
-                print(f'ref = {ref}, rest = {rest}, record_date = {record_date}, last = {last}, account_id = {account_id}, capital = {capital}, total = {box_total}, count = {count}, desc = {desc}')
+                print(
+                    f'ref = {ref}, rest = {rest}, record_date = {record_date}, last = {last}, account_id = {account_id}, capital = {capital}, total = {box_total}, count = {count}, desc = {desc}')
             exchange = self.exchange(account_id, debug=debug)
             rest = Helper.exchange_calc(rest, float(exchange['rate']), 1)
             brief[0] += rest
@@ -3407,6 +3421,7 @@ class SQLModel(Model):
                     valid = True
                     brief[2] += total
                     plan[x][index] = {
+                        'ref': ref,
                         'total': total,
                         'count': epoch,
                         'box_time': record_date,
@@ -3431,6 +3446,7 @@ class SQLModel(Model):
                         below_nisab += rest
                         brief[2] += chunk
                         plan[x][index] = {
+                            'ref': ref,
                             'below_nisab': chunk,
                             'total': chunk,
                             'count': epoch,
@@ -3454,8 +3470,81 @@ class SQLModel(Model):
             print(f"below_nisab({below_nisab}) >= nisab({nisab})")
         return valid, brief, plan
 
-    def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
-        pass
+    @pony.db_session
+    def zakat(
+        self,
+        report: tuple, parts: dict[str, dict[str, dict[str, float]] | bool | int | float] = None,
+        debug: bool = False,
+    ) -> bool:
+        return self._zakat(report, parts, debug)
+
+    def _zakat(
+        self,
+        report: tuple, parts: dict[str, dict[str, dict[str, float]] | bool | int | float] = None,
+        debug: bool = False,
+    ) -> bool:
+        if debug:
+            print('zakat', f'debug={debug}')
+        if not self.raw_sql:
+            raise Exception('Not Implemented')
+        valid, _, plan = report
+        if not valid:
+            return valid
+        parts_exist = parts is not None
+        if parts_exist:
+            if Helper.check_payment_parts(parts, debug=debug) != 0:
+                return False
+        if debug:
+            print('######### zakat #######')
+            print('parts_exist', parts_exist)
+        report_time = Helper.time()
+        db.execute(f'''
+            INSERT INTO report(record_date, details, created_at)
+                        VALUES(
+                            "{report_time}",
+                            '{json.dumps(report)}',
+                            "{str(datetime.datetime.now())}"
+                        );
+        ''')
+        created = Helper.time()
+        for x, boxes in plan.items():
+            target_exchange = self.exchange(x, debug=debug)
+            if debug:
+                print(f'plan[{x}]', boxes)
+                print('-------------')
+            for index, box in boxes.items():
+                if debug:
+                    print('i', index, 'box', box)
+                amount = Helper.exchange_calc(float(box['total']), 1, float(target_exchange['rate']))
+                db.execute(f'''
+                    UPDATE  box
+                    SET     last = "{created}",
+                            total = total + {amount},
+                            count = count + {box['count']}
+                    WHERE   id = {box['ref']};
+                ''')
+                if not parts_exist:
+                    db.execute(f'''
+                        UPDATE  box
+                        SET     rest = rest - {box['rest']}
+                        WHERE   id = {box['ref']};
+                    ''')
+                    self.log(-float(amount), desc='zakat-زكاة', account_id=x, created=None, ref=box['box_time'], debug=debug)
+        if parts_exist:
+            for account, part in parts['account'].items():
+                if part['part'] == 0:
+                    continue
+                if debug:
+                    print('zakat-part', account, part['rate'])
+                target_exchange = self.exchange(account, debug=debug)
+                amount = Helper.exchange_calc(part['part'], part['rate'], target_exchange['rate'])
+                self.sub(
+                    unscaled_value=Helper.unscale(int(amount)),
+                    desc='zakat-part-دفعة-زكاة',
+                    account=account,
+                    debug=debug,
+                )
+        return True
 
     def import_csv_cache_path(self):
         path = str(self.path())
@@ -3722,7 +3811,12 @@ class ZakatTracker:
         """
         self.db = model
 
-    def build_payment_parts(self, scaled_demand: int, positive_only: bool = True, debug: bool = False) -> dict:
+    def build_payment_parts(
+        self,
+        scaled_demand: int,
+        positive_only: bool = True,
+        debug: bool = False,
+    ) -> dict[str, dict[str, dict[str, float]] | bool | int | float]:
         """
         Build payment parts for the Zakat distribution.
 
