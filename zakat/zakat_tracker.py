@@ -98,6 +98,15 @@ class JSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, Decimal):
             return float(obj)
+        elif isinstance(obj, datetime.datetime):
+            return obj.isoformat()
+        elif isinstance(obj, Account):
+            return obj.to_dict()
+        elif obj.__class__.__name__ == "QueryResult":
+            x = []
+            for y in x:
+                x.append(y.to_dict())
+            return x
         return super().default(obj)
 
 
@@ -3564,7 +3573,12 @@ class SQLModel(Model):
         }
 
     def export_json(self, path: str = "data.json") -> bool:
-        pass
+        with open(path, "w") as file:
+            vault = self.vault()
+            if self.debug:
+                print('vault', vault)
+            json.dump(vault, file, indent=4, cls=JSONEncoder)
+            return True
 
     @pony.db_session()
     def vault(self, section: Vault = Vault.ALL) -> dict:
