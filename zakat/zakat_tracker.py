@@ -1579,6 +1579,10 @@ class Helper:
                 ))
                 if debug:
                     print(s)
+                if Helper.is_windows() and year == 1:
+                    if debug:
+                        print(f'[SKIPPED] year({year})')
+                    continue
                 d = Helper.time_to_datetime(s)
                 ms = Helper.datetime_to_milliseconds(d)
                 dd = Helper.milliseconds_to_datetime(ms)
