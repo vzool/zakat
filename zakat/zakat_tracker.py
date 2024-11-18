@@ -1577,6 +1577,8 @@ class Helper:
                     f"{year:04d}-{month:02d}-{day:02d} {hour:02d}:{minute:02d}:{second:02d}.{microsecond:06d}",
                     "%Y-%m-%d %H:%M:%S.%f",
                 ))
+                if debug:
+                    print(s)
                 d = Helper.time_to_datetime(s)
                 ms = Helper.datetime_to_milliseconds(d)
                 dd = Helper.milliseconds_to_datetime(ms)
