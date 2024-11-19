@@ -3194,6 +3194,9 @@ class SQLModel(Model):
                 print('target_amount', target_amount)
             # Perform the transfer
             new_age = Helper.int_to_iso8601(Helper.iso8601_to_int(age), extra_ms=1)
+            if debug:
+                print(f'old_age = {age}')
+                print(f'new_age = {new_age}')
             if self.raw_sql:
                 box = db.execute(f'''
                     SELECT  id, rest, capital
