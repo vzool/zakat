@@ -173,7 +173,7 @@ class Model(ABC):
 
         Raises:
         ValueError: The box transaction happened again in the same time.
-        ValueError: The log transaction happened again in the same time.
+        ValueError: The log transaction('xxx') happened again in the same time.
         ValueError: The created must be a str, <class 'xxx'> was provided.
         """
 
@@ -198,7 +198,7 @@ class Model(ABC):
         This function creates a new account if it doesn't exist, logs the transaction if logging is True, and updates the account's balance and box.
 
         Raises:
-        ValueError: The log transaction happened again in the same time.
+        ValueError: The log transaction('xxx') happened again in the same time.
         ValueError: The box transaction happened again in the same time.
         ValueError: The created must be a str, <class 'xxx'> was provided.
         """
@@ -417,7 +417,7 @@ class Model(ABC):
         Raises:
         ValueError: Transfer to the same account is forbidden.
         ValueError: The box transaction happened again in the same time.
-        ValueError: The log transaction happened again in the same time.
+        ValueError: The log transaction('xxx') happened again in the same time.
         ValueError: The created must be a str, <class 'xxx'> was provided.
         """
 
@@ -831,7 +831,7 @@ class Model(ABC):
         This method updates the account's balance, count, and log with the transaction details.
 
         Raises:
-        ValueError: The log transaction happened again in the same time.
+        ValueError: The log transaction('xxx') happened again in the same time.
         ValueError: The created must be a str, <class 'xxx'> was provided.
         """
 
@@ -1972,7 +1972,7 @@ class DictModel(Model):
         if debug:
             print('create-log', created)
         if self.log_exists(account_id, created):
-            raise ValueError(f"The log transaction happened again in the same time({created}).")
+            raise ValueError(f"The log transaction('{desc}') happened again in the same time({created}).")
         if debug:
             print('created-log', created)
         self._vault['account'][account_id]['log'][created] = {
@@ -3583,10 +3583,7 @@ class SQLModel(Model):
 
     def export_json(self, path: str = "data.json") -> bool:
         with open(path, "w") as file:
-            vault = self.vault()
-            if self.debug:
-                print('vault', vault)
-            json.dump(vault, file, indent=4, cls=JSONEncoder)
+            json.dump(self.vault(), file, indent=4, cls=JSONEncoder)
             return True
 
     @pony.db_session()
@@ -3683,7 +3680,7 @@ class SQLModel(Model):
         if debug:
             print('create-log', created)
         if self._log_exists(account_id, created):
-            raise ValueError(f"The log transaction happened again in the same time({created}).")
+            raise ValueError(f"The log transaction('{desc}') happened again in the same time({created}).")
         if debug:
             print('created-log', created)
         if self.raw_sql:
