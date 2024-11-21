@@ -3691,7 +3691,7 @@ class SQLModel(Model):
                                 "{created}",
                                 {value},
                                 "{desc}",
-                                {ref if ref else 'NULL'},
+                                {f'"{ref}"' if ref else 'NULL'},
                                 "{str(datetime.datetime.now())}"
                             );
             ''')
