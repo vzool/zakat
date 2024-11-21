@@ -3223,8 +3223,8 @@ class SQLModel(Model):
                     ''')
                     y = self._log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}',
                                   account_id=to_account,
-                                  created=new_age, ref=None, debug=debug)
-                    times.append((new_age, y))
+                                  created=None, ref=None, debug=debug)
+                    times.append((age, y))
                     continue
             else:
                 box = Box.get(account=to_account, record_date=age)
@@ -3239,8 +3239,8 @@ class SQLModel(Model):
                     box.rest += target_amount
                     y = self._log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}',
                                   account_id=to_account,
-                                  created=new_age, ref=None, debug=debug)
-                    times.append((new_age, y))
+                                  created=None, ref=None, debug=debug)
+                    times.append((age, y))
                     continue
             if debug:
                 print(
@@ -3544,7 +3544,7 @@ class SQLModel(Model):
                 if not parts_exist:
                     db.execute(f'''
                         UPDATE  box
-                        SET     rest = rest - {box['rest']}
+                        SET     rest = rest - {box['box_rest']}
                         WHERE   id = {box['ref']};
                     ''')
                     self.log(-float(amount), desc='zakat-زكاة', account_id=x, created=None, ref=box['box_time'], debug=debug)
@@ -3643,7 +3643,7 @@ class SQLModel(Model):
         }
 
     def snapshot(self) -> bool:
-        pass
+        return True
 
     def ext(self) -> str | None:
         return 'sqlite' if self._file_exists else None

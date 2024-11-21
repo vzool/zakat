@@ -6,7 +6,7 @@ setup(
     description='A Python Library for Islamic Financial Management.',
     author='Abdelaziz Elrashed Elshaikh Mohamed',
     author_email='aeemh.sdn@gmail.com',
-    classifiers = [
+    classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
         'Programming Language :: Python :: 3',
