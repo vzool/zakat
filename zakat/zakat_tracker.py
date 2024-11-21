@@ -625,10 +625,10 @@ class Model(ABC):
 
     @abstractmethod
     def zakat(
-        self,
-        report: tuple,
-        parts: dict[str, dict[str, dict[str, float]] | bool | int | float] = None,
-        debug: bool = False,
+            self,
+            report: tuple,
+            parts: dict[str, dict[str, dict[str, float]] | bool | int | float] = None,
+            debug: bool = False,
     ) -> bool:
         """
         Perform Zakat calculation based on the given report and optional parts.
@@ -1243,8 +1243,8 @@ class Helper:
 
     @staticmethod
     def check_payment_parts(
-        parts: dict[str, dict[str, dict[str, float]] | bool | int | float],
-        debug: bool = False,
+            parts: dict[str, dict[str, dict[str, float]] | bool | int | float],
+            debug: bool = False,
     ) -> int:
         """
         Checks the validity of payment parts.
@@ -2499,10 +2499,10 @@ class DictModel(Model):
         return valid, brief, plan
 
     def zakat(
-        self,
-        report: tuple,
-        parts: dict[str, dict[str, dict[str, float]] | bool | int | float] = None,
-        debug: bool = False,
+            self,
+            report: tuple,
+            parts: dict[str, dict[str, dict[str, float]] | bool | int | float] = None,
+            debug: bool = False,
     ) -> bool:
         if debug:
             print('zakat', f'debug={debug}')
@@ -3490,16 +3490,16 @@ class SQLModel(Model):
 
     @pony.db_session
     def zakat(
-        self,
-        report: tuple, parts: dict[str, dict[str, dict[str, float]] | bool | int | float] = None,
-        debug: bool = False,
+            self,
+            report: tuple, parts: dict[str, dict[str, dict[str, float]] | bool | int | float] = None,
+            debug: bool = False,
     ) -> bool:
         return self._zakat(report, parts, debug)
 
     def _zakat(
-        self,
-        report: tuple, parts: dict[str, dict[str, dict[str, float]] | bool | int | float] = None,
-        debug: bool = False,
+            self,
+            report: tuple, parts: dict[str, dict[str, dict[str, float]] | bool | int | float] = None,
+            debug: bool = False,
     ) -> bool:
         if debug:
             print('zakat', f'debug={debug}')
@@ -3547,7 +3547,8 @@ class SQLModel(Model):
                         SET     rest = rest - {box['box_rest']}
                         WHERE   id = {box['ref']};
                     ''')
-                    self.log(-float(amount), desc='zakat-زكاة', account_id=x, created=None, ref=box['box_time'], debug=debug)
+                    self.log(-float(amount), desc='zakat-زكاة', account_id=x, created=None, ref=box['box_time'],
+                             debug=debug)
         if parts_exist:
             for account, part in parts['account'].items():
                 if part['part'] == 0:
@@ -3832,10 +3833,10 @@ class ZakatTracker:
         self.db = model
 
     def build_payment_parts(
-        self,
-        scaled_demand: int,
-        positive_only: bool = True,
-        debug: bool = False,
+            self,
+            scaled_demand: int,
+            positive_only: bool = True,
+            debug: bool = False,
     ) -> dict[str, dict[str, dict[str, float]] | bool | int | float]:
         """
         Build payment parts for the Zakat distribution.
@@ -4784,9 +4785,7 @@ class ZakatTracker:
                             suite.append(cp)
                 if debug:
                     print('suite', len(suite))
-                # vault = self._vault.copy()
                 for case in suite:
-                    # self._vault = vault.copy()
                     if debug:
                         print('case', case)
                     result = Helper.check_payment_parts(case)
@@ -5010,6 +5009,7 @@ class ZakatTracker:
                     (valid, brief, plan) = report
                     if debug:
                         print('brief', brief)
+                        print('case', case)
                     assert valid == case[4]
                     assert case[5] == brief[0]
                     assert case[5] == brief[1]
@@ -5036,7 +5036,6 @@ class ZakatTracker:
                     assert valid is False
             return True
         except Exception as e:
-            # pp().pprint(self._vault)
             assert self.db.export_json("test-snapshot.json")
             assert self.db.save(f"test-snapshot.{self.db.ext()}")
             raise e
