@@ -5010,12 +5010,10 @@ class ZakatTracker:
                     if debug:
                         print('brief', brief)
                         print('case', case)
+                        pp().pprint(plan)
                     assert valid == case[4]
                     assert case[5] == brief[0]
                     assert case[5] == brief[1]
-
-                    if debug:
-                        pp().pprint(plan)
 
                     for x in plan:
                         assert case[1] == x
