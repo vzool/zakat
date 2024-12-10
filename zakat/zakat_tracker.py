@@ -3411,6 +3411,8 @@ class SQLModel(Model):
                 print(
                     f'ref = {ref}, rest = {rest}, record_date = {record_date}, last = {last}, account_id = {account_id}, capital = {capital}, total = {box_total}, count = {count}, desc = {desc}')
             exchange = self.exchange(account_id, debug=debug)
+            if debug:
+                print(f'exchange <=> {exchange}')
             rest = Helper.exchange_calc(rest, float(exchange['rate']), 1)
             brief[0] += rest
             j = Helper.time_to_milliseconds(record_date)
@@ -4981,13 +4983,13 @@ class ZakatTracker:
                 if debug:
                     print('rate', rate, 'values', values)
                 for case in [
-                    (a, account_safe_ref, Helper.time_to_milliseconds(Helper.time()) - Helper.TimeCycle(), [
+                    (a, account_safe_ref, Helper.time(Helper.milliseconds_to_datetime(Helper.time_to_milliseconds(Helper.time()) - Helper.TimeCycle())), [
                         {account_safe_ref: {0: {'below_nisab': x}}},
                     ], False, m),
-                    (b, account_safe_ref, Helper.time_to_milliseconds(Helper.time()) - Helper.TimeCycle(), [
+                    (b, account_safe_ref, Helper.time(Helper.milliseconds_to_datetime(Helper.time_to_milliseconds(Helper.time()) - Helper.TimeCycle())), [
                         {account_safe_ref: {0: {'count': 1, 'total': y}}},
                     ], True, n),
-                    (c, account_cave_ref, Helper.time_to_milliseconds(Helper.time()) - (Helper.TimeCycle() * 3), [
+                    (c, account_cave_ref, Helper.time(Helper.milliseconds_to_datetime(Helper.time_to_milliseconds(Helper.time()) - (Helper.TimeCycle() * 3))), [
                         {account_cave_ref: {0: {'count': 3, 'total': z}}},
                     ], True, o),
                 ]:
@@ -5001,7 +5003,7 @@ class ZakatTracker:
                         desc='test-check',
                         account=case[1],
                         logging=True,
-                        created=Helper.time(Helper.milliseconds_to_datetime(case[2])),
+                        created=case[2],
                     )
                     assert self.db.snapshot()
 
