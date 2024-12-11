@@ -2603,6 +2603,8 @@ db = pony.Database()
 class Account(db.Entity):
     _table_ = 'account'
     id = pony.PrimaryKey(int, auto=True)
+    # When changed to Str the tests duration changed as following:
+    # - macOS(intel) 15.1.1 increased from 5 seconds to 01:30 minutes.
     name = pony.Optional(pony.LongStr, unique=True)
     balance = pony.Optional(int, size=64, default=0)
     count = pony.Optional(int, size=64, default=0)
