@@ -42,9 +42,11 @@
         <th>#</th>
         <th>النموذج</th>
         <th colspan="2">نوع قاعدة البيانات</th>
+        <th>المتطلبات</th>
         <th>الحالة</th>
     </tr>
     <tr>
+        <td></td>
         <td></td>
         <td></td>
         <td></td>
@@ -56,7 +58,8 @@
         <td>DictModel</td>
         <td></td>
         <td>Camel</td>
-        <td>جاري العمل عليه</td>
+        <td>-</td>
+        <td>مكتمل</td>
     </tr>
     <tr>
         <td></td>
@@ -70,34 +73,41 @@
         <td rowspan="6">SQLModel</td>
         <td>1</td>
         <td>SQLite</td>
-        <td>جاري العمل عليه</td>
+        <td>-</td>
+        <td>مكتمل</td>
     </tr>
     <tr>
         <td>2</td>
         <td>MySQL</td>
-        <td>بالخطة</td>
+        <td><a href="https://pypi.org/project/PyMySQL/">pymysql</a></td>
+        <td>جاري العمل عليه</td>
     </tr>
     <tr>
         <td>3</td>
         <td>MariaDB</td>
+        <td>-</td>
         <td>بالخطة</td>
     </tr>
     <tr>
         <td>4</td>
         <td>PostgreSQL</td>
+        <td>-</td>
         <td>بالخطة</td>
     </tr>
     <tr>
         <td>5</td>
         <td>CockroachDB</td>
+        <td>-</td>
         <td>بالخطة</td>
     </tr>
     <tr>
         <td>6</td>
         <td>Oracle</td>
+        <td>-</td>
         <td>بالخطة</td>
     </tr>
     <tr>
+        <td></td>
         <td></td>
         <td></td>
         <td></td>

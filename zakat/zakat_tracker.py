@@ -1765,6 +1765,7 @@ class DictModel(Model):
         self._vault = None
         self.reset()
         self.path(db_path)
+        self.provider = 'dict'
 
     def path(self, path: str = None) -> str:
         if path is None:
@@ -2704,8 +2705,9 @@ class SQLModel(Model):
         self.debug = False
         self._file_exists = False
         self.raw_sql = True
+        self.provider = str.lower(db_params['provider'])
 
-        if str.lower(db_params['provider']) == 'sqlite' and 'filename' in db_params:
+        if self.provider == 'sqlite' and 'filename' in db_params:
             db_params['filename'] = str(self.path(db_params['filename']))
             self._db_path = db_params['filename']
             self._file_exists = True
@@ -5045,8 +5047,8 @@ def test(
         debug: bool = False,
         dict_model: bool = True,
         sqlite_model: bool = True,
-        mariadb_model: bool = False,
         mysql_model: bool = False,
+        mariadb_model: bool = False,
         postgresql_model: bool = False,
         cockroachdb_model: bool = False,
 ) -> None:
@@ -5062,8 +5064,8 @@ def test(
         debug: If True, enables detailed logging and output during the test process.
         dict_model: If True, tests the in-memory dictionary model.
         sqlite_model: If True, tests the SQLite model.
-        mariadb_model: If True, tests the MariaDB model.
         mysql_model: If True, tests the MySQL model.
+        mariadb_model: If True, tests the MariaDB model.
         postgresql_model: If True, tests the PostgreSQL model.
         cockroachdb_model: If True, tests the CockroachDB model.
 
@@ -5095,12 +5097,29 @@ def test(
                 debug=True,
             ),
         )
+    if mysql_model:
+        models.append(
+            SQLModel(
+                provider='mysql',
+                host='127.0.0.1',
+                user='root',
+                passwd='t00r',
+                db='zakat',
+                debug=True,
+            ),
+        )
+    if mariadb_model:
+        pass
+    if postgresql_model:
+        pass
+    if cockroachdb_model:
+        pass
     for model in models:
         start = time_ns()
         assert model.test(debug=debug)
         ledger = ZakatTracker(model=model)
         assert ledger.test(debug=debug)
-        durations[model.__class__.__name__] = time_ns() - start
+        durations[f'{model.__class__.__name__}({model.provider})'] = time_ns() - start
     if debug:
         print("#########################")
         print("######## TEST DONE ########")

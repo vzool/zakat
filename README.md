@@ -38,9 +38,11 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
         <th>#</th>
         <th>Model</th>
         <th colspan="2">Database Engine</th>
+        <th>Requirements</th>
         <th>Status</th>
     </tr>
     <tr>
+        <td></td>
         <td></td>
         <td></td>
         <td></td>
@@ -52,9 +54,11 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
         <td>DictModel</td>
         <td></td>
         <td>Camel</td>
-        <td>In Progress</td>
+        <td>-</td>
+        <td>Done</td>
     </tr>
     <tr>
+        <td></td>
         <td></td>
         <td></td>
         <td></td>
@@ -66,34 +70,41 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
         <td rowspan="6">SQLModel</td>
         <td>1</td>
         <td>SQLite</td>
-        <td>In Progress</td>
+        <td>-</td>
+        <td>Done</td>
     </tr>
     <tr>
         <td>2</td>
         <td>MySQL</td>
-        <td>Planned</td>
+        <td><a href="https://pypi.org/project/PyMySQL/">pymysql</a></td>
+        <td>In Progress</td>
     </tr>
     <tr>
         <td>3</td>
         <td>MariaDB</td>
+        <td>-</td>
         <td>Planned</td>
     </tr>
     <tr>
         <td>4</td>
         <td>PostgreSQL</td>
+        <td>-</td>
         <td>Planned</td>
     </tr>
     <tr>
         <td>5</td>
         <td>CockroachDB</td>
+        <td>-</td>
         <td>Planned</td>
     </tr>
     <tr>
         <td>6</td>
         <td>Oracle</td>
+        <td>-</td>
         <td>Planned</td>
     </tr>
     <tr>
+        <td></td>
         <td></td>
         <td></td>
         <td></td>
