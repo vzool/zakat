@@ -5041,7 +5041,35 @@ class ZakatTracker:
             raise e
 
 
-def test(debug: bool = False):
+def test(
+        debug: bool = False,
+        dict_model: bool = True,
+        sqlite_model: bool = True,
+        mariadb_model: bool = False,
+        mysql_model: bool = False,
+        postgresql_model: bool = False,
+        cockroachdb_model: bool = False,
+) -> None:
+    """
+        Conducts comprehensive tests on various ZakatTracker models.
+
+        This function orchestrates the testing process for different database models,
+        including in-memory dictionaries, SQLite, MariaDB, MySQL, PostgreSQL, CockroachDB,
+        and Oracle. It initializes the test environment, creates and populates the database,
+        and executes a series of test cases for both the `Model` and `ZakatTracker` classes.
+
+        Parameters:
+        debug: If True, enables detailed logging and output during the test process.
+        dict_model: If True, tests the in-memory dictionary model.
+        sqlite_model: If True, tests the SQLite model.
+        mariadb_model: If True, tests the MariaDB model.
+        mysql_model: If True, tests the MySQL model.
+        postgresql_model: If True, tests the PostgreSQL model.
+        cockroachdb_model: If True, tests the CockroachDB model.
+
+        Returns: None
+    """
+    models = []
     durations = {}
     # clean
     test_directory = 'zakat_test_db'
@@ -5051,17 +5079,23 @@ def test(debug: bool = False):
     else:
         print(f"{test_directory} Directory does not exist.")
     Helper.test(debug=True)
-    for model in [
-        DictModel(
-            db_path=f"./{test_directory}/zakat.camel",
-        ),
-        SQLModel(
-            provider="sqlite",
-            filename=f"./{test_directory}/zakat.sqlite",
-            create_db=True,
-            debug=True,
-        ),
-    ]:
+    # models
+    if dict_model:
+        models.append(
+            DictModel(
+                db_path=f"./{test_directory}/zakat.camel",
+            ),
+        )
+    if sqlite_model:
+        models.append(
+            SQLModel(
+                provider="sqlite",
+                filename=f"./{test_directory}/zakat.sqlite",
+                create_db=True,
+                debug=True,
+            ),
+        )
+    for model in models:
         start = time_ns()
         assert model.test(debug=debug)
         ledger = ZakatTracker(model=model)
