@@ -128,7 +128,7 @@ class Model(ABC):
         Returns:
         str: The current version of the software.
         """
-        return '0.2.95'
+        return '0.3.0'
 
     @abstractmethod
     def path(self, path: str = None) -> str:
