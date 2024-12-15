@@ -2598,14 +2598,18 @@ class DictModel(Model):
 
 
 db = pony.Database()
-
+longStr = not True
 
 class Account(db.Entity):
     _table_ = 'account'
     id = pony.PrimaryKey(int, auto=True)
-    # When changed to Str the tests duration changed as following:
+    # When changed LongStr to Str the tests duration changed as following:
     # - macOS(intel) 15.1.1 increased from 5 seconds to 01:30 minutes.
-    name = pony.Optional(pony.LongStr, unique=True)
+    # - android(arm) 13 decreased from 48 seconds to 45 seconds.
+    if longStr:
+    	name = pony.Optional(pony.LongStr, unique=True)
+    else:
+    	name = pony.Optional(str, 255, unique=True)
     balance = pony.Optional(int, size=64, default=0)
     count = pony.Optional(int, size=64, default=0)
     hide = pony.Optional(bool, default=False)
@@ -2637,7 +2641,10 @@ class Log(db.Entity):
     account = pony.Required(Account, column='account_id')
     record_date = pony.Required(datetime.datetime, unique=True)
     value = pony.Required(int, size=64)
-    desc = pony.Required(pony.LongStr)
+    if longStr:
+    	desc = pony.Required(pony.LongStr)
+    else:
+    	desc = pony.Required(str, 255)
     ref = pony.Optional(int, size=64)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
     file = pony.Set('File', cascade_delete=False)
@@ -2648,8 +2655,12 @@ class File(db.Entity):
     id = pony.PrimaryKey(int, auto=True)
     log = pony.Required(Log, column='log_id')
     record_date = pony.Required(datetime.datetime, unique=True)
-    path = pony.Required(pony.LongStr)
-    name = pony.Optional(pony.LongStr)
+    if longStr:
+	    path = pony.Required(pony.LongStr)
+	    name = pony.Optional(pony.LongStr)
+    else:
+    	path = pony.Required(str, 1024)
+    	name = pony.Optional(str, 255)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
     updated_at = pony.Optional(datetime.datetime)
 
@@ -2660,7 +2671,10 @@ class Exchange(db.Entity):
     account = pony.Required(Account, column='account_id')
     record_date = pony.Required(datetime.datetime, unique=True)
     rate = pony.Required(Decimal)
-    desc = pony.Optional(pony.LongStr)
+    if longStr:
+    	desc = pony.Optional(pony.LongStr)
+    else:
+    	desc = pony.Optional(str, 255)
     created_at = pony.Required(datetime.datetime, default=lambda: datetime.datetime.now())
 
 
