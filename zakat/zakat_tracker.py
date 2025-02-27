@@ -833,7 +833,7 @@ class ZakatTracker:
         current_hash = self.file_hash(self.path())
         cache: dict[str, int] = {}  # hash: time_ns
         try:
-            with open(self.snapshot_cache_path(), 'r') as stream:
+            with open(self.snapshot_cache_path(), 'r', encoding="utf-8") as stream:
                 cache = camel.load(stream.read())
         except:
             pass
@@ -843,7 +843,7 @@ class ZakatTracker:
         cache[current_hash] = time
         if not self.save(self.base_path('snapshots', f'{time}.{self.ext()}')):
             return False
-        with open(self.snapshot_cache_path(), 'w') as stream:
+        with open(self.snapshot_cache_path(), 'w', encoding="utf-8") as stream:
             stream.write(camel.dump(cache))
         return True
 
@@ -862,7 +862,7 @@ class ZakatTracker:
         """
         cache: dict[str, int] = {}  # hash: time_ns
         try:
-            with open(self.snapshot_cache_path(), 'r') as stream:
+            with open(self.snapshot_cache_path(), 'r', encoding="utf-8") as stream:
                 cache = camel.load(stream.read())
         except:
             pass
@@ -2066,7 +2066,7 @@ class ZakatTracker:
         Raises:
         No specific exceptions are raised by this method.
         """
-        with open(path, "w") as file:
+        with open(path, "w", encoding="utf-8") as file:
             json.dump(self._vault, file, indent=4, cls=JSONEncoder)
             return True
 
@@ -2086,7 +2086,7 @@ class ZakatTracker:
             path = self.path()
         try:
         	# first save in tmp file
-        	with open(f'{path}.tmp', 'w') as stream:
+        	with open(f'{path}.tmp', 'w', encoding="utf-8") as stream:
         		stream.write(camel.dump(self._vault))
         	# then move tmp file to original location
         	shutil.move(f'{path}.tmp', path)
@@ -2109,7 +2109,7 @@ class ZakatTracker:
             path = self.path()
         try:
             if os.path.exists(path):
-                with open(path, 'r') as stream:
+                with open(path, 'r', encoding="utf-8") as stream:
                 	self._vault = camel.load(stream.read())
                 return True
             else:
@@ -2175,7 +2175,7 @@ class ZakatTracker:
             print('import_csv', f'debug={debug}')
         cache: list[int] = []
         try:
-            with open(self.import_csv_cache_path(), 'r') as stream:
+            with open(self.import_csv_cache_path(), 'r', encoding="utf-8") as stream:
                 cache = camel.load(stream.read())
         except:
             pass
@@ -2282,7 +2282,7 @@ class ZakatTracker:
                 for (i, account, desc, value, date, rate, _) in rows:
                     bad[i] = (account, desc, value, date, rate, e)
                 break
-        with open(self.import_csv_cache_path(), 'w') as stream:
+        with open(self.import_csv_cache_path(), 'w', encoding="utf-8") as stream:
             stream.write(camel.dump(cache))
         return created, found, bad
 
@@ -2494,7 +2494,7 @@ class ZakatTracker:
         if debug:
             print('generate_random_csv_file', f'debug={debug}')
         i = 0
-        with open(path, "w", newline="") as csvfile:
+        with open(path, "w", newline="", encoding="utf-8") as csvfile:
             writer = csv.writer(csvfile)
             for i in range(count):
                 account = f"acc-{random.randint(1, 1000)}"
