@@ -2084,12 +2084,16 @@ class ZakatTracker:
         """
         if path is None:
             path = self.path()
-        with open(f'{path}.tmp', 'w') as stream:
-            # first save in tmp file
-            stream.write(camel.dump(self._vault))
-            # then move tmp file to original location
-            shutil.move(f'{path}.tmp', path)
-            return True
+        try:
+        	# first save in tmp file
+        	with open(f'{path}.tmp', 'w') as stream:
+        		stream.write(camel.dump(self._vault))
+        	# then move tmp file to original location
+        	shutil.move(f'{path}.tmp', path)
+        	return True
+        except (IOError, OSError) as e:
+            print(f"Error saving file: {e}")
+            return False
 
     def load(self, path: str = None) -> bool:
         """
@@ -2103,11 +2107,17 @@ class ZakatTracker:
         """
         if path is None:
             path = self.path()
-        if os.path.exists(path):
-            with open(path, 'r') as stream:
-                self._vault = camel.load(stream.read())
+        try:
+            if os.path.exists(path):
+                with open(path, 'r') as stream:
+                	self._vault = camel.load(stream.read())
                 return True
-        return False
+            else:
+            	print(f"File not found: {path}")
+            	return False
+        except (IOError, OSError) as e:
+            print(f"Error loading file: {e}")
+            return False
 
     def import_csv_cache_path(self):
         """
@@ -2578,13 +2588,14 @@ class ZakatTracker:
             print('count', xx, ' - unique: ', (xx / limit) * 100, '%')
         assert limit == xx
 
-        # sanity check - convert date since 1000AD
+        # sanity check - convert date since 1AD to 9999AD
 
-        for year in range(1000, 9000):
-            ns = ZakatTracker.time(datetime.datetime.strptime(f"{year}-12-30 18:30:45", "%Y-%m-%d %H:%M:%S"))
+        for year in range(1, 10_000):
+            ns = ZakatTracker.time(datetime.datetime.strptime(f"{year:04d}-12-30 18:30:45", "%Y-%m-%d %H:%M:%S"))
             date = ZakatTracker.time_to_datetime(ns)
             if debug:
                 print(date)
+            assert ns > 0
             assert date.year == year
             assert date.month == 12
             assert date.day == 30
