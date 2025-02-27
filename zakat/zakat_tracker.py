@@ -62,7 +62,7 @@ import datetime
 import hashlib
 from time import sleep
 from pprint import PrettyPrinter as pp
-from math import floor
+from math import floor, ceil
 from enum import Enum, auto
 from decimal import Decimal
 from typing import Dict, Any
@@ -436,40 +436,91 @@ class ZakatTracker:
             'report': {},
         }
 
+    _last_time_ns = None
+    _time_diff_ns = None
+
     @staticmethod
-    def time(now: datetime = None) -> int:
+    def minimum_time_diff_ns() -> tuple[int, int]:
         """
-        Generates a timestamp based on the provided datetime object or the current datetime.
+        Calculates the minimum time difference between two consecutive calls to
+        `ZakatTracker._time()` in nanoseconds.
+
+        This method is used internally to determine the minimum granularity of
+        time measurements within the system.
+
+        Returns:
+        tuple[int, int]:
+            - The minimum time difference in nanoseconds.
+            - The number of iterations required to measure the difference.
+        """
+        i = 0
+        x = y = ZakatTracker._time()
+        while x == y:
+            y = ZakatTracker._time()
+            i += 1
+        return y - x, i
+
+    @staticmethod
+    def _time(now: datetime.datetime = None) -> int:
+        """
+        Internal method to generate a nanosecond-precision timestamp from a datetime object.
 
         Parameters:
-        now (datetime, optional): The datetime object to generate the timestamp from.
+        now (datetime.datetime, optional): The datetime object to generate the timestamp from.
         If not provided, the current datetime is used.
 
         Returns:
-        int: The timestamp in positive nanoseconds since the Unix epoch (January 1, 1970),
-            before 1970 will return in negative until 1000AD.
+        int: The timestamp in nanoseconds since the epoch (January 1, 1AD).
         """
         if now is None:
             now = datetime.datetime.now()
-        ordinal_day = now.toordinal()
         ns_in_day = (now - now.replace(hour=0, minute=0, second=0, microsecond=0)).total_seconds() * 10 ** 9
-        return int((ordinal_day - 719_163) * 86_400_000_000_000 + ns_in_day)
+        return int(now.toordinal() * 86_400_000_000_000 + ns_in_day)
 
     @staticmethod
-    def time_to_datetime(ordinal_ns: int) -> datetime:
+    def time(now: datetime.datetime = None) -> int:
         """
-        Converts an ordinal number (number of days since 1000-01-01) to a datetime object.
+        Generates a unique, monotonically increasing timestamp based on the provided
+        datetime object or the current datetime.
+
+        This method ensures that timestamps are unique even if called in rapid succession
+        by introducing a small delay if necessary, based on the system's minimum
+        time resolution.
 
         Parameters:
-        ordinal_ns (int): The ordinal number of days since 1000-01-01.
+        now (datetime.datetime, optional): The datetime object to generate the timestamp from.
+        If not provided, the current datetime is used.
 
         Returns:
-        datetime: The corresponding datetime object.
+        int: The unique timestamp in nanoseconds since the epoch (January 1, 1AD).
         """
-        ordinal_day = ordinal_ns // 86_400_000_000_000 + 719_163
-        ns_in_day = ordinal_ns % 86_400_000_000_000
-        d = datetime.datetime.fromordinal(ordinal_day)
-        t = datetime.timedelta(seconds=ns_in_day // 10 ** 9)
+        new_time = ZakatTracker._time(now)
+        if ZakatTracker._last_time_ns is None:
+            ZakatTracker._last_time_ns = new_time
+            return new_time
+        while new_time == ZakatTracker._last_time_ns:
+            if ZakatTracker._time_diff_ns is None:
+                diff, _ = ZakatTracker.minimum_time_diff_ns()
+                ZakatTracker._time_diff_ns = ceil(diff)
+            sleep(ZakatTracker._time_diff_ns / 1_000_000_000)
+            new_time = ZakatTracker._time()
+        ZakatTracker._last_time_ns = new_time
+        return new_time
+
+    @staticmethod
+    def time_to_datetime(ordinal_ns: int) -> datetime.datetime:
+        """
+        Converts a nanosecond-precision timestamp (ordinal number of nanoseconds since 1AD)
+        back to a datetime object.
+
+        Parameters:
+        ordinal_ns (int): The timestamp in nanoseconds since the epoch (January 1, 1AD).
+
+        Returns:
+        datetime.datetime: The corresponding datetime object.
+        """
+        d = datetime.datetime.fromordinal(ordinal_ns // 86_400_000_000_000)
+        t = datetime.timedelta(seconds=(ordinal_ns % 86_400_000_000_000) // 10 ** 9)
         return datetime.datetime.combine(d, datetime.time()) + t
 
     def clean_history(self, lock: int | None = None) -> int:
@@ -2487,6 +2538,27 @@ class ZakatTracker:
 
         if debug:
             random.seed(1234567890)
+
+        test_cases = [
+            datetime.datetime(1, 1, 1),
+            datetime.datetime(1970, 1, 1),
+            datetime.datetime(1969, 12, 31),
+            datetime.datetime.now(),
+            datetime.datetime(9999, 12, 31, 23, 59, 59),
+        ]
+        
+        for test_date in test_cases:
+            timestamp = ZakatTracker.time(test_date)
+            converted = ZakatTracker.time_to_datetime(timestamp)
+            if debug:
+                print(f"{timestamp} <=> {converted}")
+            assert timestamp > 0
+            assert test_date.year == converted.year
+            assert test_date.month == converted.month
+            assert test_date.day == converted.day
+            assert test_date.hour == converted.hour
+            assert test_date.minute == converted.minute
+            assert test_date.second in [converted.second - 1, converted.second, converted.second + 1]
 
         # sanity check - random forward time
 

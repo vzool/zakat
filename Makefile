@@ -1,7 +1,7 @@
 .PHONY: init
 # init development
 init:
-	python3 -m venv venv
+	python3 -m venv .venv
 
 .PHONY: clean
 # clean development

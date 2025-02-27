@@ -67,6 +67,13 @@
 
 - [خوارزمية تتبع المخزون مع مراعاة الزكاة (مع الدورة القمرية)](./docs/inventory.ar.md) [**مخطط له**]
 
+### المحتوى المرئي:
+
+* [Mastering Zakat: The Rooms and Boxes Algorithm Explained!](https://www.youtube.com/watch?v=maxttQ5Xo5g)
+* [طريقة الزكاة في العصر الرقمي: خوارزمية الغرف والصناديق](https://www.youtube.com/watch?v=kuhHzPjYD6o)
+* [Zakat Algorithm in 42 seconds](https://www.youtube.com/watch?v=1ipCcqf48go)
+* [How Exchange Rates Impact Zakat Calculation?](https://www.youtube.com/watch?v=PW6tjZgtShE)
+
 ### ابدأ الآن:
 
 قم بتثبيت مكتبة الزكاة (Zakat) باستخدام pip:
@@ -79,6 +86,19 @@ pip install zakat
 
 ```bash
 python -c "import zakat, sys; sys.exit(zakat.test())"
+```
+
+###### مثال سريع
+
+```python
+from zakat import ZakatTracker
+
+tracker = ZakatTracker()
+tracker.track(10000, "Initial deposit")
+tracker.sub(500, "Expense")
+# نفترض أن سعر الفضة 2.5 لكل جرام
+report = tracker.check(2.5)
+tracker.zakat(report)
 ```
 
 استكشف الوثائق والبرمجة المصدرية والأمثلة لبدء تتبع الزكاة (Zakat) الخاصة بك وتحقيق راحة البال المالية وفقًا للمبادئ الإسلامية.

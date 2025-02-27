@@ -65,6 +65,13 @@ Zakat is a user-friendly Python library designed to simplify the tracking and ca
 
 - [Zakat-Aware Inventory Tracking Algorithm (with Lunar Cycle)](./docs/inventory.md) [**PLANNED**]
 
+### Videos:
+
+* [Mastering Zakat: The Rooms and Boxes Algorithm Explained!](https://www.youtube.com/watch?v=maxttQ5Xo5g)
+* [طريقة الزكاة في العصر الرقمي: خوارزمية الغرف والصناديق](https://www.youtube.com/watch?v=kuhHzPjYD6o)
+* [Zakat Algorithm in 42 seconds](https://www.youtube.com/watch?v=1ipCcqf48go)
+* [How Exchange Rates Impact Zakat Calculation?](https://www.youtube.com/watch?v=PW6tjZgtShE)
+
 ### Get Started:
 
 Install the Zakat library using pip:
@@ -79,4 +86,15 @@ pip install zakat
 python -c "import zakat, sys; sys.exit(zakat.test())"
 ```
 
+###### Quick Example
+
+```python
+from zakat import ZakatTracker
+
+tracker = ZakatTracker()
+tracker.track(10000, "Initial deposit") # default account name is "1"
+tracker.sub(500, "Expense")
+report = tracker.check(2.5)  # Assuming silver price is 2.5 per gram
+tracker.zakat(report)
+```
 Explore the documentation, source code and examples to begin tracking your Zakat and achieving financial peace of mind in accordance with Islamic principles.
