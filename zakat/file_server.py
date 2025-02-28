@@ -1,12 +1,12 @@
-import http.server
 import socketserver
 import threading
 import os
 import uuid
-import cgi
-from enum import Enum, auto
 import shutil
 import json
+from enum import Enum, auto
+from wsgiref.simple_server import make_server
+import io
 
 
 class FileType(Enum):
@@ -54,7 +54,7 @@ def find_available_port() -> int:
 def start_file_server(database_path: str, database_callback: callable = None, csv_callback: callable = None,
                       debug: bool = False) -> tuple:
     """
-    Starts a multi-purpose HTTP server to manage file interactions for a Zakat application.
+    Starts a multi-purpose WSGI server to manage file interactions for a Zakat application.
 
     This server facilitates the following functionalities:
 
@@ -95,136 +95,235 @@ def start_file_server(database_path: str, database_callback: callable = None, cs
     download_url = f"http://localhost:{port}/{file_uuid}/get"
     upload_url = f"http://localhost:{port}/{file_uuid}/upload"
 
-    class Handler(http.server.SimpleHTTPRequestHandler):
-        def do_GET(self):
-            if self.path == f"/{file_uuid}/get":
-                # GET: Serve the existing file
-                try:
-                    with open(database_path, "rb") as f:
-                        self.send_response(200)
-                        self.send_header("Content-type", "application/octet-stream")
-                        self.send_header("Content-Disposition", f'attachment; filename="{file_name}"')
-                        self.end_headers()
-                        self.wfile.write(f.read())
-                except FileNotFoundError:
-                    self.send_error(404, "File not found")
-            elif self.path == f"/{file_uuid}/upload":
-                # GET: Serve the upload form
-                self.send_response(200)
-                self.send_header("Content-type", "text/html")
-                self.end_headers()
-                self.wfile.write(f"""
-                    <html lang="en">
-                        <head>
-                            <title>Zakat File Server</title>
-                        </head>
-                    <body>
-                    <h1>Zakat File Server</h1>
-                    <h3>You can download the <a target="__blank" href="{download_url}">database file</a>...</h3>
-                    <h3>Or upload a new file to restore a database or import `CSV` file:</h3>
-                    <form action="/{file_uuid}/upload" method="post" enctype="multipart/form-data">
-                        <input type="file" name="file" required><br/>
-                        <input type="radio" id="{FileType.Database.value}" name="upload_type" value="{FileType.Database.value}" required>
-                        <label for="database">Database File</label><br/>
-                        <input type="radio"id="{FileType.CSV.value}" name="upload_type" value="{FileType.CSV.value}">
-                        <label for="csv">CSV File</label><br/>
-                        <input type="submit" value="Upload"><br/>
-                    </form>
-                    </body></html>
-                """.encode())
-            else:
-                self.send_error(404)
+    # Upload directory
+    upload_directory = "./uploads"
+    os.makedirs(upload_directory, exist_ok=True)
 
-        def do_POST(self):
-            if self.path == f"/{file_uuid}/upload":
-                # POST: Handle request
-                # 1. Get the Form Data
-                form_data = cgi.FieldStorage(
-                    fp=self.rfile,
-                    headers=self.headers,
-                    environ={'REQUEST_METHOD': 'POST'}
-                )
-                upload_type = form_data.getvalue("upload_type")
+    # HTML templates
+    upload_form = f"""
+    <html lang="en">
+        <head>
+            <title>Zakat File Server</title>
+        </head>
+    <body>
+    <h1>Zakat File Server</h1>
+    <h3>You can download the <a target="__blank" href="{download_url}">database file</a>...</h3>
+    <h3>Or upload a new file to restore a database or import `CSV` file:</h3>
+    <form action="/{file_uuid}/upload" method="post" enctype="multipart/form-data">
+        <input type="file" name="file" required><br/>
+        <input type="radio" id="{FileType.Database.value}" name="upload_type" value="{FileType.Database.value}" required>
+        <label for="database">Database File</label><br/>
+        <input type="radio"id="{FileType.CSV.value}" name="upload_type" value="{FileType.CSV.value}">
+        <label for="csv">CSV File</label><br/>
+        <input type="submit" value="Upload"><br/>
+    </form>
+    </body></html>
+    """
 
+    # WSGI application
+    def wsgi_app(environ, start_response):
+        path = environ.get('PATH_INFO', '')
+        method = environ.get('REQUEST_METHOD', 'GET')
+
+        if path == f"/{file_uuid}/get" and method == 'GET':
+            # GET: Serve the existing file
+            try:
+                with open(database_path, "rb") as f:
+                    file_content = f.read()
+                    
+                start_response('200 OK', [
+                    ('Content-type', 'application/octet-stream'),
+                    ('Content-Disposition', f'attachment; filename="{file_name}"'),
+                    ('Content-Length', str(len(file_content)))
+                ])
+                return [file_content]
+            except FileNotFoundError:
+                start_response('404 Not Found', [('Content-type', 'text/plain')])
+                return [b'File not found']
+                
+        elif path == f"/{file_uuid}/upload" and method == 'GET':
+            # GET: Serve the upload form
+            start_response('200 OK', [('Content-type', 'text/html')])
+            return [upload_form.encode()]
+            
+        elif path == f"/{file_uuid}/upload" and method == 'POST':
+            # POST: Handle file uploads
+            try:
+                # Get content length
+                content_length = int(environ.get('CONTENT_LENGTH', 0))
+                
+                # Get content type and boundary
+                content_type = environ.get('CONTENT_TYPE', '')
+                
+                # Read the request body
+                request_body = environ['wsgi.input'].read(content_length)
+                
+                # Create a file-like object from the request body
+                # request_body_file = io.BytesIO(request_body)
+                
+                # Parse the multipart form data using WSGI approach
+                # First, detect the boundary from content_type
+                boundary = None
+                for part in content_type.split(';'):
+                    part = part.strip()
+                    if part.startswith('boundary='):
+                        boundary = part[9:]
+                        if boundary.startswith('"') and boundary.endswith('"'):
+                            boundary = boundary[1:-1]
+                        break
+                
+                if not boundary:
+                    start_response('400 Bad Request', [('Content-type', 'text/plain')])
+                    return [b"Missing boundary in multipart form data"]
+                
+                # Process multipart data
+                parts = request_body.split(f'--{boundary}'.encode())
+                
+                # Initialize variables to store form data
+                upload_type = None
+                # file_item = None
+                file_data = None
+                filename = None
+                
+                # Process each part
+                for part in parts:
+                    if not part.strip():
+                        continue
+                    
+                    # Split header and body
+                    try:
+                        headers_raw, body = part.split(b'\r\n\r\n', 1)
+                        headers_text = headers_raw.decode('utf-8')
+                    except ValueError:
+                        continue
+                    
+                    # Parse headers
+                    headers = {}
+                    for header_line in headers_text.split('\r\n'):
+                        if ':' in header_line:
+                            name, value = header_line.split(':', 1)
+                            headers[name.strip().lower()] = value.strip()
+                    
+                    # Get content disposition
+                    content_disposition = headers.get('content-disposition', '')
+                    if not content_disposition.startswith('form-data'):
+                        continue
+                    
+                    # Extract field name
+                    field_name = None
+                    for item in content_disposition.split(';'):
+                        item = item.strip()
+                        if item.startswith('name='):
+                            field_name = item[5:].strip('"\'')
+                            break
+                    
+                    if not field_name:
+                        continue
+                    
+                    # Handle upload_type field
+                    if field_name == 'upload_type':
+                        # Remove trailing data including the boundary
+                        body_end = body.find(b'\r\n--')
+                        if body_end >= 0:
+                            body = body[:body_end]
+                        upload_type = body.decode('utf-8').strip()
+                    
+                    # Handle file field
+                    elif field_name == 'file':
+                        # Extract filename
+                        for item in content_disposition.split(';'):
+                            item = item.strip()
+                            if item.startswith('filename='):
+                                filename = item[9:].strip('"\'')
+                                break
+                        
+                        if filename:
+                            # Remove trailing data including the boundary
+                            body_end = body.find(b'\r\n--')
+                            if body_end >= 0:
+                                body = body[:body_end]
+                            file_data = body
+                
                 if debug:
                     print('upload_type', upload_type)
-
-                if upload_type not in [FileType.Database.value, FileType.CSV.value]:
-                    self.send_error(400, "Invalid upload type")
-                    return
-
-                # 2. Extract File Data
-                file_item = form_data['file']  # Assuming 'file' is your file input name
-
-                # 3. Get File Details
-                filename = file_item.filename
-                file_data = file_item.file.read()  # Read the file's content
-
+                    
+                if debug:
+                    print('upload_type:', upload_type)
+                    print('filename:', filename)
+                
+                if not upload_type or upload_type not in [FileType.Database.value, FileType.CSV.value]:
+                    start_response('400 Bad Request', [('Content-type', 'text/plain')])
+                    return [b"Invalid upload type"]
+                
+                if not filename or not file_data:
+                    start_response('400 Bad Request', [('Content-type', 'text/plain')])
+                    return [b"Missing file data"]
+                
                 if debug:
                     print(f'Uploaded filename: {filename}')
-
-                # 4. Define Storage Path for CSV
-                upload_directory = "./uploads"  # Create this directory if it doesn't exist
-                os.makedirs(upload_directory, exist_ok=True)
+                
+                # Save the file
                 file_path = os.path.join(upload_directory, upload_type)
-
-                # 5. Write to Disk
                 with open(file_path, 'wb') as f:
                     f.write(file_data)
-
-                match upload_type:
-                    case FileType.Database.value:
-
-                        try:
-                            # 6. Verify database file
-                            # ZakatTracker(db_path=file_path) # FATAL, Circular Imports Error
-                            if database_callback is not None:
-                                database_callback(file_path)
-
-                            # 7. Copy database into the original path
-                            shutil.copy2(file_path, database_path)
-                        except Exception as e:
-                            self.send_error(400, str(e))
-                            return
-
-                    case FileType.CSV.value:
-                        # 6. Verify CSV file
-                        try:
-                            # x = ZakatTracker(db_path=database_path) # FATAL, Circular Imports Error
-                            # result = x.import_csv(file_path, debug=debug)
-                            if csv_callback is not None:
-                                result = csv_callback(file_path, database_path, debug)
-                                if debug:
-                                    print(f'CSV imported: {result}')
-                                if len(result[2]) != 0:
-                                    self.send_response(200)
-                                    self.end_headers()
-                                    self.wfile.write(json.dumps(result).encode())
-                                    return
-                        except Exception as e:
-                            self.send_error(400, str(e))
-                            return
-
-                self.send_response(200)
-                self.end_headers()
-                self.wfile.write(b"File uploaded successfully.")
-
-    httpd = socketserver.TCPServer(("localhost", port), Handler)
+                
+                # Process based on file type
+                if upload_type == FileType.Database.value:
+                    try:
+                        # Verify database file
+                        if database_callback is not None:
+                            database_callback(file_path)
+                        
+                        # Copy database into the original path
+                        shutil.copy2(file_path, database_path)
+                        
+                        start_response('200 OK', [('Content-type', 'text/plain')])
+                        return [b"Database file uploaded successfully."]
+                    except Exception as e:
+                        start_response('400 Bad Request', [('Content-type', 'text/plain')])
+                        return [str(e).encode()]
+                
+                elif upload_type == FileType.CSV.value:
+                    try:
+                        if csv_callback is not None:
+                            result = csv_callback(file_path, database_path, debug)
+                            if debug:
+                                print(f'CSV imported: {result}')
+                            if len(result[2]) != 0:
+                                start_response('200 OK', [('Content-type', 'application/json')])
+                                return [json.dumps(result).encode()]
+                        
+                        start_response('200 OK', [('Content-type', 'text/plain')])
+                        return [b"CSV file uploaded successfully."]
+                    except Exception as e:
+                        start_response('400 Bad Request', [('Content-type', 'text/plain')])
+                        return [str(e).encode()]
+            
+            except Exception as e:
+                start_response('500 Internal Server Error', [('Content-type', 'text/plain')])
+                return [f"Error processing upload: {str(e)}".encode()]
+        
+        else:
+            # 404 for anything else
+            start_response('404 Not Found', [('Content-type', 'text/plain')])
+            return [b'Not Found']
+    
+    # Create and start the server
+    httpd = make_server('localhost', port, wsgi_app)
     server_thread = threading.Thread(target=httpd.serve_forever)
-
+    
     def shutdown_server():
         nonlocal httpd, server_thread
         httpd.shutdown()
-        httpd.server_close()  # Close the socket
         server_thread.join()  # Wait for the thread to finish
-
+    
     return file_name, download_url, upload_url, server_thread, shutdown_server
 
 
 def main():
     from zakat_tracker import ZakatTracker, Action  # SAFE Circular Imports
     # Example usage (replace with your file path)
-    file_to_share = f"{uuid.uuid4()}.pickle"  # Or any other file type
+    file_to_share = f"{uuid.uuid4()}.{ZakatTracker.ext()}"  # Or any other file type
 
     def database_callback(file_path):
         ZakatTracker(db_path=file_path)
@@ -247,7 +346,7 @@ def main():
     print(upload_url)
     print("(The uploaded file will replace the existing one.)")
 
-    print("\nString the server...")
+    print("\nStarting the server...")
     server_thread.start()
     print("The server started.")
 
