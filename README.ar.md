@@ -21,6 +21,33 @@
 
 الزكاة (Zakat) هي مكتبة بايثون سهلة الاستخدام مصممة لتبسيط عملية تتبع وحساب الزكاة، وهي ركن أساسي في المالية الإسلامية. سواء كنت فردًا أو مؤسسة، يوفر الزكاة (Zakat) الأدوات اللازمة لإدارة التزاماتك الزكوية بدقة.
 
+### ابدأ الآن:
+
+قم بتثبيت مكتبة الزكاة (Zakat) باستخدام pip:
+
+```bash
+pip install zakat
+```
+
+###### الاختبارات
+
+```bash
+python -c "import zakat, sys; sys.exit(zakat.test())"
+```
+
+###### مثال سريع
+
+```python
+from zakat import ZakatTracker
+
+tracker = ZakatTracker()
+tracker.track(10000, "Initial deposit")
+tracker.sub(500, "Expense")
+# نفترض أن سعر الفضة 2.5 لكل جرام
+report = tracker.check(2.5)
+tracker.zakat(report)
+```
+
 ### الميزات الرئيسية:
 
 - تتبع المعاملات: سجل بسهولة كل من الدخل والنفقات مع أوصاف مفصلة، مما يضمن سجلات مالية شاملة.
@@ -73,33 +100,6 @@
 * [طريقة الزكاة في العصر الرقمي: خوارزمية الغرف والصناديق](https://www.youtube.com/watch?v=kuhHzPjYD6o)
 * [Zakat Algorithm in 42 seconds](https://www.youtube.com/watch?v=1ipCcqf48go)
 * [How Exchange Rates Impact Zakat Calculation?](https://www.youtube.com/watch?v=PW6tjZgtShE)
-
-### ابدأ الآن:
-
-قم بتثبيت مكتبة الزكاة (Zakat) باستخدام pip:
-
-```bash
-pip install zakat
-```
-
-###### الاختبارات
-
-```bash
-python -c "import zakat, sys; sys.exit(zakat.test())"
-```
-
-###### مثال سريع
-
-```python
-from zakat import ZakatTracker
-
-tracker = ZakatTracker()
-tracker.track(10000, "Initial deposit")
-tracker.sub(500, "Expense")
-# نفترض أن سعر الفضة 2.5 لكل جرام
-report = tracker.check(2.5)
-tracker.zakat(report)
-```
 
 استكشف الوثائق والبرمجة المصدرية والأمثلة لبدء تتبع الزكاة (Zakat) الخاصة بك وتحقيق راحة البال المالية وفقًا للمبادئ الإسلامية.
 </div>
