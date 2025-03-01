@@ -2,7 +2,7 @@ from setuptools import find_packages, setup
 
 setup(
     name='zakat',
-    version='0.2.96',
+    version='0.2.97',
     description='A Python Library for Islamic Financial Management.',
     author='Abdelaziz Elrashed Elshaikh Mohamed',
     author_email='aeemh.sdn@gmail.com',
@@ -13,6 +13,7 @@ setup(
         'Programming Language :: Python :: 3.10',
         'Programming Language :: Python :: 3.11',
         'Programming Language :: Python :: 3.12',
+        'Programming Language :: Python :: 3.13',
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],

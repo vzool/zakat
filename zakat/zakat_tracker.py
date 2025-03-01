@@ -1,3 +1,4 @@
+#pylint:disable=W0237
 """
  _____     _         _     _____               _
 |__  /__ _| | ____ _| |_  |_   _| __ __ _  ___| | _____ _ __
@@ -97,12 +98,12 @@ class Action(Enum):
 
 
 class JSONEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj, Action) or isinstance(obj, MathOperation):
-            return obj.name  # Serialize as the enum member's name
-        elif isinstance(obj, Decimal):
-            return float(obj)
-        return super().default(obj)
+    def default(self, o):
+        if isinstance(o, Action) or isinstance(o, MathOperation):
+            return o.name  # Serialize as the enum member's name
+        elif isinstance(o, Decimal):
+            return float(o)
+        return super().default(o)
 
 
 class MathOperation(Enum):
@@ -111,30 +112,30 @@ class MathOperation(Enum):
     SUBTRACTION = auto()
 
 
-reg = CamelRegistry()
+camel_registry = CamelRegistry()
 
 
-@reg.dumper(Action, u'action', version=None)
+@camel_registry.dumper(Action, u'action', version=None)
 def _dump_action(data):
     return u"{}".format(data.value)
 
 
-@reg.loader(u'action', version=None)
+@camel_registry.loader(u'action', version=None)
 def _load_action(data, version):
     return Action(int(data))
 
 
-@reg.dumper(MathOperation, u'math', version=None)
+@camel_registry.dumper(MathOperation, u'math', version=None)
 def _dump_math(data):
     return u"{}".format(data.value)
 
 
-@reg.loader(u'math', version=None)
+@camel_registry.loader(u'math', version=None)
 def _load_math(data, version):
     return MathOperation(int(data))
 
 
-camel = Camel([reg])
+camel = Camel([camel_registry])
 
 
 class ZakatTracker:
@@ -170,7 +171,7 @@ class ZakatTracker:
 
         _vault (dict):
             - account (dict):
-                - {account_number} (dict):
+                - {account_name} (dict):
                     - balance (int): The current balance of the account.
                     - box (dict): A dictionary storing transaction details.
                         - {timestamp} (dict):
@@ -189,7 +190,7 @@ class ZakatTracker:
                     - hide (bool): Indicates whether the account is hidden or not.
                     - zakatable (bool): Indicates whether the account is subject to Zakat.
             - exchange (dict):
-                - account (dict):
+                - {account_name} (dict):
                     - {timestamps} (dict):
                         - rate (float): Exchange rate when compared to local currency.
                         - description (str): The description of the exchange rate.
@@ -220,7 +221,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.96'
+        return '0.2.97'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
