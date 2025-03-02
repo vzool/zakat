@@ -1,4 +1,3 @@
-#pylint:disable=W0237
 """
  _____     _         _     _____               _
 |__  /__ _| | ____ _| |_  |_   _| __ __ _  ___| | _____ _ __
@@ -61,21 +60,19 @@ import json
 import random
 import datetime
 import hashlib
-from time import sleep
-from pprint import PrettyPrinter as pp
-from math import floor, ceil
-from enum import Enum, auto
-from decimal import Decimal
-from typing import Dict, Any
-from pathlib import Path
-from time import time_ns
-from camelx import Camel, CamelRegistry
+import math
+import time
 import shutil
-from datetime import timedelta
 import inspect
+import decimal
+import camelx
+import enum
+import pathlib
+from pprint import PrettyPrinter as pp
+from typing import Dict, Any
 
 
-class WeekDay(Enum):
+class WeekDay(enum.Enum):
     Monday = 0
     Tuesday = 1
     Wednesday = 2
@@ -85,32 +82,32 @@ class WeekDay(Enum):
     Sunday = 6
 
 
-class Action(Enum):
-    CREATE = auto()
-    TRACK = auto()
-    LOG = auto()
-    SUB = auto()
-    ADD_FILE = auto()
-    REMOVE_FILE = auto()
-    BOX_TRANSFER = auto()
-    EXCHANGE = auto()
-    REPORT = auto()
-    ZAKAT = auto()
+class Action(enum.Enum):
+    CREATE = 0
+    TRACK = 1
+    LOG = 2
+    SUB = 3
+    ADD_FILE = 4
+    REMOVE_FILE = 5
+    BOX_TRANSFER = 6
+    EXCHANGE = 7
+    REPORT = 8
+    ZAKAT = 9
+
+
+class MathOperation(enum.Enum):
+    ADDITION = 0
+    EQUAL = 1
+    SUBTRACTION = 2
 
 
 class JSONEncoder(json.JSONEncoder):
     def default(self, o):
         if isinstance(o, Action) or isinstance(o, MathOperation):
             return o.name  # Serialize as the enum member's name
-        elif isinstance(o, Decimal):
+        elif isinstance(o, decimal.Decimal):
             return float(o)
         return super().default(o)
-
-
-class MathOperation(Enum):
-    ADDITION = auto()
-    EQUAL = auto()
-    SUBTRACTION = auto()
 
 
 def print_stack(simple: bool = True, local: bool = False, skip_first: bool = True):
@@ -184,7 +181,7 @@ def print_stack(simple: bool = True, local: bool = False, skip_first: bool = Tru
         		print(f"    {name} = {value}")
 
 
-camel_registry = CamelRegistry()
+camel_registry = camelx.CamelRegistry()
 
 
 @camel_registry.dumper(Action, u'action', version=None)
@@ -207,7 +204,7 @@ def _load_math(data, version):
     return MathOperation(int(data))
 
 
-camel = Camel([camel_registry])
+camel = camelx.Camel([camel_registry])
 
 
 class ZakatTracker:
@@ -392,8 +389,8 @@ class ZakatTracker:
         """
         if path is None:
             return self._vault_path
-        self._vault_path = Path(path).resolve()
-        base_path = Path(path).resolve()
+        self._vault_path = pathlib.Path(path).resolve()
+        base_path = pathlib.Path(path).resolve()
         if base_path.is_file() or base_path.suffix:
             base_path = base_path.parent
         base_path.mkdir(parents=True, exist_ok=True)
@@ -415,11 +412,11 @@ class ZakatTracker:
         filtered_args = []
         ignored_filename = None
         for arg in args:
-            if Path(arg).suffix:
+            if pathlib.Path(arg).suffix:
                 ignored_filename = arg
             else:
                 filtered_args.append(arg)
-        base_path = Path(self._base_path)
+        base_path = pathlib.Path(self._base_path)
         full_path = base_path.joinpath(*filtered_args)
         full_path.mkdir(parents=True, exist_ok=True)
         if ignored_filename is not None:
@@ -427,11 +424,11 @@ class ZakatTracker:
         return str(full_path.resolve())
 
     @staticmethod
-    def scale(x: float | int | Decimal, decimal_places: int = 2) -> int:
+    def scale(x: float | int | decimal.Decimal, decimal_places: int = 2) -> int:
         """
         Scales a numerical value by a specified power of 10, returning an integer.
 
-        This function is designed to handle various numeric types (`float`, `int`, or `Decimal`) and
+        This function is designed to handle various numeric types (`float`, `int`, or `decimal.Decimal`) and
         facilitate precise scaling operations, particularly useful in financial or scientific calculations.
 
         Parameters:
@@ -453,28 +450,28 @@ class ZakatTracker:
         >>> ZakatTracker.scale(Decimal("0.005"), decimal_places=4)
         50
         """
-        if not isinstance(x, (float, int, Decimal)):
-            raise TypeError("Input 'x' must be a float, int, or Decimal.")
-        return int(Decimal(f"{x:.{decimal_places}f}") * (10 ** decimal_places))
+        if not isinstance(x, (float, int, decimal.Decimal)):
+            raise TypeError("Input 'x' must be a float, int, or decimal.Decimal.")
+        return int(decimal.Decimal(f"{x:.{decimal_places}f}") * (10 ** decimal_places))
 
     @staticmethod
-    def unscale(x: int, return_type: type = float, decimal_places: int = 2) -> float | Decimal:
+    def unscale(x: int, return_type: type = float, decimal_places: int = 2) -> float | decimal.Decimal:
         """
         Unscales an integer by a power of 10.
 
         Parameters:
         x: The integer to unscale.
-        return_type: The desired type for the returned value. Can be float, int, or Decimal. Defaults to float.
+        return_type: The desired type for the returned value. Can be float, int, or decimal.Decimal. Defaults to float.
         decimal_places: The power of 10 to use. Defaults to 2.
 
         Returns:
         The unscaled number, converted to the specified return_type.
 
         Raises:
-        TypeError: If the return_type is not float or Decimal.
+        TypeError: If the return_type is not float or decimal.Decimal.
         """
-        if return_type not in (float, Decimal):
-            raise TypeError(f'Invalid return_type({return_type}). Supported types are float, int, and Decimal.')
+        if return_type not in (float, decimal.Decimal):
+            raise TypeError(f'Invalid return_type({return_type}). Supported types are float, int, and decimal.Decimal.')
         return round(return_type(x / (10 ** decimal_places)), decimal_places)
 
     def reset(self) -> None:
@@ -560,8 +557,8 @@ class ZakatTracker:
         while new_time == ZakatTracker._last_time_ns:
             if ZakatTracker._time_diff_ns is None:
                 diff, _ = ZakatTracker.minimum_time_diff_ns()
-                ZakatTracker._time_diff_ns = ceil(diff)
-            sleep(ZakatTracker._time_diff_ns / 1_000_000_000)
+                ZakatTracker._time_diff_ns = math.ceil(diff)
+            time.sleep(ZakatTracker._time_diff_ns / 1_000_000_000)
             new_time = ZakatTracker._time()
         ZakatTracker._last_time_ns = new_time
         return new_time
@@ -621,7 +618,7 @@ class ZakatTracker:
         return self._history_mode
 
     def _step(self, action: Action = None, account: str = None, ref: int = None, file: int = None, value: float = None,
-              key: str = None, math_operation: MathOperation = None, debug : bool = False) -> int:
+              key: str = None, math_operation: MathOperation = None, debug: bool = False) -> int:
         """
         This method is responsible for recording the actions performed on the ZakatTracker.
 
@@ -633,7 +630,7 @@ class ZakatTracker:
         - value (int): The value associated with the action.
         - key (str): The key associated with the action.
         - math_operation (MathOperation): The mathematical operation performed during the action.
-        debug (bool): If True, the function will print debug information. Default is False.
+        - debug (bool): If True, the function will print debug information. Default is False.
 
         Returns:
         - int: The lock time of the recorded action. If no lock was performed, it returns 0.
@@ -709,7 +706,7 @@ class ZakatTracker:
             return True
         return False
 
-    def recall(self, dry : bool = True, debug : bool = False) -> bool:
+    def recall(self, dry: bool = True, debug: bool = False) -> bool:
         """
         Revert the last operation.
 
@@ -776,13 +773,13 @@ class ZakatTracker:
                                     try:
                                         self._vault['account'][x['account']]['box'][box_ref]['rest'] += -box_value
                                     except TypeError:
-                                        self._vault['account'][x['account']]['box'][box_ref]['rest'] += Decimal(
+                                        self._vault['account'][x['account']]['box'][box_ref]['rest'] += decimal.Decimal(
                                             -box_value)
 
                                     try:
                                         self._vault['account'][x['account']]['balance'] += -box_value
                                     except TypeError:
-                                        self._vault['account'][x['account']]['balance'] += Decimal(-box_value)
+                                        self._vault['account'][x['account']]['balance'] += decimal.Decimal(-box_value)
 
                                     self._vault['account'][x['account']]['count'] -= 1
                                 del self._vault['account'][x['account']]['log'][x['ref']]
@@ -1064,9 +1061,9 @@ class ZakatTracker:
             pass
         if current_hash in cache:
             return True
-        time = time_ns()
-        cache[current_hash] = time
-        if not self.save(self.base_path('snapshots', f'{time}.{self.ext()}')):
+        ref = time.time_ns()
+        cache[current_hash] = ref
+        if not self.save(self.base_path('snapshots', f'{ref}.{self.ext()}')):
             return False
         with open(self.snapshot_cache_path(), 'w', encoding="utf-8") as stream:
             stream.write(camel.dump(cache))
@@ -1133,14 +1130,14 @@ class ZakatTracker:
         """
         return self.ref_exists(account, 'box', ref)
 
-    def track(self, unscaled_value: float | int | Decimal = 0, desc: str = '', account: str = 1, logging: bool = True,
+    def track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: str = 1, logging: bool = True,
               created: int = None,
               debug: bool = False) -> int:
         """
         This function tracks a transaction for a specific account.
 
         Parameters:
-        unscaled_value (float | int | Decimal): The value of the transaction. Default is 0.
+        unscaled_value (float | int | decimal.Decimal): The value of the transaction. Default is 0.
         desc (str): The description of the transaction. Default is an empty string.
         account (str): The account for which the transaction is being tracked. Default is '1'.
         logging (bool): Whether to log the transaction. Default is True.
@@ -1242,7 +1239,7 @@ class ZakatTracker:
         try:
             self._vault['account'][account]['balance'] += value
         except TypeError:
-            self._vault['account'][account]['balance'] += Decimal(value)
+            self._vault['account'][account]['balance'] += decimal.Decimal(value)
         self._vault['account'][account]['count'] += 1
         if debug:
             print('create-log', created)
@@ -1492,7 +1489,7 @@ class ZakatTracker:
         for i in sorted(logs, reverse=True):
             dt = self.time_to_datetime(i)
             daily = f'{dt.year}-{dt.month:02d}-{dt.day:02d}'
-            weekly = dt - timedelta(days=weekday.value)
+            weekly = dt - datetime.timedelta(days=weekday.value)
             monthly = f'{dt.year}-{dt.month:02d}'
             yearly = dt.year
             # daily
@@ -1693,7 +1690,7 @@ class ZakatTracker:
             return status
         return False
 
-    def sub(self, unscaled_value: float | int | Decimal, desc: str = '', account: str = 1, created: int = None,
+    def sub(self, unscaled_value: float | int | decimal.Decimal, desc: str = '', account: str = 1, created: int = None,
             debug: bool = False) \
             -> tuple[
                    int,
@@ -1705,7 +1702,7 @@ class ZakatTracker:
         Subtracts a specified value from an account's balance.
 
         Parameters:
-        unscaled_value (float | int | Decimal): The amount to be subtracted.
+        unscaled_value (float | int | decimal.Decimal): The amount to be subtracted.
         desc (str): A description for the transaction. Defaults to an empty string.
         account (str): The account from which the value will be subtracted. Defaults to '1'.
         created (int): The timestamp of the transaction. If not provided, the current timestamp will be used.
@@ -1773,14 +1770,14 @@ class ZakatTracker:
             self.free(self.lock())
         return created, ages
 
-    def transfer(self, unscaled_amount: float | int | Decimal, from_account: str, to_account: str, desc: str = '',
+    def transfer(self, unscaled_amount: float | int | decimal.Decimal, from_account: str, to_account: str, desc: str = '',
                  created: int = None,
                  debug: bool = False) -> list[int]:
         """
         Transfers a specified value from one account to another.
 
         Parameters:
-        unscaled_amount (float | int | Decimal): The amount to be transferred.
+        unscaled_amount (float | int | decimal.Decimal): The amount to be transferred.
         from_account (str): The account from which the value will be transferred.
         to_account (str): The account to which the value will be transferred.
         desc (str, optional): A description for the transaction. Defaults to an empty string.
@@ -1850,7 +1847,7 @@ class ZakatTracker:
 
     def check(self,
               silver_gram_price: float,
-              unscaled_nisab: float | int | Decimal = None,
+              unscaled_nisab: float | int | decimal.Decimal = None,
               debug: bool = False,
               now: int = None,
               cycle: float = None) -> tuple:
@@ -1859,7 +1856,7 @@ class ZakatTracker:
 
         Parameters:
         silver_gram_price (float): The price of a gram of silver.
-        unscaled_nisab (float | int | Decimal): The minimum amount of wealth required for Zakat. If not provided,
+        unscaled_nisab (float | int | decimal.Decimal): The minimum amount of wealth required for Zakat. If not provided,
                         it will be calculated based on the silver_gram_price.
         debug (bool): Flag to enable debug mode.
         now (int): The current timestamp. If not provided, it will be calculated using ZakatTracker.time().
@@ -1907,7 +1904,7 @@ class ZakatTracker:
                     epoch = (now - _box[j]['last']) / cycle
                 if debug:
                     print(f"Epoch: {epoch}")
-                epoch = floor(epoch)
+                epoch = math.floor(epoch)
                 if debug:
                     print(f"Epoch: {epoch}", type(epoch), epoch == 0, 1 - epoch, epoch)
                 if epoch == 0:
@@ -2109,7 +2106,7 @@ class ZakatTracker:
                     try:
                         self._vault['account'][x]['box'][j]['rest'] -= amount
                     except TypeError:
-                        self._vault['account'][x]['box'][j]['rest'] -= Decimal(amount)
+                        self._vault['account'][x]['box'][j]['rest'] -= decimal.Decimal(amount)
                     # self._step(Action.ZAKAT, account=x, ref=j, value=amount, key='rest',
                     #            math_operation=MathOperation.SUBTRACTION)
                     self._log(-float(amount), desc='zakat-زكاة', account=x, created=None, ref=j, debug=debug)
@@ -2622,7 +2619,7 @@ class ZakatTracker:
 
         return result
 
-    def _test_core(self, restore : bool = False, debug : bool = False):
+    def _test_core(self, restore: bool = False, debug: bool = False):
 
         if debug:
             random.seed(1234567890)
@@ -2731,7 +2728,7 @@ class ZakatTracker:
             ]:
                 for return_type in (
                         float,
-                        Decimal,
+                        decimal.Decimal,
                 ):
                     for i in range(max_i):
                         for j in range(max_j):
@@ -2795,7 +2792,7 @@ class ZakatTracker:
                 assert len(self._vault['account'][x]['log'][ref]['file']) == 0
                 for i in range(3):
                     file_ref = self.add_file(x, ref, 'file_' + str(i))
-                    sleep(0.0000001)
+                    time.sleep(0.0000001)
                     assert file_ref != 0
                     if debug:
                         print('ref', ref, 'file', file_ref)
