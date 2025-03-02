@@ -13,8 +13,21 @@
 </div>
 
 <p>
-<a href="https://github.com/vzool/zakat/blob/main/README.md"><img src="https://img.shields.io/badge/lang-en-green.svg" alt="en" data-canonical-src="https://img.shields.io/badge/lang-en-green.svg" style="max-width: 100%;"></a>
-<img src="https://github.com/vzool/zakat/actions/workflows/python-package.yml/badge.svg"/>
+    <a href="https://opensource.org/licenses/MIT">
+        <img src="https://img.shields.io/badge/license-MIT%20License-red.svg"/>
+    </a>
+    <a href="https://www.python.org/downloads/">
+        <img src="https://img.shields.io/badge/python-3.10%2B-blue"/>
+    </a>
+    <a href="https://github.com/vzool/zakat/actions/workflows/python-package.yml">
+        <img src="https://github.com/vzool/zakat/actions/workflows/python-package.yml/badge.svg"/>
+    </a>
+    <a href="https://github.com/vzool/zakat/releases/latest">
+        <img src="https://img.shields.io/github/release/vzool/zakat.svg"/>
+    </a>
+    <a href="https://github.com/vzool/zakat/blob/main/README.md">
+        <img src="https://img.shields.io/badge/lang-en-green.svg" alt="en" data-canonical-src="https://img.shields.io/badge/lang-en-green.svg" style="max-width: 100%;">
+    </a>
 </p>
 </div>
 
