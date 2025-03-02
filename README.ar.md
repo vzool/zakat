@@ -14,6 +14,7 @@
 
 <p>
 <a href="https://github.com/vzool/zakat/blob/main/README.md"><img src="https://img.shields.io/badge/lang-en-green.svg" alt="en" data-canonical-src="https://img.shields.io/badge/lang-en-green.svg" style="max-width: 100%;"></a>
+<img src="https://github.com/vzool/zakat/actions/workflows/python-package.yml/badge.svg"/>
 </p>
 </div>
 
