@@ -72,6 +72,7 @@ from time import time_ns
 from camelx import Camel, CamelRegistry
 import shutil
 from datetime import timedelta
+import inspect
 
 
 class WeekDay(Enum):
@@ -110,6 +111,77 @@ class MathOperation(Enum):
     ADDITION = auto()
     EQUAL = auto()
     SUBTRACTION = auto()
+
+
+def print_stack(simple: bool = True, local: bool = False, skip_first: bool = True):
+    """
+    Prints the current function call stack.
+
+    Args:
+        simple (bool, optional): If True, prints a simplified stack trace with filename,
+            line number, and function name. If False, prints more detailed information.
+            Defaults to True.
+        local (bool, optional): If True, prints the local variables for each frame in the stack.
+            Defaults to False.
+        skip_first (bool, optional): If True, skips the first frame in the stack (which is
+            typically the call to this function itself). Defaults to True.
+
+    Prints:
+        The function call stack to the console, with the level of detail controlled by the
+        `simple` and `locals` arguments.
+
+    Example:
+        To print a simple stack trace:
+
+        >>> print_stack()
+        File: <filename>, Line: <line number>, Function: <function_name>
+        ...
+
+        To print a detailed stack trace with local variables:
+
+        >>> print_stack(simple=False, locals=True)
+        ----------------------------------------
+        Filename: <filename>
+        Line Number: <line number>
+        Function Name: <function_name>
+        ...
+          Arguments:
+            arg1 = value1
+            arg2 = value2
+          Local Variables:
+            local_var = local_value
+        ...
+    """
+    for frame_info in inspect.stack():
+        if skip_first:
+            skip_first = False
+            continue
+        frame = frame_info.frame
+        if simple:
+            print(f"File: {frame_info.filename}, Line: {frame_info.lineno}, Function: {frame_info.function}")
+        else:
+            print("-" * 40)  # Separator for readability
+            print(f"Filename: {frame_info.filename}")
+            print(f"Line Number: {frame_info.lineno}")
+            print(f"Function Name: {frame_info.function}")
+            print(f"Code Context: {frame_info.code_context}")
+            print(f"Index in Code Context: {frame_info.index}")
+            print(f"Frame Object: {frame}")
+
+        args, varargs, keywords, values = inspect.getargvalues(frame)
+        if args:
+            print("  Arguments:")
+            for arg in args:
+                print(f"    {arg} = {values[arg]}")
+        if varargs:
+            print(f"  *args: {values[varargs]}")
+        if keywords:
+            print(f"  **kwargs: {values[keywords]}")
+
+        if local:
+        	print("  Local Variables:")
+        	for name, value in values.items():
+        		print(f"    {name} = {value}")
 
 
 camel_registry = CamelRegistry()
@@ -405,20 +477,6 @@ class ZakatTracker:
             raise TypeError(f'Invalid return_type({return_type}). Supported types are float, int, and Decimal.')
         return round(return_type(x / (10 ** decimal_places)), decimal_places)
 
-    def _history(self, status: bool = None) -> bool:
-        """
-        Enable or disable history tracking.
-
-        Parameters:
-        status (bool): The status of history tracking. Default is True.
-
-        Returns:
-        None
-        """
-        if status is not None:
-            self._history_mode = status
-        return self._history_mode
-
     def reset(self) -> None:
         """
         Reset the internal data structure to its initial state.
@@ -526,7 +584,7 @@ class ZakatTracker:
 
     def clean_history(self, lock: int | None = None) -> int:
         """
-        Cleans up the history of actions performed on the ZakatTracker instance.
+        Cleans up the empty history records of actions performed on the ZakatTracker instance.
 
         Parameters:
         lock (int, optional): The lock ID is used to clean up the empty history.
@@ -548,8 +606,22 @@ class ZakatTracker:
                 del self._vault['history'][lock]
         return count
 
-    def _step(self, action: Action = None, account=None, ref: int = None, file: int = None, value: float = None,
-              key: str = None, math_operation: MathOperation = None) -> int:
+    def _history(self, status: bool = None) -> bool:
+        """
+        Enable or disable history tracking.
+
+        Parameters:
+        status (bool): The status of history tracking. Default is True.
+
+        Returns:
+        None
+        """
+        if status is not None:
+            self._history_mode = status
+        return self._history_mode
+
+    def _step(self, action: Action = None, account: str = None, ref: int = None, file: int = None, value: float = None,
+              key: str = None, math_operation: MathOperation = None, debug : bool = False) -> int:
         """
         This method is responsible for recording the actions performed on the ZakatTracker.
 
@@ -561,6 +633,7 @@ class ZakatTracker:
         - value (int): The value associated with the action.
         - key (str): The key associated with the action.
         - math_operation (MathOperation): The mathematical operation performed during the action.
+        debug (bool): If True, the function will print debug information. Default is False.
 
         Returns:
         - int: The lock time of the recorded action. If no lock was performed, it returns 0.
@@ -573,6 +646,9 @@ class ZakatTracker:
             self._vault['history'][lock] = []
         if action is None:
             return lock
+        if debug:
+             print_stack()
+        assert account is None or action != Action.REPORT
         self._vault['history'][lock].append({
             'action': action,
             'account': account,
@@ -601,113 +677,6 @@ class ZakatTracker:
         int: The lock ID. This ID can be used to release the lock later.
         """
         return self._step()
-
-    def vault(self) -> dict:
-        """
-        Returns a copy of the internal vault dictionary.
-
-        This method is used to retrieve the current state of the ZakatTracker object.
-        It provides a snapshot of the internal data structure, allowing for further
-        processing or analysis.
-
-        Returns:
-        dict: A copy of the internal vault dictionary.
-        """
-        return self._vault.copy()
-
-    def stats_init(self) -> dict[str, tuple[int, str]]:
-        """
-        Initialize and return a dictionary containing initial statistics for the ZakatTracker instance.
-
-        The dictionary contains two keys: 'database' and 'ram'. Each key maps to a tuple containing two elements:
-        - The initial size of the respective statistic in bytes (int).
-        - The initial size of the respective statistic in a human-readable format (str).
-
-        Returns:
-        dict[str, tuple]: A dictionary with initial statistics for the ZakatTracker instance.
-        """
-        return {
-            'database': (0, '0'),
-            'ram': (0, '0'),
-        }
-
-    def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
-        """
-        Calculates and returns statistics about the object's data storage.
-
-        This method determines the size of the database file on disk and the
-        size of the data currently held in RAM (likely within a dictionary).
-        Both sizes are reported in bytes and in a human-readable format
-        (e.g., KB, MB).
-
-        Parameters:
-        ignore_ram (bool): Whether to ignore the RAM size. Default is True
-
-        Returns:
-        dict[str, tuple]: A dictionary containing the following statistics:
-
-            * 'database': A tuple with two elements:
-                - The database file size in bytes (int).
-                - The database file size in human-readable format (str).
-            * 'ram': A tuple with two elements:
-                - The RAM usage (dictionary size) in bytes (int).
-                - The RAM usage in human-readable format (str).
-
-        Example:
-        >>> stats = my_object.stats()
-        >>> print(stats['database'])
-        (256000, '250.0 KB')
-        >>> print(stats['ram'])
-        (12345, '12.1 KB')
-        """
-        ram_size = 0.0 if ignore_ram else self.get_dict_size(self.vault())
-        file_size = os.path.getsize(self.path())
-        return {
-            'database': (file_size, self.human_readable_size(file_size)),
-            'ram': (ram_size, self.human_readable_size(ram_size)),
-        }
-
-    def files(self) -> list[dict[str, str | int]]:
-        """
-        Retrieves information about files associated with this class.
-
-        This class method provides a standardized way to gather details about
-        files used by the class for storage, snapshots, and CSV imports.
-
-        Returns:
-        list[dict[str, str | int]]: A list of dictionaries, each containing information
-            about a specific file:
-
-            * type (str): The type of file ('database', 'snapshot', 'import_csv').
-            * path (str): The full file path.
-            * exists (bool): Whether the file exists on the filesystem.
-            * size (int): The file size in bytes (0 if the file doesn't exist).
-            * human_readable_size (str): A human-friendly representation of the file size (e.g., '10 KB', '2.5 MB').
-
-        Example:
-        ```
-        file_info = MyClass.files()
-        for info in file_info:
-            print(f"Type: {info['type']}, Exists: {info['exists']}, Size: {info['human_readable_size']}")
-        ```
-        """
-        result = []
-        for file_type, path in {
-            'database': self.path(),
-            'snapshot': self.snapshot_cache_path(),
-            'import_csv': self.import_csv_cache_path(),
-        }.items():
-            exists = os.path.exists(path)
-            size = os.path.getsize(path) if exists else 0
-            human_readable_size = self.human_readable_size(size) if exists else 0
-            result.append({
-                'type': file_type,
-                'path': path,
-                'exists': exists,
-                'size': size,
-                'human_readable_size': human_readable_size,
-            })
-        return result
 
     def steps(self) -> dict:
         """
@@ -740,147 +709,7 @@ class ZakatTracker:
             return True
         return False
 
-    def account_exists(self, account) -> bool:
-        """
-        Check if the given account exists in the vault.
-
-        Parameters:
-        account (str): The account number to check.
-
-        Returns:
-        bool: True if the account exists, False otherwise.
-        """
-        return account in self._vault['account']
-
-    def box_size(self, account) -> int:
-        """
-        Calculate the size of the box for a specific account.
-
-        Parameters:
-        account (str): The account number for which the box size needs to be calculated.
-
-        Returns:
-        int: The size of the box for the given account. If the account does not exist, -1 is returned.
-        """
-        if self.account_exists(account):
-            return len(self._vault['account'][account]['box'])
-        return -1
-
-    def log_size(self, account) -> int:
-        """
-        Get the size of the log for a specific account.
-
-        Parameters:
-        account (str): The account number for which the log size needs to be calculated.
-
-        Returns:
-        int: The size of the log for the given account. If the account does not exist, -1 is returned.
-        """
-        if self.account_exists(account):
-            return len(self._vault['account'][account]['log'])
-        return -1
-
-    @staticmethod
-    def file_hash(file_path: str, algorithm: str = "blake2b") -> str:
-        """
-        Calculates the hash of a file using the specified algorithm.
-
-        Parameters:
-        file_path (str): The path to the file.
-        algorithm (str, optional): The hashing algorithm to use. Defaults to "blake2b".
-
-        Returns:
-        str: The hexadecimal representation of the file's hash.
-        """
-        hash_obj = hashlib.new(algorithm)  # Create the hash object
-        with open(file_path, "rb") as f:  # Open file in binary mode for reading
-            for chunk in iter(lambda: f.read(4096), b""):  # Read file in chunks
-                hash_obj.update(chunk)
-        return hash_obj.hexdigest()  # Return the hash as a hexadecimal string
-
-    def snapshot_cache_path(self):
-        """
-        Generate the path for the cache file used to store snapshots.
-
-        The cache file is a camel file that stores the timestamps of the snapshots.
-        The file name is derived from the main database file name by replacing the ".camel" extension with ".snapshots.camel".
-
-        Returns:
-        str: The path to the cache file.
-        """
-        path = str(self.path())
-        ext = self.ext()
-        ext_len = len(ext)
-        if path.endswith(f'.{ext}'):
-            path = path[:-ext_len - 1]
-        _, filename = os.path.split(path + f'.snapshots.{ext}')
-        return self.base_path(filename)
-
-    def snapshot(self) -> bool:
-        """
-        This function creates a snapshot of the current database state.
-
-        The function calculates the hash of the current database file and checks if a snapshot with the same hash already exists.
-        If a snapshot with the same hash exists, the function returns True without creating a new snapshot.
-        If a snapshot with the same hash does not exist, the function creates a new snapshot by saving the current database state
-        in a new camel file with a unique timestamp as the file name. The function also updates the snapshot cache file with the new snapshot's hash and timestamp.
-
-        Parameters:
-        None
-
-        Returns:
-        bool: True if a snapshot with the same hash already exists or if the snapshot is successfully created. False if the snapshot creation fails.
-        """
-        current_hash = self.file_hash(self.path())
-        cache: dict[str, int] = {}  # hash: time_ns
-        try:
-            with open(self.snapshot_cache_path(), 'r', encoding="utf-8") as stream:
-                cache = camel.load(stream.read())
-        except:
-            pass
-        if current_hash in cache:
-            return True
-        time = time_ns()
-        cache[current_hash] = time
-        if not self.save(self.base_path('snapshots', f'{time}.{self.ext()}')):
-            return False
-        with open(self.snapshot_cache_path(), 'w', encoding="utf-8") as stream:
-            stream.write(camel.dump(cache))
-        return True
-
-    def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) \
-            -> dict[int, tuple[str, str, bool]]:
-        """
-        Retrieve a dictionary of snapshots, with their respective hashes, paths, and existence status.
-
-        Parameters:
-        - hide_missing (bool): If True, only include snapshots that exist in the dictionary. Default is True.
-        - verified_hash_only (bool): If True, only include snapshots with a valid hash. Default is False.
-
-        Returns:
-        - dict[int, tuple[str, str, bool]]: A dictionary where the keys are the timestamps of the snapshots,
-        and the values are tuples containing the snapshot's hash, path, and existence status.
-        """
-        cache: dict[str, int] = {}  # hash: time_ns
-        try:
-            with open(self.snapshot_cache_path(), 'r', encoding="utf-8") as stream:
-                cache = camel.load(stream.read())
-        except:
-            pass
-        if not cache:
-            return {}
-        result: dict[int, tuple[str, str, bool]] = {}  # time_ns: (hash, path, exists)
-        for file_hash, ref in cache.items():
-            path = self.base_path('snapshots', f'{ref}.{self.ext()}')
-            exists = os.path.exists(path)
-            valid_hash = self.file_hash(path) == file_hash if verified_hash_only else True
-            if (verified_hash_only and not valid_hash) or (verified_hash_only and not exists):
-                continue
-            if exists or not hide_missing:
-                result[ref] = (file_hash, path, exists)
-        return result
-
-    def recall(self, dry=True, debug=False) -> bool:
+    def recall(self, dry : bool = True, debug : bool = False) -> bool:
         """
         Revert the last operation.
 
@@ -1028,6 +857,253 @@ class ZakatTracker:
             del self._vault['history'][ref]
         return True
 
+    def vault(self) -> dict:
+        """
+        Returns a copy of the internal vault dictionary.
+
+        This method is used to retrieve the current state of the ZakatTracker object.
+        It provides a snapshot of the internal data structure, allowing for further
+        processing or analysis.
+
+        Returns:
+        dict: A copy of the internal vault dictionary.
+        """
+        return self._vault.copy()
+
+    def stats_init(self) -> dict[str, tuple[int, str]]:
+        """
+        Initialize and return a dictionary containing initial statistics for the ZakatTracker instance.
+
+        The dictionary contains two keys: 'database' and 'ram'. Each key maps to a tuple containing two elements:
+        - The initial size of the respective statistic in bytes (int).
+        - The initial size of the respective statistic in a human-readable format (str).
+
+        Returns:
+        dict[str, tuple]: A dictionary with initial statistics for the ZakatTracker instance.
+        """
+        return {
+            'database': (0, '0'),
+            'ram': (0, '0'),
+        }
+
+    def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
+        """
+        Calculates and returns statistics about the object's data storage.
+
+        This method determines the size of the database file on disk and the
+        size of the data currently held in RAM (likely within a dictionary).
+        Both sizes are reported in bytes and in a human-readable format
+        (e.g., KB, MB).
+
+        Parameters:
+        ignore_ram (bool): Whether to ignore the RAM size. Default is True
+
+        Returns:
+        dict[str, tuple]: A dictionary containing the following statistics:
+
+            * 'database': A tuple with two elements:
+                - The database file size in bytes (int).
+                - The database file size in human-readable format (str).
+            * 'ram': A tuple with two elements:
+                - The RAM usage (dictionary size) in bytes (int).
+                - The RAM usage in human-readable format (str).
+
+        Example:
+        >>> stats = my_object.stats()
+        >>> print(stats['database'])
+        (256000, '250.0 KB')
+        >>> print(stats['ram'])
+        (12345, '12.1 KB')
+        """
+        ram_size = 0.0 if ignore_ram else self.get_dict_size(self.vault())
+        file_size = os.path.getsize(self.path())
+        return {
+            'database': (file_size, self.human_readable_size(file_size)),
+            'ram': (ram_size, self.human_readable_size(ram_size)),
+        }
+
+    def files(self) -> list[dict[str, str | int]]:
+        """
+        Retrieves information about files associated with this class.
+
+        This class method provides a standardized way to gather details about
+        files used by the class for storage, snapshots, and CSV imports.
+
+        Returns:
+        list[dict[str, str | int]]: A list of dictionaries, each containing information
+            about a specific file:
+
+            * type (str): The type of file ('database', 'snapshot', 'import_csv').
+            * path (str): The full file path.
+            * exists (bool): Whether the file exists on the filesystem.
+            * size (int): The file size in bytes (0 if the file doesn't exist).
+            * human_readable_size (str): A human-friendly representation of the file size (e.g., '10 KB', '2.5 MB').
+
+        Example:
+        ```
+        file_info = MyClass.files()
+        for info in file_info:
+            print(f"Type: {info['type']}, Exists: {info['exists']}, Size: {info['human_readable_size']}")
+        ```
+        """
+        result = []
+        for file_type, path in {
+            'database': self.path(),
+            'snapshot': self.snapshot_cache_path(),
+            'import_csv': self.import_csv_cache_path(),
+        }.items():
+            exists = os.path.exists(path)
+            size = os.path.getsize(path) if exists else 0
+            human_readable_size = self.human_readable_size(size) if exists else 0
+            result.append({
+                'type': file_type,
+                'path': path,
+                'exists': exists,
+                'size': size,
+                'human_readable_size': human_readable_size,
+            })
+        return result
+
+    def account_exists(self, account) -> bool:
+        """
+        Check if the given account exists in the vault.
+
+        Parameters:
+        account (str): The account number to check.
+
+        Returns:
+        bool: True if the account exists, False otherwise.
+        """
+        return account in self._vault['account']
+
+    def box_size(self, account) -> int:
+        """
+        Calculate the size of the box for a specific account.
+
+        Parameters:
+        account (str): The account number for which the box size needs to be calculated.
+
+        Returns:
+        int: The size of the box for the given account. If the account does not exist, -1 is returned.
+        """
+        if self.account_exists(account):
+            return len(self._vault['account'][account]['box'])
+        return -1
+
+    def log_size(self, account) -> int:
+        """
+        Get the size of the log for a specific account.
+
+        Parameters:
+        account (str): The account number for which the log size needs to be calculated.
+
+        Returns:
+        int: The size of the log for the given account. If the account does not exist, -1 is returned.
+        """
+        if self.account_exists(account):
+            return len(self._vault['account'][account]['log'])
+        return -1
+
+    @staticmethod
+    def file_hash(file_path: str, algorithm: str = "blake2b") -> str:
+        """
+        Calculates the hash of a file using the specified algorithm.
+
+        Parameters:
+        file_path (str): The path to the file.
+        algorithm (str, optional): The hashing algorithm to use. Defaults to "blake2b".
+
+        Returns:
+        str: The hexadecimal representation of the file's hash.
+        """
+        hash_obj = hashlib.new(algorithm)  # Create the hash object
+        with open(file_path, "rb") as f:  # Open file in binary mode for reading
+            for chunk in iter(lambda: f.read(4096), b""):  # Read file in chunks
+                hash_obj.update(chunk)
+        return hash_obj.hexdigest()  # Return the hash as a hexadecimal string
+
+    def snapshot_cache_path(self):
+        """
+        Generate the path for the cache file used to store snapshots.
+
+        The cache file is a camel file that stores the timestamps of the snapshots.
+        The file name is derived from the main database file name by replacing the ".camel" extension with ".snapshots.camel".
+
+        Returns:
+        str: The path to the cache file.
+        """
+        path = str(self.path())
+        ext = self.ext()
+        ext_len = len(ext)
+        if path.endswith(f'.{ext}'):
+            path = path[:-ext_len - 1]
+        _, filename = os.path.split(path + f'.snapshots.{ext}')
+        return self.base_path(filename)
+
+    def snapshot(self) -> bool:
+        """
+        This function creates a snapshot of the current database state.
+
+        The function calculates the hash of the current database file and checks if a snapshot with the same hash already exists.
+        If a snapshot with the same hash exists, the function returns True without creating a new snapshot.
+        If a snapshot with the same hash does not exist, the function creates a new snapshot by saving the current database state
+        in a new camel file with a unique timestamp as the file name. The function also updates the snapshot cache file with the new snapshot's hash and timestamp.
+
+        Parameters:
+        None
+
+        Returns:
+        bool: True if a snapshot with the same hash already exists or if the snapshot is successfully created. False if the snapshot creation fails.
+        """
+        current_hash = self.file_hash(self.path())
+        cache: dict[str, int] = {}  # hash: time_ns
+        try:
+            with open(self.snapshot_cache_path(), 'r', encoding="utf-8") as stream:
+                cache = camel.load(stream.read())
+        except:
+            pass
+        if current_hash in cache:
+            return True
+        time = time_ns()
+        cache[current_hash] = time
+        if not self.save(self.base_path('snapshots', f'{time}.{self.ext()}')):
+            return False
+        with open(self.snapshot_cache_path(), 'w', encoding="utf-8") as stream:
+            stream.write(camel.dump(cache))
+        return True
+
+    def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) \
+            -> dict[int, tuple[str, str, bool]]:
+        """
+        Retrieve a dictionary of snapshots, with their respective hashes, paths, and existence status.
+
+        Parameters:
+        - hide_missing (bool): If True, only include snapshots that exist in the dictionary. Default is True.
+        - verified_hash_only (bool): If True, only include snapshots with a valid hash. Default is False.
+
+        Returns:
+        - dict[int, tuple[str, str, bool]]: A dictionary where the keys are the timestamps of the snapshots,
+        and the values are tuples containing the snapshot's hash, path, and existence status.
+        """
+        cache: dict[str, int] = {}  # hash: time_ns
+        try:
+            with open(self.snapshot_cache_path(), 'r', encoding="utf-8") as stream:
+                cache = camel.load(stream.read())
+        except:
+            pass
+        if not cache:
+            return {}
+        result: dict[int, tuple[str, str, bool]] = {}  # time_ns: (hash, path, exists)
+        for file_hash, ref in cache.items():
+            path = self.base_path('snapshots', f'{ref}.{self.ext()}')
+            exists = os.path.exists(path)
+            valid_hash = self.file_hash(path) == file_hash if verified_hash_only else True
+            if (verified_hash_only and not valid_hash) or (verified_hash_only and not exists):
+                continue
+            if exists or not hide_missing:
+                result[ref] = (file_hash, path, exists)
+        return result
+
     def ref_exists(self, account: str, ref_type: str, ref: int) -> bool:
         """
         Check if a specific reference (transaction) exists in the vault for a given account and reference type.
@@ -1096,6 +1172,7 @@ class ZakatTracker:
                 'log': {},
                 'hide': False,
                 'zakatable': True,
+                'created': created, # !!!
             }
             self._step(Action.CREATE, account)
         if unscaled_value == 0:
@@ -2545,7 +2622,7 @@ class ZakatTracker:
 
         return result
 
-    def _test_core(self, restore=False, debug=False):
+    def _test_core(self, restore : bool = False, debug : bool = False):
 
         if debug:
             random.seed(1234567890)
