@@ -25,6 +25,9 @@
     <a href="https://github.com/vzool/zakat/releases/latest">
         <img src="https://img.shields.io/github/release/vzool/zakat.svg"/>
     </a>
+    <a href="https://pypi.org/project/zakat/">
+        <img src="https://img.shields.io/pypi/v/zakat"/>
+    </a>
     <a href="https://github.com/vzool/zakat/blob/main/README.md">
         <img src="https://img.shields.io/badge/lang-en-green.svg" alt="en" data-canonical-src="https://img.shields.io/badge/lang-en-green.svg" style="max-width: 100%;">
     </a>
