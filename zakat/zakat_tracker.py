@@ -1158,7 +1158,7 @@ class ZakatTracker:
         if created is None:
             created = self.time()
         no_lock = self.nolock()
-        self.lock()
+        lock = self.lock()
         if not self.account_exists(account):
             if debug:
                 print(f"account {account} created")
@@ -1174,7 +1174,7 @@ class ZakatTracker:
             self._step(Action.CREATE, account)
         if unscaled_value == 0:
             if no_lock:
-                self.free(self.lock())
+                self.free(lock)
             return 0
         value = self.scale(unscaled_value)
         if logging:
@@ -1194,7 +1194,7 @@ class ZakatTracker:
         }
         self._step(Action.TRACK, account, ref=created, value=value)
         if no_lock:
-            self.free(self.lock())
+            self.free(lock)
         return created
 
     def log_exists(self, account: str, ref: int) -> bool:
@@ -1277,7 +1277,7 @@ class ZakatTracker:
         if created is None:
             created = self.time()
         no_lock = self.nolock()
-        self.lock()
+        lock = self.lock()
         if rate is not None:
             if rate <= 0:
                 return dict()
@@ -1288,7 +1288,7 @@ class ZakatTracker:
             self._vault['exchange'][account][created] = {"rate": rate, "description": description}
             self._step(Action.EXCHANGE, account, ref=created, value=rate)
             if no_lock:
-                self.free(self.lock())
+                self.free(lock)
             if debug:
                 print("exchange-created-1",
                       f'account: {account}, created: {created}, rate:{rate}, description:{description}')
@@ -1572,10 +1572,10 @@ class ZakatTracker:
                 file_ref = self.time()
                 self._vault['account'][account]['log'][ref]['file'][file_ref] = path
                 no_lock = self.nolock()
-                self.lock()
+                lock = self.lock()
                 self._step(Action.ADD_FILE, account, ref=ref, file=file_ref)
                 if no_lock:
-                    self.free(self.lock())
+                    self.free(lock)
                 return file_ref
         return 0
 
@@ -1597,10 +1597,10 @@ class ZakatTracker:
                     x = self._vault['account'][account]['log'][ref]['file'][file_ref]
                     del self._vault['account'][account]['log'][ref]['file'][file_ref]
                     no_lock = self.nolock()
-                    self.lock()
+                    lock = self.lock()
                     self._step(Action.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
                     if no_lock:
-                        self.free(self.lock())
+                        self.free(lock)
                     return True
         return False
 
@@ -1728,7 +1728,7 @@ class ZakatTracker:
         if created is None:
             created = self.time()
         no_lock = self.nolock()
-        self.lock()
+        lock = self.lock()
         self.track(0, '', account)
         value = self.scale(unscaled_value)
         self._log(value=-value, desc=desc, account=account, created=created, ref=None, debug=debug)
@@ -1767,7 +1767,7 @@ class ZakatTracker:
             )
             ages.append((created, target))
         if no_lock:
-            self.free(self.lock())
+            self.free(lock)
         return created, ages
 
     def transfer(self, unscaled_amount: float | int | decimal.Decimal, from_account: str, to_account: str, desc: str = '',
@@ -1800,6 +1800,8 @@ class ZakatTracker:
             return []
         if created is None:
             created = self.time()
+        no_lock = self.nolock()
+        lock = self.lock()
         (_, ages) = self.sub(unscaled_amount, desc, from_account, created, debug=debug)
         times = []
         source_exchange = self.exchange(from_account, created)
@@ -1843,6 +1845,8 @@ class ZakatTracker:
                 debug=debug,
             )
             times.append(y)
+        if no_lock:
+            self.free(lock)
         return times
 
     def check(self,
@@ -2073,7 +2077,7 @@ class ZakatTracker:
             print('######### zakat #######')
             print('parts_exist', parts_exist)
         no_lock = self.nolock()
-        self.lock()
+        lock = self.lock()
         report_time = self.time()
         self._vault['report'][report_time] = report
         self._step(Action.REPORT, ref=report_time)
@@ -2125,7 +2129,7 @@ class ZakatTracker:
                     debug=debug,
                 )
         if no_lock:
-            self.free(self.lock())
+            self.free(lock)
         return True
 
     def export_json(self, path: str = "data.json") -> bool:
