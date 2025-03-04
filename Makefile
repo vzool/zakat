@@ -58,7 +58,7 @@ deploy:
 .PHONY: pdoc
 # create pdoc documentaions
 pdoc:
-	pdoc --logo https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg -o docs/html zakat
+	pdoc --logo https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg -o docs zakat
 
 # show help
 help:
