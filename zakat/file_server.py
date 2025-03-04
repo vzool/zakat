@@ -65,7 +65,7 @@ def start_file_server(database_path: str, database_callback: callable = None, cs
         - CSV File (.csv): Imports data from the CSV into the existing database.
 
     Args:
-        database_path (str): The path to the pickle database file.
+        database_path (str): The path to the camel database file.
         database_callback (callable, optional): A function to call after a successful database upload.
                                                 It receives the uploaded database path as its argument.
         csv_callback (callable, optional): A function to call after a successful CSV upload. It receives the uploaded CSV path,
