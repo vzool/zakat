@@ -355,12 +355,12 @@ class ZakatTracker:
         """
         return 'camel'
 
-    def __init__(self, db_path: str = "./zakat_db/zakat.camel", history_mode: bool = True):
+    def __init__(self, db_path: str = "./zakat_db/", history_mode: bool = True):
         """
         Initialize ZakatTracker with database path and history mode.
 
         Parameters:
-        db_path (str): The path to the database file. Default is "zakat.camel".
+        db_path (str): The path to the database  directory. Default is "./zakat_db".
         history_mode (bool): The mode for tracking history. Default is True.
 
         Returns:
@@ -371,7 +371,7 @@ class ZakatTracker:
         self._vault = None
         self.reset()
         self._history(history_mode)
-        self.path(db_path)
+        self.path(f'{db_path}/db.{self.ext()}')
 
     def path(self, path: str = None) -> str:
         """
@@ -3616,7 +3616,7 @@ class ZakatTracker:
 
 
 def test(debug: bool = False):
-    ledger = ZakatTracker("./zakat_test_db/zakat.camel")
+    ledger = ZakatTracker("./zakat_test_db")
     start = ZakatTracker.time()
     assert ledger.test(debug=debug)
     if debug:
