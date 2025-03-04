@@ -36,6 +36,7 @@ deps:
 	python3 -m pip install --upgrade pytest-runner==6.0.1
 	python3 -m pip install --upgrade twine
 	python3 -m pip install --upgrade build
+	python3 -m pip install --upgrade pdoc
 
 .PHONY: pytest
 # run pytest
@@ -53,6 +54,11 @@ deploy:
 	rm -rf dist/
 	python3 -m build
 	python3 -m twine upload --repository zakat dist/*
+
+.PHONY: pdoc
+# create pdoc documentaions
+pdoc:
+	pdoc --logo https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg -o docs/html zakat
 
 # show help
 help:
