@@ -1150,6 +1150,7 @@ class ZakatTracker:
         This function creates a new account if it doesn't exist, logs the transaction if logging is True, and updates the account's balance and box.
 
         Raises:
+        ValueError: The created should be greater than zero.
         ValueError: The log transaction happened again in the same nanosecond time.
         ValueError: The box transaction happened again in the same nanosecond time.
         """
@@ -1157,6 +1158,8 @@ class ZakatTracker:
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
         if created is None:
             created = self.time()
+        if created <= 0:
+            raise ValueError("The created should be greater than zero.")
         no_lock = self.nolock()
         lock = self.lock()
         if not self.account_exists(account):
@@ -1230,12 +1233,15 @@ class ZakatTracker:
         It also creates a step in the history of the transaction.
 
         Raises:
+        ValueError: The created should be greater than zero.
         ValueError: The log transaction happened again in the same nanosecond time.
         """
         if debug:
             print('_log', f'debug={debug}')
         if created is None:
             created = self.time()
+        if created <= 0:
+            raise ValueError("The created should be greater than zero.")
         try:
             self._vault['account'][account]['balance'] += value
         except TypeError:
@@ -1271,11 +1277,16 @@ class ZakatTracker:
         Returns:
         - dict: A dictionary containing the latest exchange rate and its description. If no exchange rate is found,
         it returns a dictionary with default values for the rate and description.
+
+        Raises:
+        ValueError: The created should be greater than zero.
         """
         if debug:
             print('exchange', f'debug={debug}')
         if created is None:
             created = self.time()
+        if created <= 0:
+            raise ValueError("The created should be greater than zero.")
         no_lock = self.nolock()
         lock = self.lock()
         if rate is not None:
@@ -1715,6 +1726,7 @@ class ZakatTracker:
         the remaining amount will be transferred to a new transaction with a negative value.
 
         Raises:
+        ValueError: The created should be greater than zero.
         ValueError: The box transaction happened again in the same nanosecond time.
         ValueError: The log transaction happened again in the same nanosecond time.
         """
@@ -1727,6 +1739,8 @@ class ZakatTracker:
             return ref, ref
         if created is None:
             created = self.time()
+        if created <= 0:
+            raise ValueError("The created should be greater than zero.")
         no_lock = self.nolock()
         lock = self.lock()
         self.track(0, '', account)
@@ -1789,6 +1803,7 @@ class ZakatTracker:
 
         Raises:
         ValueError: Transfer to the same account is forbidden.
+        ValueError: The created should be greater than zero.
         ValueError: The box transaction happened again in the same nanosecond time.
         ValueError: The log transaction happened again in the same nanosecond time.
         """
@@ -1800,6 +1815,8 @@ class ZakatTracker:
             return []
         if created is None:
             created = self.time()
+        if created <= 0:
+            raise ValueError("The created should be greater than zero.")
         no_lock = self.nolock()
         lock = self.lock()
         (_, ages) = self.sub(unscaled_amount, desc, from_account, created, debug=debug)
