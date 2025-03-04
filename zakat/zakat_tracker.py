@@ -176,9 +176,9 @@ def print_stack(simple: bool = True, local: bool = False, skip_first: bool = Tru
             print(f"  **kwargs: {values[keywords]}")
 
         if local:
-        	print("  Local Variables:")
-        	for name, value in values.items():
-        		print(f"    {name} = {value}")
+            print("  Local Variables:")
+            for name, value in values.items():
+                print(f"    {name} = {value}")
 
 
 camel_registry = camelx.CamelRegistry()
@@ -290,7 +290,7 @@ class ZakatTracker:
         Returns:
         str: The current version of the software.
         """
-        return '0.2.97'
+        return '0.2.98'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -2164,12 +2164,12 @@ class ZakatTracker:
         if path is None:
             path = self.path()
         try:
-        	# first save in tmp file
-        	with open(f'{path}.tmp', 'w', encoding="utf-8") as stream:
-        		stream.write(camel.dump(self._vault))
-        	# then move tmp file to original location
-        	shutil.move(f'{path}.tmp', path)
-        	return True
+            # first save in tmp file
+            with open(f'{path}.tmp', 'w', encoding="utf-8") as stream:
+                stream.write(camel.dump(self._vault))
+            # then move tmp file to original location
+            shutil.move(f'{path}.tmp', path)
+            return True
         except (IOError, OSError) as e:
             print(f"Error saving file: {e}")
             return False
@@ -2189,11 +2189,11 @@ class ZakatTracker:
         try:
             if os.path.exists(path):
                 with open(path, 'r', encoding="utf-8") as stream:
-                	self._vault = camel.load(stream.read())
+                    self._vault = camel.load(stream.read())
                 return True
             else:
-            	print(f"File not found: {path}")
-            	return False
+                print(f"File not found: {path}")
+                return False
         except (IOError, OSError) as e:
             print(f"Error loading file: {e}")
             return False
@@ -3617,13 +3617,13 @@ class ZakatTracker:
 
 def test(debug: bool = False):
     ledger = ZakatTracker("./zakat_test_db")
-    start = ZakatTracker.time()
+    start = time.time_ns()
     assert ledger.test(debug=debug)
     if debug:
         print("#########################")
         print("######## TEST DONE ########")
         print("#########################")
-        print(ZakatTracker.duration_from_nanoseconds(ZakatTracker.time() - start))
+        print(ZakatTracker.duration_from_nanoseconds(time.time_ns() - start))
         print("#########################")
 
 
