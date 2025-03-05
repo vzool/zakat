@@ -232,13 +232,14 @@ class ZakatTracker:
     for interacting with and managing the Zakat tracker.
 
     Attributes:
-        ZakatTracker.ZakatCut (function): A function to calculate the Zakat percentage.
-        ZakatTracker.TimeCycle (function): A function to determine the time cycle for Zakat.
-        ZakatTracker.Nisab (function): A function to calculate the Nisab based on the silver price.
-        ZakatTracker.Version (function): The version of the ZakatTracker class.
+    - ZakatTracker.ZakatCut (function): A function to calculate the Zakat percentage.
+    - ZakatTracker.TimeCycle (function): A function to determine the time cycle for Zakat.
+    - ZakatTracker.Nisab (function): A function to calculate the Nisab based on the silver price.
+    - ZakatTracker.Version (function): The version of the ZakatTracker class.
 
     Data Structure:
-        The ZakatTracker class utilizes a nested dictionary structure called "_vault" to store and manage data.
+    
+    The ZakatTracker class utilizes a nested dictionary structure called "_vault" to store and manage data.
 
         _vault (dict):
             - account (dict):
@@ -663,6 +664,9 @@ class ZakatTracker:
         """
         Check if the vault lock is currently not set.
 
+        Parameters:
+        None
+
         Returns:
         - bool: True if the vault lock is not set, False otherwise.
         """
@@ -671,6 +675,9 @@ class ZakatTracker:
     def lock(self) -> int:
         """
         Acquires a lock on the ZakatTracker instance.
+
+        Parameters:
+        None
 
         Returns:
         - int: The lock ID. This ID can be used to release the lock later.
@@ -683,6 +690,9 @@ class ZakatTracker:
 
         The history is a dictionary where each key is a unique identifier for a step,
         and the corresponding value is a dictionary containing information about the step.
+
+        Parameters:
+        None
 
         Returns:
         - dict: A copy of the history of steps taken in the ZakatTracker.
@@ -864,6 +874,9 @@ class ZakatTracker:
         It provides a snapshot of the internal data structure, allowing for further
         processing or analysis.
 
+        Parameters:
+        None
+
         Returns:
         - dict: A copy of the internal vault dictionary.
         """
@@ -876,6 +889,9 @@ class ZakatTracker:
         The dictionary contains two keys: 'database' and 'ram'. Each key maps to a tuple containing two elements:
         - The initial size of the respective statistic in bytes (int).
         - The initial size of the respective statistic in a human-readable format (str).
+
+        Parameters:
+        None
 
         Returns:
         - dict[str, tuple]: A dictionary with initial statistics for the ZakatTracker instance.
@@ -927,6 +943,9 @@ class ZakatTracker:
 
         This class method provides a standardized way to gather details about
         files used by the class for storage, snapshots, and CSV imports.
+
+        Parameters:
+        None
 
         Returns:
         - list[dict[str, str | int]]: A list of dictionaries, each containing information
@@ -1027,6 +1046,9 @@ class ZakatTracker:
 
         The cache file is a camel file that stores the timestamps of the snapshots.
         The file name is derived from the main database file name by replacing the ".camel" extension with ".snapshots.camel".
+
+        Parameters:
+        None
 
         Returns:
         - str: The path to the cache file.
@@ -1325,7 +1347,7 @@ class ZakatTracker:
         Parameters:
         - x (float): The original amount of the currency.
         - x_rate (float): The exchange rate of the original currency.
-         - y_rate (float): The exchange rate of the target currency.
+        - y_rate (float): The exchange rate of the target currency.
 
         Returns:
         - float: The exchanged amount of the target currency.
@@ -1395,8 +1417,11 @@ class ZakatTracker:
         """
         Initialize a dictionary to store daily, weekly, monthly, and yearly logs.
 
+        Parameters:
+        None
+
         Returns:
-        dict: A dictionary with keys 'daily', 'weekly', 'monthly', and 'yearly', each containing an empty dictionary.
+        - dict: A dictionary with keys 'daily', 'weekly', 'monthly', and 'yearly', each containing an empty dictionary.
             Later each key maps to another dictionary, which will store the logs for the corresponding time period.
         """
         return {
@@ -1419,7 +1444,7 @@ class ZakatTracker:
         - debug (bool): Whether to print debug information. Default is False.
 
         Returns:
-        dict: A dictionary containing the daily logs.
+        - dict: A dictionary containing the daily logs.
 
         Example:
         >>> tracker = ZakatTracker()
@@ -1708,7 +1733,8 @@ class ZakatTracker:
                    ],
                ] | tuple:
         """
-        Subtracts a specified value from an account's balance.
+        Subtracts a specified value from an account's balance, if the amount to subtract is greater than the account's balance,
+        the remaining amount will be transferred to a new transaction with a negative value.
 
         Parameters:
         - unscaled_value (float | int | decimal.Decimal): The amount to be subtracted.
@@ -1719,9 +1745,6 @@ class ZakatTracker:
 
         Returns:
         - tuple: A tuple containing the timestamp of the transaction and a list of tuples representing the age of each transaction.
-
-        If the amount to subtract is greater than the account's balance,
-        the remaining amount will be transferred to a new transaction with a negative value.
 
         Raises:
         - ValueError: The created should be greater than zero.
@@ -1793,7 +1816,7 @@ class ZakatTracker:
         - from_account (str): The account from which the value will be transferred.
         - to_account (str): The account to which the value will be transferred.
         - desc (str, optional): A description for the transaction. Defaults to an empty string.
-        -;created (int, optional): The timestamp of the transaction. If not provided, the current timestamp will be used.
+        - created (int, optional): The timestamp of the transaction. If not provided, the current timestamp will be used.
         - debug (bool): A flag indicating whether to print debug information. Defaults to False.
 
         Returns:
@@ -2221,6 +2244,9 @@ class ZakatTracker:
         will be stored. The cache file is a camel file (.camel extension) appended
         to the base path of the object.
 
+        Parameters:
+        None
+
         Returns:
         - str: The full path to the import CSV cache file.
 
@@ -2432,7 +2458,7 @@ class ZakatTracker:
         Returns:
          - float: An approximate size of the dictionary and its contents in bytes.
 
-        Note:
+        Notes:
         - This function is a method of the `ZakatTracker` class and is likely used to
           estimate the memory footprint of data structures relevant to Zakat calculations.
         - The size calculation is approximate as it relies on `sys.getsizeof()`, which might
@@ -2544,7 +2570,7 @@ class ZakatTracker:
         - int: The timestamp representing the given day, month, and year.
 
         Note:
-        This method assumes the default month and year if not provided.
+        - This method assumes the default month and year if not provided.
         """
         return ZakatTracker.time(datetime.datetime(year, month, day))
 
