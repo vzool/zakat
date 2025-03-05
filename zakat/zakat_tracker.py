@@ -33,7 +33,7 @@ The module also includes a few helper functions and classes:
 
 The ZakatTracker class is designed to be flexible and extensible, allowing users to customize it to their specific needs.
 
-Example usage:
+<b>Example</b>:
 
 ```python
 from zakat_tracker import ZakatTracker
@@ -116,20 +116,20 @@ def print_stack(simple: bool = True, local: bool = False, skip_first: bool = Tru
     """
     Prints the current function call stack.
 
-    Args:
-        simple (bool, optional): If True, prints a simplified stack trace with filename,
-            line number, and function name. If False, prints more detailed information.
-            Defaults to True.
-        local (bool, optional): If True, prints the local variables for each frame in the stack.
-            Defaults to False.
-        skip_first (bool, optional): If True, skips the first frame in the stack (which is
-            typically the call to this function itself). Defaults to True.
+    <b>Parameters</b>:
+    - simple (bool, optional): If True, prints a simplified stack trace with filename,
+        line number, and function name. If False, prints more detailed information.
+        Defaults to True.
+    - local (bool, optional): If True, prints the local variables for each frame in the stack.
+        Defaults to False.
+    - skip_first (bool, optional): If True, skips the first frame in the stack (which is
+        typically the call to this function itself). Defaults to True.
 
     Prints:
         The function call stack to the console, with the level of detail controlled by the
         `simple` and `locals` arguments.
 
-    Example:
+    <b>Example</b>:
         To print a simple stack trace:
 
         >>> print_stack()
@@ -231,13 +231,13 @@ class ZakatTracker:
     and more. These methods provide additional functionalities and flexibility
     for interacting with and managing the Zakat tracker.
 
-    Attributes:
+    <b>Attributes</b>:
     - ZakatTracker.ZakatCut (function): A function to calculate the Zakat percentage.
     - ZakatTracker.TimeCycle (function): A function to determine the time cycle for Zakat.
     - ZakatTracker.Nisab (function): A function to calculate the Nisab based on the silver price.
     - ZakatTracker.Version (function): The version of the ZakatTracker class.
 
-    Data Structure:
+    <b>Data Structure</b>:
     
     The ZakatTracker class utilizes a nested dictionary structure called "_vault" to store and manage data.
 
@@ -290,7 +290,7 @@ class ZakatTracker:
         This function returns a string representing the current version of the software,
         including major, minor, and patch version numbers in the format "X.Y.Z".
 
-        Returns:
+        <b>Returns</b>:
         - str: The current version of the software.
         """
         return '0.2.98'
@@ -304,10 +304,10 @@ class ZakatTracker:
         Zakat is an Islamic obligatory alms-giving, calculated as a fixed percentage of an individual's wealth
         that exceeds a certain threshold (Nisab).
 
-        Parameters:
+        <b>Parameters</b>:
         - x (float): The total value of the asset on which Zakat is to be calculated.
 
-        Returns:
+        <b>Returns</b>:
         - float: The amount of Zakat due on the asset, calculated as 2.5% of the asset's value.
         """
         return 0.025 * x  # Zakat Cut in one Lunar Year
@@ -320,11 +320,11 @@ class ZakatTracker:
         This function calculates the approximate duration of a lunar year based on the given number of days.
         It converts the given number of days into nanoseconds for use in high-precision timing applications.
 
-        Parameters:
+        <b>Parameters</b>:
         - days (int): The number of days in a lunar year. Defaults to 355,
               which is an approximation of the average length of a lunar year.
 
-        Returns:
+        <b>Returns</b>:
         - int: The approximate duration of a lunar year in nanoseconds.
         """
         return int(60 * 60 * 24 * days * 1e9)  # Lunar Year in nanoseconds
@@ -339,11 +339,11 @@ class ZakatTracker:
         The Nisab value is determined by the equivalent value of a specific amount
         of gold or silver (currently 595 grams in silver) in the local currency.
 
-        Parameters:
+        <b>Parameters</b>:
         - gram_price (float): The price per gram of Nisab.
         - gram_quantity (float): The quantity of grams in a Nisab. Default is 595 grams of silver.
 
-        Returns:
+        <b>Returns</b>:
         - float: The total value of Nisab based on the given price per gram.
         """
         return gram_price * gram_quantity
@@ -353,7 +353,10 @@ class ZakatTracker:
         """
         Returns the file extension used by the ZakatTracker class.
 
-        Returns:
+        <b>Parameters</b>:
+        None
+
+        <b>Returns</b>:
         - str: The file extension used by the ZakatTracker class, which is 'camel'.
         """
         return 'camel'
@@ -362,11 +365,11 @@ class ZakatTracker:
         """
         Initialize ZakatTracker with database path and history mode.
 
-        Parameters:
+        <b>Parameters</b>:
         - db_path (str): The path to the database  directory. Default is "./zakat_db".
         - history_mode (bool): The mode for tracking history. Default is True.
 
-        Returns:
+        <b>Returns</b>:
         None
         """
         self._base_path = None
@@ -384,10 +387,10 @@ class ZakatTracker:
         If a path is provided, it is set as the new path.
         The function also creates the necessary directories if the provided path is a file.
 
-        Parameters:
+        <b>Parameters</b>:
         - path (str): The new path to the database file. If not provided, the current path is returned.
 
-        Returns:
+        <b>Returns</b>:
         - str: The current or new path to the database file.
         """
         if path is None:
@@ -404,10 +407,10 @@ class ZakatTracker:
         """
         Generate a base path by joining the provided arguments with the existing base path.
 
-        Parameters:
+        <b>Parameters</b>:
         - *args (str): Variable length argument list of strings to be joined with the base path.
 
-        Returns:
+        <b>Returns</b>:
         - str: The generated base path. If no arguments are provided, the existing base path is returned.
         """
         if not args:
@@ -434,18 +437,18 @@ class ZakatTracker:
         This function is designed to handle various numeric types (`float`, `int`, or `decimal.Decimal`) and
         facilitate precise scaling operations, particularly useful in financial or scientific calculations.
 
-        Parameters:
+        <b>Parameters</b>:
         - x (float | int | decimal.Decimal): The numeric value to scale. Can be a floating-point number, integer, or decimal.
         - decimal_places (int): The exponent for the scaling factor (10**y). Defaults to 2, meaning the input is scaled
             by a factor of 100 (e.g., converts 1.23 to 123).
 
-        Returns:
+        <b>Returns</b>:
         - The scaled value, rounded to the nearest integer.
 
-        Raises:
+        <b>Raises</b>:
         - TypeError: If the input `x` is not a valid numeric type.
 
-        Examples:
+        <b>Examples</b>:
         >>> ZakatTracker.scale(3.14159)
         314
         >>> ZakatTracker.scale(1234, decimal_places=3)
@@ -462,15 +465,15 @@ class ZakatTracker:
         """
         Unscales an integer by a power of 10.
 
-        Parameters:
+        <b>Parameters</b>:
         - x (int): The integer to unscale.
         - return_type (type): The desired type for the returned value. Can be float, int, or decimal.Decimal. Defaults to float.
         - decimal_places (int): The power of 10 to use. Defaults to 2.
 
-        Returns:
+        <b>Returns</b>:
         - float | int | decimal.Decimal: The unscaled number, converted to the specified return_type.
 
-        Raises:
+        <b>Raises</b>:
         - TypeError: If the return_type is not float or decimal.Decimal.
         """
         if return_type not in (float, decimal.Decimal):
@@ -481,10 +484,10 @@ class ZakatTracker:
         """
         Reset the internal data structure to its initial state.
 
-        Parameters:
+        <b>Parameters</b>:
         None
 
-        Returns:
+        <b>Returns</b>:
         None
         """
         self._vault = {
@@ -507,7 +510,7 @@ class ZakatTracker:
         This method is used internally to determine the minimum granularity of
         time measurements within the system.
 
-        Returns:
+        <b>Returns</b>:
         tuple[int, int]:
             - The minimum time difference in nanoseconds.
             - The number of iterations required to measure the difference.
@@ -524,11 +527,11 @@ class ZakatTracker:
         """
         Internal method to generate a nanosecond-precision timestamp from a datetime object.
 
-        Parameters:
+        <b>Parameters</b>:
         - now (datetime.datetime, optional): The datetime object to generate the timestamp from.
         If not provided, the current datetime is used.
 
-        Returns:
+        <b>Returns</b>:
         - int: The timestamp in nanoseconds since the epoch (January 1, 1AD).
         """
         if now is None:
@@ -546,11 +549,11 @@ class ZakatTracker:
         by introducing a small delay if necessary, based on the system's minimum
         time resolution.
 
-        Parameters:
+        <b>Parameters</b>:
         - now (datetime.datetime, optional): The datetime object to generate the timestamp from.
         If not provided, the current datetime is used.
 
-        Returns:
+        <b>Returns</b>:
         - int: The unique timestamp in nanoseconds since the epoch (January 1, 1AD).
         """
         new_time = ZakatTracker._time(now)
@@ -572,10 +575,10 @@ class ZakatTracker:
         Converts a nanosecond-precision timestamp (ordinal number of nanoseconds since 1AD)
         back to a datetime object.
 
-        Parameters:
+        <b>Parameters</b>:
         - ordinal_ns (int): The timestamp in nanoseconds since the epoch (January 1, 1AD).
 
-        Returns:
+        <b>Returns</b>:
         - datetime.datetime: The corresponding datetime object.
         """
         d = datetime.datetime.fromordinal(ordinal_ns // 86_400_000_000_000)
@@ -586,11 +589,11 @@ class ZakatTracker:
         """
         Cleans up the empty history records of actions performed on the ZakatTracker instance.
 
-        Parameters:
+        <b>Parameters</b>:
         - lock (int, optional): The lock ID is used to clean up the empty history.
             If not provided, it cleans up the empty history records for all locks.
 
-        Returns:
+        <b>Returns</b>:
         - int: The number of locks cleaned up.
         """
         count = 0
@@ -610,10 +613,10 @@ class ZakatTracker:
         """
         Enable or disable history tracking.
 
-        Parameters:
+        <b>Parameters</b>:
         - status (bool): The status of history tracking. Default is True.
 
-        Returns:
+        <b>Returns</b>:
         None
         """
         if status is not None:
@@ -625,7 +628,7 @@ class ZakatTracker:
         """
         This method is responsible for recording the actions performed on the ZakatTracker.
 
-        Parameters:
+        <b>Parameters</b>:
         - action (Action): The type of action performed.
         - account (str): The account number on which the action was performed.
         - ref (int): The reference number of the action.
@@ -635,7 +638,7 @@ class ZakatTracker:
         - math_operation (MathOperation): The mathematical operation performed during the action.
         - debug (bool): If True, the function will print debug information. Default is False.
 
-        Returns:
+        <b>Returns</b>:
         - int: The lock time of the recorded action. If no lock was performed, it returns 0.
         """
         if not self._history():
@@ -664,10 +667,10 @@ class ZakatTracker:
         """
         Check if the vault lock is currently not set.
 
-        Parameters:
+        <b>Parameters</b>:
         None
 
-        Returns:
+        <b>Returns</b>:
         - bool: True if the vault lock is not set, False otherwise.
         """
         return self._vault['lock'] is None
@@ -676,10 +679,10 @@ class ZakatTracker:
         """
         Acquires a lock on the ZakatTracker instance.
 
-        Parameters:
+        <b>Parameters</b>:
         None
 
-        Returns:
+        <b>Returns</b>:
         - int: The lock ID. This ID can be used to release the lock later.
         """
         return self._step()
@@ -691,10 +694,10 @@ class ZakatTracker:
         The history is a dictionary where each key is a unique identifier for a step,
         and the corresponding value is a dictionary containing information about the step.
 
-        Parameters:
+        <b>Parameters</b>:
         None
 
-        Returns:
+        <b>Returns</b>:
         - dict: A copy of the history of steps taken in the ZakatTracker.
         """
         return self._vault['history'].copy()
@@ -703,11 +706,11 @@ class ZakatTracker:
         """
         Releases the lock on the database.
 
-        Parameters:
+        <b>Parameters</b>:
         - lock (int): The lock ID to be released.
         - auto_save (bool): Whether to automatically save the database after releasing the lock.
 
-        Returns:
+        <b>Returns</b>:
         - bool: True if the lock is successfully released and (optionally) saved, False otherwise.
         """
         if lock == self._vault['lock']:
@@ -722,11 +725,11 @@ class ZakatTracker:
         """
         Revert the last operation.
 
-        Parameters:
+        <b>Parameters</b>:
         - dry (bool): If True, the function will not modify the data, but will simulate the operation. Default is True.
         - debug (bool): If True, the function will print debug information. Default is False.
 
-        Returns:
+        <b>Returns</b>:
         - bool: True if the operation was successful, False otherwise.
         """
         if not self.nolock() or len(self._vault['history']) == 0:
@@ -874,10 +877,10 @@ class ZakatTracker:
         It provides a snapshot of the internal data structure, allowing for further
         processing or analysis.
 
-        Parameters:
+        <b>Parameters</b>:
         None
 
-        Returns:
+        <b>Returns</b>:
         - dict: A copy of the internal vault dictionary.
         """
         return self._vault.copy()
@@ -890,10 +893,10 @@ class ZakatTracker:
         - The initial size of the respective statistic in bytes (int).
         - The initial size of the respective statistic in a human-readable format (str).
 
-        Parameters:
+        <b>Parameters</b>:
         None
 
-        Returns:
+        <b>Returns</b>:
         - dict[str, tuple]: A dictionary with initial statistics for the ZakatTracker instance.
         """
         return {
@@ -910,10 +913,10 @@ class ZakatTracker:
         Both sizes are reported in bytes and in a human-readable format
         (e.g., KB, MB).
 
-        Parameters:
+        <b>Parameters</b>:
         - ignore_ram (bool): Whether to ignore the RAM size. Default is True
 
-        Returns:
+        <b>Returns</b>:
         - dict[str, tuple]: A dictionary containing the following statistics:
 
             * 'database': A tuple with two elements:
@@ -923,7 +926,7 @@ class ZakatTracker:
                 - The RAM usage (dictionary size) in bytes (int).
                 - The RAM usage in human-readable format (str).
 
-        Example:
+        <b>Example</b>:
         >>> stats = my_object.stats()
         >>> print(stats['database'])
         (256000, '250.0 KB')
@@ -944,10 +947,10 @@ class ZakatTracker:
         This class method provides a standardized way to gather details about
         files used by the class for storage, snapshots, and CSV imports.
 
-        Parameters:
+        <b>Parameters</b>:
         None
 
-        Returns:
+        <b>Returns</b>:
         - list[dict[str, str | int]]: A list of dictionaries, each containing information
             about a specific file:
 
@@ -957,7 +960,7 @@ class ZakatTracker:
             * size (int): The file size in bytes (0 if the file doesn't exist).
             * human_readable_size (str): A human-friendly representation of the file size (e.g., '10 KB', '2.5 MB').
 
-        Example:
+        <b>Example</b>:
         ```
         file_info = MyClass.files()
         for info in file_info:
@@ -986,10 +989,10 @@ class ZakatTracker:
         """
         Check if the given account exists in the vault.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number to check.
 
-        Returns:
+        <b>Returns</b>:
         - bool: True if the account exists, False otherwise.
         """
         return account in self._vault['account']
@@ -998,10 +1001,10 @@ class ZakatTracker:
         """
         Calculate the size of the box for a specific account.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number for which the box size needs to be calculated.
 
-        Returns:
+        <b>Returns</b>:
         - int: The size of the box for the given account. If the account does not exist, -1 is returned.
         """
         if self.account_exists(account):
@@ -1012,10 +1015,10 @@ class ZakatTracker:
         """
         Get the size of the log for a specific account.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number for which the log size needs to be calculated.
 
-        Returns:
+        <b>Returns</b>:
         - int: The size of the log for the given account. If the account does not exist, -1 is returned.
         """
         if self.account_exists(account):
@@ -1027,11 +1030,11 @@ class ZakatTracker:
         """
         Calculates the hash of a file using the specified algorithm.
 
-        Parameters:
+        <b>Parameters</b>:
         - file_path (str): The path to the file.
         - algorithm (str, optional): The hashing algorithm to use. Defaults to "blake2b".
 
-        Returns:
+        <b>Returns</b>:
         - str: The hexadecimal representation of the file's hash.
         """
         hash_obj = hashlib.new(algorithm)  # Create the hash object
@@ -1047,10 +1050,10 @@ class ZakatTracker:
         The cache file is a camel file that stores the timestamps of the snapshots.
         The file name is derived from the main database file name by replacing the ".camel" extension with ".snapshots.camel".
 
-        Parameters:
+        <b>Parameters</b>:
         None
 
-        Returns:
+        <b>Returns</b>:
         - str: The path to the cache file.
         """
         path = str(self.path())
@@ -1070,10 +1073,10 @@ class ZakatTracker:
         If a snapshot with the same hash does not exist, the function creates a new snapshot by saving the current database state
         in a new camel file with a unique timestamp as the file name. The function also updates the snapshot cache file with the new snapshot's hash and timestamp.
 
-        Parameters:
+        <b>Parameters</b>:
         None
 
-        Returns:
+        <b>Returns</b>:
         - bool: True if a snapshot with the same hash already exists or if the snapshot is successfully created. False if the snapshot creation fails.
         """
         current_hash = self.file_hash(self.path())
@@ -1098,11 +1101,11 @@ class ZakatTracker:
         """
         Retrieve a dictionary of snapshots, with their respective hashes, paths, and existence status.
 
-        Parameters:
+        <b>Parameters</b>:
         - hide_missing (bool): If True, only include snapshots that exist in the dictionary. Default is True.
         - verified_hash_only (bool): If True, only include snapshots with a valid hash. Default is False.
 
-        Returns:
+        <b>Returns</b>:
         - dict[int, tuple[str, str, bool]]: A dictionary where the keys are the timestamps of the snapshots,
         and the values are tuples containing the snapshot's hash, path, and existence status.
         """
@@ -1129,12 +1132,12 @@ class ZakatTracker:
         """
         Check if a specific reference (transaction) exists in the vault for a given account and reference type.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number for which to check the existence of the reference.
         - ref_type (str): The type of reference (e.g., 'box', 'log', etc.).
         - ref (int): The reference (transaction) number to check for existence.
 
-        Returns:
+        <b>Returns</b>:
         - bool: True if the reference exists for the given account and reference type, False otherwise.
         """
         if account in self._vault['account']:
@@ -1145,11 +1148,11 @@ class ZakatTracker:
         """
         Check if a specific box (transaction) exists in the vault for a given account and reference.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number for which to check the existence of the box.
         - ref (int): The reference (transaction) number to check for existence.
 
-        Returns:
+        <b>Returns</b>:
         - bool: True if the box exists for the given account and reference, False otherwise.
         """
         return self.ref_exists(account, 'box', ref)
@@ -1160,7 +1163,7 @@ class ZakatTracker:
         """
         This function tracks a transaction for a specific account, so it do creates a new account if it doesn't exist, logs the transaction if logging is True, and updates the account's balance and box.
 
-        Parameters:
+        <b>Parameters</b>:
         - unscaled_value (float | int | decimal.Decimal): The value of the transaction. Default is 0.
         - desc (str): The description of the transaction. Default is an empty string.
         - account (str): The account for which the transaction is being tracked. Default is '1'.
@@ -1168,10 +1171,10 @@ class ZakatTracker:
         - created (int): The timestamp of the transaction. If not provided, it will be generated. Default is None.
         - debug (bool): Whether to print debug information. Default is False.
 
-        Returns:
+        <b>Returns</b>:
         - int: The timestamp of the transaction.
 
-        Raises:
+        <b>Raises</b>:
         - ValueError: The created should be greater than zero.
         - ValueError: The log transaction happened again in the same nanosecond time.
         - ValueError: The box transaction happened again in the same nanosecond time.
@@ -1226,11 +1229,11 @@ class ZakatTracker:
         """
         Checks if a specific transaction log entry exists for a given account.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number associated with the transaction log.
         - ref (int): The reference to the transaction log entry.
 
-        Returns:
+        <b>Returns</b>:
         - bool: True if the transaction log entry exists, False otherwise.
         """
         return self.ref_exists(account, 'log', ref)
@@ -1241,7 +1244,7 @@ class ZakatTracker:
         Log a transaction into the account's log by updates the account's balance, count, and log with the transaction details.
         It also creates a step in the history of the transaction.
 
-        Parameters:
+        <b>Parameters</b>:
         - value (float): The value of the transaction.
         - desc (str): The description of the transaction.
         - account (str): The account to log the transaction into. Default is '1'.
@@ -1249,10 +1252,10 @@ class ZakatTracker:
         - ref (int): The reference of the object.
         - debug (bool): Whether to print debug information. Default is False.
 
-        Returns:
+        <b>Returns</b>:
         - int: The timestamp of the logged transaction.
 
-        Raises:
+        <b>Raises</b>:
         - ValueError: The created should be greater than zero.
         - ValueError: The log transaction happened again in the same nanosecond time.
         """
@@ -1287,18 +1290,18 @@ class ZakatTracker:
         """
         This method is used to record or retrieve exchange rates for a specific account.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number for which the exchange rate is being recorded or retrieved.
         - created (int): The timestamp of the exchange rate. If not provided, the current timestamp will be used.
         - rate (float): The exchange rate to be recorded. If not provided, the method will retrieve the latest exchange rate.
         - description (str): A description of the exchange rate.
         - debug (bool): Whether to print debug information. Default is False.
 
-        Returns:
+        <b>Returns</b>:
         - dict: A dictionary containing the latest exchange rate and its description. If no exchange rate is found,
         it returns a dictionary with default values for the rate and description.
 
-        Raises:
+        <b>Raises</b>:
         - ValueError: The created should be greater than zero.
         """
         if debug:
@@ -1344,12 +1347,12 @@ class ZakatTracker:
         """
         This function calculates the exchanged amount of a currency.
 
-        Parameters:
+        <b>Parameters</b>:
         - x (float): The original amount of the currency.
         - x_rate (float): The exchange rate of the original currency.
         - y_rate (float): The exchange rate of the target currency.
 
-        Returns:
+        <b>Returns</b>:
         - float: The exchanged amount of the target currency.
         """
         return (x * x_rate) / y_rate
@@ -1358,10 +1361,10 @@ class ZakatTracker:
         """
         Retrieve the recorded exchange rates for all accounts.
 
-        Parameters:
+        <b>Parameters</b>:
         None
 
-        Returns:
+        <b>Returns</b>:
         - dict: A dictionary containing all recorded exchange rates.
         The keys are account names or numbers, and the values are dictionaries containing the exchange rates.
         Each exchange rate dictionary has timestamps as keys and exchange rate details as values.
@@ -1372,10 +1375,10 @@ class ZakatTracker:
         """
         Returns a dictionary containing account numbers as keys and their respective balances as values.
 
-        Parameters:
+        <b>Parameters</b>:
         None
 
-        Returns:
+        <b>Returns</b>:
         - dict: A dictionary where keys are account numbers and values are their respective balances.
         """
         result = {}
@@ -1387,10 +1390,10 @@ class ZakatTracker:
         """
         Retrieve the boxes (transactions) associated with a specific account.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number for which to retrieve the boxes.
 
-        Returns:
+        <b>Returns</b>:
         - dict: A dictionary containing the boxes associated with the given account.
         If the account does not exist, an empty dictionary is returned.
         """
@@ -1402,10 +1405,10 @@ class ZakatTracker:
         """
         Retrieve the logs (transactions) associated with a specific account.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number for which to retrieve the logs.
 
-        Returns:
+        <b>Returns</b>:
         - dict: A dictionary containing the logs associated with the given account.
         If the account does not exist, an empty dictionary is returned.
         """
@@ -1417,10 +1420,10 @@ class ZakatTracker:
         """
         Initialize a dictionary to store daily, weekly, monthly, and yearly logs.
 
-        Parameters:
+        <b>Parameters</b>:
         None
 
-        Returns:
+        <b>Returns</b>:
         - dict: A dictionary with keys 'daily', 'weekly', 'monthly', and 'yearly', each containing an empty dictionary.
             Later each key maps to another dictionary, which will store the logs for the corresponding time period.
         """
@@ -1439,14 +1442,14 @@ class ZakatTracker:
         It returns a dictionary where the keys are the timestamps of the daily groups,
         and the values are dictionaries containing the total value and the logs for that group.
 
-        Parameters:
+        <b>Parameters</b>:
         - weekday (WeekDay): Select the weekday is collected for the week data. Default is WeekDay.Friday.
         - debug (bool): Whether to print debug information. Default is False.
 
-        Returns:
+        <b>Returns</b>:
         - dict: A dictionary containing the daily logs.
 
-        Example:
+        <b>Example</b>:
         >>> tracker = ZakatTracker()
         >>> tracker.sub(51, 'desc', 'account1')
         >>> ref = tracker.track(100, 'desc', 'account2')
@@ -1593,12 +1596,12 @@ class ZakatTracker:
         """
         Adds a file reference to a specific transaction log entry in the vault.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number associated with the transaction log.
         - ref (int): The reference to the transaction log entry.
         - path (str): The path of the file to be added.
 
-        Returns:
+        <b>Returns</b>:
         - int: The reference of the added file. If the account or transaction log entry does not exist, returns 0.
         """
         if self.account_exists(account):
@@ -1617,12 +1620,12 @@ class ZakatTracker:
         """
         Removes a file reference from a specific transaction log entry in the vault.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number associated with the transaction log.
         - ref (int): The reference to the transaction log entry.
         - file_ref (int): The reference of the file to be removed.
 
-        Returns:
+        <b>Returns</b>:
         - bool: True if the file reference is successfully removed, False otherwise.
         """
         if self.account_exists(account):
@@ -1642,11 +1645,11 @@ class ZakatTracker:
         """
         Calculate and return the balance of a specific account.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number. Default is '1'.
         - cached (bool): If True, use the cached balance. If False, calculate the balance from the box. Default is True.
 
-        Returns:
+        <b>Returns</b>:
         - int: The balance of the account.
 
         Notes:
@@ -1662,17 +1665,17 @@ class ZakatTracker:
         """
         Check or set the hide status of a specific account.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number.
         - status (bool, optional): The new hide status. If not provided, the function will return the current status.
 
-        Returns:
+        <b>Returns</b>:
         - bool: The current or updated hide status of the account.
 
-        Raises:
+        <b>Raises</b>:
         None
 
-        Example:
+        <b>Example</b>:
         >>> tracker = ZakatTracker()
         >>> ref = tracker.track(51, 'desc', 'account1')
         >>> tracker.hide('account1')  # Set the hide status of 'account1' to True
@@ -1695,17 +1698,17 @@ class ZakatTracker:
         """
         Check or set the zakatable status of a specific account.
 
-        Parameters:
+        <b>Parameters</b>:
         - account (str): The account number.
         - status (bool, optional): The new zakatable status. If not provided, the function will return the current status.
 
-        Returns:
+        <b>Returns</b>:
         - bool: The current or updated zakatable status of the account.
 
-        Raises:
+        <b>Raises</b>:
         None
 
-        Example:
+        <b>Example</b>:
         >>> tracker = ZakatTracker()
         >>> ref = tracker.track(51, 'desc', 'account1')
         >>> tracker.zakatable('account1')  # Set the zakatable status of 'account1' to True
@@ -1736,17 +1739,17 @@ class ZakatTracker:
         Subtracts a specified value from an account's balance, if the amount to subtract is greater than the account's balance,
         the remaining amount will be transferred to a new transaction with a negative value.
 
-        Parameters:
+        <b>Parameters</b>:
         - unscaled_value (float | int | decimal.Decimal): The amount to be subtracted.
         - desc (str): A description for the transaction. Defaults to an empty string.
         - account (str): The account from which the value will be subtracted. Defaults to '1'.
         - created (int): The timestamp of the transaction. If not provided, the current timestamp will be used.
         - debug (bool): A flag indicating whether to print debug information. Defaults to False.
 
-        Returns:
+        <b>Returns</b>:
         - tuple: A tuple containing the timestamp of the transaction and a list of tuples representing the age of each transaction.
 
-        Raises:
+        <b>Raises</b>:
         - ValueError: The created should be greater than zero.
         - ValueError: The box transaction happened again in the same nanosecond time.
         - ValueError: The log transaction happened again in the same nanosecond time.
@@ -1811,7 +1814,7 @@ class ZakatTracker:
         """
         Transfers a specified value from one account to another.
 
-        Parameters:
+        <b>Parameters</b>:
         - unscaled_amount (float | int | decimal.Decimal): The amount to be transferred.
         - from_account (str): The account from which the value will be transferred.
         - to_account (str): The account to which the value will be transferred.
@@ -1819,10 +1822,10 @@ class ZakatTracker:
         - created (int, optional): The timestamp of the transaction. If not provided, the current timestamp will be used.
         - debug (bool): A flag indicating whether to print debug information. Defaults to False.
 
-        Returns:
+        <b>Returns</b>:
         - list[int]: A list of timestamps corresponding to the transactions made during the transfer.
 
-        Raises:
+        <b>Raises</b>:
         - ValueError: Transfer to the same account is forbidden.
         - ValueError: The created should be greater than zero.
         - ValueError: The box transaction happened again in the same nanosecond time.
@@ -1896,7 +1899,7 @@ class ZakatTracker:
         """
         Check the eligibility for Zakat based on the given parameters.
 
-        Parameters:
+        <b>Parameters</b>:
         - silver_gram_price (float): The price of a gram of silver.
         - unscaled_nisab (float | int | decimal.Decimal): The minimum amount of wealth required for Zakat. If not provided,
                         it will be calculated based on the silver_gram_price.
@@ -1904,7 +1907,7 @@ class ZakatTracker:
         - now (int): The current timestamp. If not provided, it will be calculated using ZakatTracker.time().
         - cycle (float): The time cycle for Zakat. If not provided, it will be calculated using ZakatTracker.TimeCycle().
 
-        Returns:
+        <b>Returns</b>:
         - tuple: A tuple containing a boolean indicating the eligibility for Zakat, a list of brief statistics,
         and a dictionary containing the Zakat plan.
         """
@@ -2008,11 +2011,11 @@ class ZakatTracker:
         """
         Build payment parts for the Zakat distribution.
 
-        Parameters:
+        <b>Parameters</b>:
         - scaled_demand (int): The total demand for payment in local currency.
         - positive_only (bool): If True, only consider accounts with positive balance. Default is True.
 
-        Returns:
+        <b>Returns</b>:
         - dict: A dictionary containing the payment parts for each account. The dictionary has the following structure:
         {
             'account': {
@@ -2044,11 +2047,11 @@ class ZakatTracker:
         """
         Checks the validity of payment parts.
 
-        Parameters:
+        <b>Parameters</b>:
         - parts (dict): A dictionary containing payment parts information.
         - debug (bool): Flag to enable debug mode.
 
-        Returns:
+        <b>Returns</b>:
         - int: Returns 0 if the payment parts are valid, otherwise returns the error code.
 
         Error Codes:
@@ -2094,12 +2097,12 @@ class ZakatTracker:
         """
         Perform Zakat calculation based on the given report and optional parts.
 
-        Parameters:
+        <b>Parameters</b>:
         - report (tuple): A tuple containing the validity of the report, the report data, and the zakat plan.
         - parts (dict): A dictionary containing the payment parts for the zakat.
         - debug (bool): A flag indicating whether to print debug information.
 
-        Returns:
+        <b>Returns</b>:
         - bool: True if the zakat calculation is successful, False otherwise.
         """
         if debug:
@@ -2174,13 +2177,13 @@ class ZakatTracker:
         """
         Exports the current state of the ZakatTracker object to a JSON file.
 
-        Parameters:
+        <b>Parameters</b>:
         - path (str): The path where the JSON file will be saved. Default is "data.json".
 
-        Returns:
+        <b>Returns</b>:
         - bool: True if the export is successful, False otherwise.
 
-        Raises:
+        <b>Raises</b>:
         No specific exceptions are raised by this method.
         """
         with open(path, "w", encoding="utf-8") as file:
@@ -2193,10 +2196,10 @@ class ZakatTracker:
 
         This method serializes the internal data (`_vault`).
 
-        Parameters:
+        <b>Parameters</b>:
         - path (str, optional): File path for saving. Defaults to a predefined location.
 
-        Returns:
+        <b>Returns</b>:
         - bool: True if the save operation is successful, False otherwise.
         """
         if path is None:
@@ -2216,10 +2219,10 @@ class ZakatTracker:
         """
         Load the current state of the ZakatTracker object from a camel file.
 
-        Parameters:
+        <b>Parameters</b>:
         - path (str): The path where the camel file is located. If not provided, it will use the default path.
 
-        Returns:
+        <b>Returns</b>:
         - bool: True if the load operation is successful, False otherwise.
         """
         if path is None:
@@ -2244,13 +2247,13 @@ class ZakatTracker:
         will be stored. The cache file is a camel file (.camel extension) appended
         to the base path of the object.
 
-        Parameters:
+        <b>Parameters</b>:
         None
 
-        Returns:
+        <b>Returns</b>:
         - str: The full path to the import CSV cache file.
 
-        Example:
+        <b>Example</b>:
             >>> obj = ZakatTracker('/data/reports')
             >>> obj.import_csv_cache_path()
             '/data/reports.import_csv.camel'
@@ -2267,28 +2270,28 @@ class ZakatTracker:
         """
         The function reads the CSV file, checks for duplicate transactions, and creates the transactions in the system.
 
-        Parameters:
+        <b>Parameters</b>:
         - path (str): The path to the CSV file. Default is 'file.csv'.
         - scale_decimal_places (int): The number of decimal places to scale the value. Default is 0.
         - debug (bool): A flag indicating whether to print debug information.
 
-        Returns:
+        <b>Returns</b>:
         - tuple: A tuple containing the number of transactions created, the number of transactions found in the cache,
                 and a dictionary of bad transactions.
 
-        Notes:
-            * Currency Pair Assumption: This function assumes that the exchange rates stored for each account
-                                        are appropriate for the currency pairs involved in the conversions.
-            * The exchange rate for each account is based on the last encountered transaction rate that is not equal
-                to 1.0 or the previous rate for that account.
-            * Those rates will be merged into the exchange rates main data, and later it will be used for all subsequent
-              transactions of the same account within the whole imported and existing dataset when doing `check` and
-              `zakat` operations.
+        <b>Notes</b>:
+        * Currency Pair Assumption: This function assumes that the exchange rates stored for each account
+                                    are appropriate for the currency pairs involved in the conversions.
+        * The exchange rate for each account is based on the last encountered transaction rate that is not equal
+            to 1.0 or the previous rate for that account.
+        * Those rates will be merged into the exchange rates main data, and later it will be used for all subsequent
+            transactions of the same account within the whole imported and existing dataset when doing `check` and
+            `zakat` operations.
 
-        Example Usage:
+        <b>Example</b>:
             The CSV file should have the following format, rate is optional per transaction:
             account, desc, value, date, rate
-            For example:
+            For <b>example</b>:
             safe-45, "Some text", 34872, 1988-06-30 00:00:00, 1
         """
         if debug:
@@ -2418,14 +2421,14 @@ class ZakatTracker:
         (B, KB, MB, GB, etc.) and divides the input size until it fits within a
         range that can be expressed with a reasonable number before the unit.
 
-        Parameters:
+        <b>Parameters</b>:
         - size (float): The size in bytes to convert.
         - decimal_places (int, optional): The number of decimal places to display
             in the result. Defaults to 2.
 
-        Returns:
+        <b>Returns</b>:
         - str: A string representation of the size in a human-readable format,
-            rounded to the specified number of decimal places. For example:
+            rounded to the specified number of decimal places. For <b>example</b>:
                 - "1.50 KB" (1536 bytes)
                 - "23.00 MB" (24117248 bytes)
                 - "1.23 GB" (1325899906 bytes)
@@ -2450,15 +2453,15 @@ class ZakatTracker:
         (e.g., lists, tuples, sets, numbers, strings) and prevents infinite recursion in case
         of circular references.
 
-        Parameters:
+        <b>Parameters</b>:
         - obj (dict): The dictionary whose size is to be calculated.
         - seen (set, optional): A set used internally to track visited objects
                              and avoid circular references. Defaults to None.
 
-        Returns:
+        <b>Returns</b>:
          - float: An approximate size of the dictionary and its contents in bytes.
 
-        Notes:
+        <b>Notes</b>:
         - This function is a method of the `ZakatTracker` class and is likely used to
           estimate the memory footprint of data structures relevant to Zakat calculations.
         - The size calculation is approximate as it relies on `sys.getsizeof()`, which might
@@ -2561,12 +2564,12 @@ class ZakatTracker:
         """
         Convert a specific day, month, and year into a timestamp.
 
-        Parameters:
+        <b>Parameters</b>:
         - day (int): The day of the month.
         - month (int): The month of the year. Default is 6 (June).
         - year (int): The year. Default is 2024.
 
-        Returns:
+        <b>Returns</b>:
         - int: The timestamp representing the given day, month, and year.
 
         Note:
@@ -2579,11 +2582,11 @@ class ZakatTracker:
         """
         Generate a random date between two given dates.
 
-        Parameters:
+        <b>Parameters</b>:
         - start_date (datetime.datetime): The start date from which to generate a random date.
         - end_date (datetime.datetime): The end date until which to generate a random date.
 
-        Returns:
+        <b>Returns</b>:
         - datetime.datetime: A random date between the start_date and end_date.
         """
         time_between_dates = end_date - start_date
@@ -2596,19 +2599,20 @@ class ZakatTracker:
                                  debug: bool = False) -> int:
         """
         Generate a random CSV file with specified parameters.
+        The function generates a CSV file at the specified path with the given count of rows.
+        Each row contains a randomly generated account, description, value, and date.
+        The value is randomly generated between 1000 and 100000,
+        and the date is randomly generated between 1950-01-01 and 2023-12-31.
+        If the row number is not divisible by 13, the value is multiplied by -1.
 
-        Parameters:
+        <b>Parameters</b>:
         - path (str): The path where the CSV file will be saved. Default is "data.csv".
         - count (int): The number of rows to generate in the CSV file. Default is 1000.
         - with_rate (bool): If True, a random rate between 1.2% and 12% is added. Default is False.
         - debug (bool): A flag indicating whether to print debug information.
 
-        Returns:
-        None. The function generates a CSV file at the specified path with the given count of rows.
-        Each row contains a randomly generated account, description, value, and date.
-        The value is randomly generated between 1000 and 100000,
-        and the date is randomly generated between 1950-01-01 and 2023-12-31.
-        If the row number is not divisible by 13, the value is multiplied by -1.
+        <b>Returns</b>:
+        None
         """
         if debug:
             print('generate_random_csv_file', f'debug={debug}')
@@ -2640,12 +2644,12 @@ class ZakatTracker:
         """
         Creates a list of random integers whose sum does not exceed the specified maximum.
 
-        Parameters:
+        <b>Parameters</b>:
         - max_sum: The maximum allowed sum of the list elements.
         - min_value: The minimum possible value for an element (inclusive).
         - max_value: The maximum possible value for an element (inclusive).
 
-        Returns:
+        <b>Returns</b>:
         - A list of random integers.
         """
         result = []
