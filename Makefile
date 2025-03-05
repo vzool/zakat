@@ -63,7 +63,7 @@ pdoc:
 .PHONY: pdoc-live
 # create pdoc documentaions on the fly by web server
 pdoc-live:
-	pdoc --logo "https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg"./zakat"
+	pdoc --logo "https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg" "./zakat"
 
 # show help
 help:
