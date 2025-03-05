@@ -1,6 +1,6 @@
 # The Zakat Formula: A Mathematical Representation of Islamic Charity
 
-_**Note**: If you found any issues in reading this page, consider viewing this document in [PDF format](mathematics.pdf)._
+_**Note**: If you found any issues in reading this page, consider viewing this document in [PDF format](../pdf/mathematics.pdf)._
 
 Zakat, one of the Five Pillars of Islam, is a mandatory form of charity for Muslims who meet specific wealth criteria. It serves as a means of purifying one's wealth and redistributing it to those in need. While the principles of Zakat are well-established, the calculation of the amount due can vary based on the type of assets and their value according to their exchange rates on Zakat time.
 

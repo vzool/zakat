@@ -100,13 +100,13 @@ tracker.zakat(report)
 
 ### Documentation
 
-- [Mechanism of Zakat: The Rooms and Boxes Algorithm](./docs/algorithm.md)
+- [Mechanism of Zakat: The Rooms and Boxes Algorithm](./docs/markdown/algorithm.md)
 
-- [The Zakat Formula: A Mathematical Representation of Islamic Charity](./docs/mathematics.md)
+- [The Zakat Formula: A Mathematical Representation of Islamic Charity](./docs/markdown/mathematics.md)
 
-- [How Exchange Rates Work in a Zakat Calculation System?](./docs/exchange_rates.md)
+- [How Exchange Rates Work in a Zakat Calculation System?](./docs/markdown/exchange_rates.md)
 
-- [Zakat-Aware Inventory Tracking Algorithm (with Lunar Cycle)](./docs/inventory.md) [**PLANNED**]
+- [Zakat-Aware Inventory Tracking Algorithm (with Lunar Cycle)](./docs/markdown/inventory.md) [**PLANNED**]
 
 ### Videos:
 
