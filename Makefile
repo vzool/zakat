@@ -56,9 +56,14 @@ deploy:
 	python3 -m twine upload --repository zakat dist/*
 
 .PHONY: pdoc
-# create pdoc documentaions
+# create pdoc documentaions on disk
 pdoc:
-	pdoc --logo https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg -o docs zakat
+	pdoc --logo "https://raw.githubusercontent.com/vzool/zakat/refs/heads/main/images/logo.svg" -o "./docs" "zakat"
+
+.PHONY: pdoc-live
+# create pdoc documentaions on the fly by web server
+pdoc-live:
+	pdoc --logo "https://raw.githubusercontent.com/vzool/zakat/refs/heads/main/images/logo.svg" "./zakat"
 
 # show help
 help:
