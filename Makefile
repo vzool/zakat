@@ -58,12 +58,17 @@ deploy:
 .PHONY: pdoc
 # create pdoc documentaions on disk
 pdoc:
-	pdoc --footer-text "zakat v$(git describe --tags --abbrev=0)" --logo "https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg" -o "./docs" "zakat"
+	pdoc --footer-text "zakat v$$(git describe --tags --abbrev=0 || echo 'unknown')-$$(git rev-parse --short $$(git describe --tags --abbrev=0) || echo 'g0000000')"\
+		 --logo "https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg"\
+		 -o "./docs"\
+		 "zakat"
 
 .PHONY: pdoc-live
 # create pdoc documentaions on the fly by web server
 pdoc-live:
-	pdoc --footer-text "zakat v$(git describe --tags --abbrev=0)" --logo "https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg" "./zakat"
+	pdoc --footer-text "zakat v$$(git describe --tags --abbrev=0 || echo 'unknown')-$$(git rev-parse --short $$(git describe --tags --abbrev=0) || echo 'g0000000')"\
+		 --logo "https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg"\
+		 "./zakat"
 
 # show help
 help:
