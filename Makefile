@@ -58,12 +58,12 @@ deploy:
 .PHONY: pdoc
 # create pdoc documentaions on disk
 pdoc:
-	pdoc --logo "https://raw.githubusercontent.com/vzool/zakat/refs/heads/main/images/logo.svg" -o "./docs" "zakat"
+	pdoc --logo "https://raw.githubusercontent.com/vzool/zakat/refs/heads/main/images/logo.jpg" -o "./docs" "zakat"
 
 .PHONY: pdoc-live
 # create pdoc documentaions on the fly by web server
 pdoc-live:
-	pdoc --logo "https://raw.githubusercontent.com/vzool/zakat/refs/heads/main/images/logo.svg" "./zakat"
+	pdoc --logo "https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg"./zakat"
 
 # show help
 help:
