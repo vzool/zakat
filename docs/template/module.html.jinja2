@@ -1,0 +1,26 @@
+{#
+We want to extend the default template instead of defining everything ourselves.
+#}
+{% extends "default/module.html.jinja2" %}
+
+{#
+We can redefine individual blocks.
+For example, if the `--favicon` option does not do what you want, you can specify a replacement like this.
+#}
+{% block favicon %}
+    <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/vzool/zakat/main/images/favicon/favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/vzool/zakat/main/images/favicon/favicon.svg" />
+    <link rel="shortcut icon" href="https://raw.githubusercontent.com/vzool/zakat/main/images/favicon/favicon.ico" />
+    <link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/vzool/zakat/main/images/favicon/apple-touch-icon.png" />
+    <meta name="apple-mobile-web-app-title" content="ZakaTracker" />
+    <link rel="manifest" href="https://raw.githubusercontent.com/vzool/zakat/main/images/favicon/site.webmanifest" />
+{% endblock %}
+
+{#
+We can access system environment variables in the template, for example to pass version information.
+#}
+{#
+{% block nav_footer %}
+    <footer>My Package v{{ env["VERSION"] | default("1.0") }}</footer>
+{% endblock %}
+#}

@@ -60,7 +60,7 @@ deploy:
 pdoc:
 	pdoc --footer-text "zakat v$$(git describe --tags --abbrev=0 || echo 'unknown')-$$(git rev-parse --short $$(git describe --tags --abbrev=0) || echo 'g0000000')"\
 		 --logo "https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg"\
-		 --favicon "https://raw.githubusercontent.com/vzool/zakat/main/images/favicon/favicon.ico"\
+		 -t "./docs/template"\
 		 -o "./docs"\
 		 "zakat"
 
@@ -69,7 +69,7 @@ pdoc:
 pdoc-live:
 	pdoc --footer-text "zakat v$$(git describe --tags --abbrev=0 || echo 'unknown')-$$(git rev-parse --short $$(git describe --tags --abbrev=0) || echo 'g0000000')"\
 		 --logo "https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg"\
-		 --favicon "https://raw.githubusercontent.com/vzool/zakat/main/images/favicon/favicon.ico"\
+		 -t "./docs/template"\
 		 "./zakat"
 
 # show help
