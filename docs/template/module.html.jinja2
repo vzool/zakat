@@ -3,6 +3,8 @@ We want to extend the default template instead of defining everything ourselves.
 #}
 {% extends "default/module.html.jinja2" %}
 
+{% block title %}{{ module.modulename }} API documentation {% if footer_text %} {{ footer_text }} {% endif %}{% endblock %}
+
 {#
 We can redefine individual blocks.
 For example, if the `--favicon` option does not do what you want, you can specify a replacement like this.
@@ -15,6 +17,26 @@ For example, if the `--favicon` option does not do what you want, you can specif
     <meta name="apple-mobile-web-app-title" content="ZakaTracker" />
     <link rel="manifest" href="https://raw.githubusercontent.com/vzool/zakat/main/images/favicon/site.webmanifest" />
 {% endblock %}
+
+{% defaultmacro module_name() %}
+    <h1 class="modulename">
+        {% set parts = module.modulename.split(".") %}
+        {% for part in parts %}
+            {%- set fullname = ".".join(parts[:loop.index]) -%}
+            {%- if fullname in all_modules and fullname != module.modulename -%}
+                <a href="./{{ "../" * loop.revindex0 }}{{ part }}.html">{{ part }}</a>
+            {%- else -%}
+                {{ part }}
+            {%- endif -%}
+            {%- if loop.nextitem -%}
+                <wbr>.
+            {%- endif -%}
+        {% endfor %}
+        {% if footer_text %}
+            {{ footer_text }}
+        {% endif %}
+    </h1>
+{% enddefaultmacro %}
 
 {#
 We can access system environment variables in the template, for example to pass version information.

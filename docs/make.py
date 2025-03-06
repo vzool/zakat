@@ -66,9 +66,22 @@ def checkout_branch(branch):
 def generate_docs(tag, output_dir):
     """Generates documentation for the given tag using pdoc."""
     try:
+        git_describe_process = subprocess.run(
+            ["git", "describe", "--tags", "--abbrev=0"],
+            capture_output=True,
+            text=True,
+            check=False,  # Don't raise exception on non-zero exit code
+        )
+        git_describe = git_describe_process.stdout.strip() or "unknown"
+
+        # Construct the footer text
+        footer_text = f"v{git_describe}"
+
         output_path = pathlib.Path(output_dir) / tag
         subprocess.run([
             'pdoc',
+            '--footer-text',
+            footer_text,
             '--logo',
             'https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg',
             '-t',
