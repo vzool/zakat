@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0 # Important: Fetch the full history
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.13'
+          python-version: '3.12'
 
       # ADJUST THIS: install all dependencies (including pdoc)
       - run: pip install pdoc camelx
