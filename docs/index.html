@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Git Tag Documentation</title>
+    <title>zakat Documentation</title>
     <style>
         body {
             font-family: sans-serif;
@@ -11,42 +11,32 @@
             padding: 8px 12px;
             font-size: 16px;
         }
-        #docs-link {
-            display: none;
-            margin-top: 20px;
-        }
     </style>
 </head>
 <body>
-    <h1>Select a Tag to View Documentation</h1>
-    <select id="tagSelect"></select>
-    <button id="viewDocs">View Documentation</button>
-    <div id="docs-link">
-        <p>View Documentation for selected tag: <a id="docsLink" href="" target="_blank">Link</a></p>
-    </div>
+    <center>
+        <img width="256px" src="https://raw.githubusercontent.com/vzool/zakat/main/images/logo.svg"/>
+        <h1>Select a Tag to View zakat Documentation</h1>
+        <select id="tagSelect"></select>
+        <button id="viewDocs">View Documentation</button>
+    </center>
 
     <script>
         fetch('tags.json')
             .then(response => response.json())
             .then(tags => {
-                const select = document.getElementById('tagSelect');
+                window.select = document.getElementById('tagSelect');
                 tags.forEach((tag, index) => {
                     const option = document.createElement('option');
                     option.value = tag;
                     option.textContent = tag;
                     select.appendChild(option);
-                    if (index === 1 && tags.length > 1) { // Select the second option (index 1)
+                    if (index === 1 && tags.length > 1) {
                         option.selected = true;
                     }
                 });
 
-                document.getElementById('viewDocs').addEventListener('click', () => {
-                   const selectedTag = select.value;
-                   const docsLink = document.getElementById('docsLink');
-                   const docsLinkDiv = document.getElementById('docs-link');
-                   docsLink.href = `api/${selectedTag}/index.html`;
-                   docsLinkDiv.style.display = 'block';
-                });
+                document.getElementById('viewDocs').addEventListener('click', () => window.open(`api/${window.select.value}/index.html`, "_blank"));
             })
             .catch(error => console.error('Error fetching tags:', error));
     </script>
