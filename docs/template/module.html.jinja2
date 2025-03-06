@@ -33,7 +33,25 @@ For example, if the `--favicon` option does not do what you want, you can specif
             {%- endif -%}
         {% endfor %}
         {% if footer_text %}
-            {{ footer_text }}
+            <select id="tagSelect"></select>
+            <script>
+                fetch('https://raw.githubusercontent.com/vzool/zakat/refs/heads/main/docs/tags.json')
+                    .then(response => response.json())
+                    .then(tags => {
+                        window.select = document.getElementById('tagSelect');
+                        tags.forEach((tag, index) => {
+                            const option = document.createElement('option');
+                            option.value = tag;
+                            option.textContent = `v${tag}`;
+                            select.appendChild(option);
+                            if (tag == `{{ footer_text }}`) {
+                                option.selected = true;
+                            }
+                        });
+                        window.select.addEventListener('change', () => window.open(`https://vzool.github.io/zakat/api/${window.select.value}/index.html`));
+                    })
+                    .catch(error => console.error('Error fetching tags:', error));
+            </script>
         {% endif %}
     </h1>
 {% enddefaultmacro %}

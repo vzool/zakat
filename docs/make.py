@@ -70,7 +70,7 @@ def generate_docs(tag, output_dir):
         subprocess.run([
             'pdoc',
             '--footer-text',
-            f'v{tag}',
+            tag,
             '--logo',
             'https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg',
             '-t',
