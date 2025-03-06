@@ -42,7 +42,7 @@ For example, if the `--favicon` option does not do what you want, you can specif
                         tags.forEach((tag, index) => {
                             const option = document.createElement('option');
                             option.value = tag;
-                            option.textContent = `v${tag}`;
+                            option.textContent = tag == 'main' ? tag : `v${tag}`;
                             select.appendChild(option);
                             if (tag == `{{ footer_text }}`) {
                                 option.selected = true;
