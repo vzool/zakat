@@ -1,7 +1,6 @@
 import subprocess
 import pathlib
 import shutil
-import pdoc
 import json
 
 def get_git_tags_sorted():
@@ -67,13 +66,19 @@ def checkout_branch(branch):
 def generate_docs(tag, output_dir):
     """Generates documentation for the given tag using pdoc."""
     try:
-        # Assuming your modules are in the current directory or a subdirectory.
-        # Adjust the modules list as needed.
-        modules = ["./zakat"]  # Replace with your module names
         output_path = pathlib.Path(output_dir) / tag
-        pdoc.pdoc(*modules, output_directory=output_path)
+        subprocess.run([
+            'pdoc',
+            '--logo',
+            'https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg',
+            '-t',
+            './docs/template',
+            '-o',
+            f'./{output_path}',
+            "./zakat",
+        ], check=True)
         print(f"Documentation generated for tag {tag} in {output_path}")
-    except Exception as e:
+    except subprocess.CalledProcessError as e:
         print(f"Error generating documentation for tag {tag}: {e}")
 
 def save_tags_to_json(tags, filename="docs/tags.json"):
@@ -103,10 +108,6 @@ if __name__ == "__main__":
         pathlib.Path(output_directory).mkdir(parents=True, exist_ok=True) #create docs directory if it does not exist.
 
         save_tags_to_json(tags) #save tags to json file.
-        pdoc.render.configure(
-        	logo="https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg",
-        	template_directory="./docs/template",
-        )
         for tag in tags:
             checkout_tag(tag)
             generate_docs(tag, output_directory)
