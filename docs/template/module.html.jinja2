@@ -48,7 +48,9 @@ For example, if the `--favicon` option does not do what you want, you can specif
                                 option.selected = true;
                             }
                         });
-                        window.select.addEventListener('change', () => window.open(`https://vzool.github.io/zakat/api/${window.select.value}/index.html`));
+                        window.select.addEventListener('change', () => {
+                            window.location.href = `https://vzool.github.io/zakat/api/${window.select.value}/zakat.html`;
+                        });
                     })
                     .catch(error => console.error('Error fetching tags:', error));
             </script>
