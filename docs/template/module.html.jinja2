@@ -36,7 +36,7 @@ For example, if the `--favicon` option does not do what you want, you can specif
             <!-- Version Selector -->
             <select id="tagSelect"></select>
             <script>
-                fetch('./../tags.json')
+                fetch('./../../tags.json')
                     .then(response => response.json())
                     .then(tags => {
                         window.select = document.getElementById('tagSelect');

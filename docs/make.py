@@ -114,7 +114,7 @@ if __name__ == "__main__":
             generate_docs(tag, output_directory)
 
         with open(f'docs/index.html', 'w', encoding='utf-8') as file:
-            file.write(f'<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=api/{tags[1]}/zakat.html"/></head></html>')
+            file.write(f'<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0; url=api/{tags[1]}/index.html"/></head></html>')
         if original_branch:
             checkout_tag(original_branch)
         else:
