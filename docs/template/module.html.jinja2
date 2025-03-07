@@ -336,30 +336,29 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', eve
 
 {% defaultmacro version_switcher() %}
 {% if footer_text %}
-            <!-- Version Selector -->
-            <select id="tagSelect"></select>
-            <script>
-                fetch('./../../tags.json')
-                    .then(response => response.json())
-                    .then(tags => {
-                        window.select = document.getElementById('tagSelect');
-                        tags.forEach((tag, index) => {
-                            const option = document.createElement('option');
-                            option.value = tag;
-                            option.textContent = tag == 'main' ? tag : `v${tag}`;
-                            select.appendChild(option);
-                            if (tag == `{{ footer_text }}`) {
-                                option.selected = true;
-                            }
-                        });
-                        window.select.addEventListener('change', () => {
-                            window.location.href = `./../${window.select.value}/index.html`;
-                        });
-                    })
-                    .catch(error => console.error('Error fetching tags:', error));
-            </script>
-            <!-- Version Selector -->
-        {% endif %}
+    <!-- Version Selector -->
+    <select id="tagSelect"></select>
+    <script>
+      fetch('./../../tags.json')
+        .then(response => response.json())
+        .then(tags => {
+          window.select = document.getElementById('tagSelect');
+          tags.forEach((tag, index) => {
+            const option = document.createElement('option');
+            option.value = tag;
+            option.textContent = tag == 'main' ? tag : `v${tag}`;
+            select.appendChild(option);
+            if (tag == `{{ footer_text }}`) {
+              option.selected = true;
+            }
+          });
+          window.select.addEventListener('change', () => {
+            window.location.href = `./../${window.select.value}/index.html`;
+          });
+      }).catch(error => console.error('Error fetching tags:', error));
+    </script>
+    <!-- Version Selector -->
+{% endif %}
 {% enddefaultmacro %}
 
 {% defaultmacro module_name() %}
