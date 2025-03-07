@@ -755,6 +755,7 @@ class ZakatTracker:
                             if debug:
                                 print('account', self._vault['account'][x['account']])
                             assert len(self._vault['account'][x['account']]['box']) == 0
+                            assert len(self._vault['account'][x['account']]['log']) == 0
                             assert self._vault['account'][x['account']]['balance'] == 0
                             assert self._vault['account'][x['account']]['count'] == 0
                             if dry:
@@ -1606,10 +1607,10 @@ class ZakatTracker:
         """
         if self.account_exists(account):
             if ref in self._vault['account'][account]['log']:
-                file_ref = self.time()
-                self._vault['account'][account]['log'][ref]['file'][file_ref] = path
                 no_lock = self.nolock()
                 lock = self.lock()
+                file_ref = self.time()
+                self._vault['account'][account]['log'][ref]['file'][file_ref] = path
                 self._step(Action.ADD_FILE, account, ref=ref, file=file_ref)
                 if no_lock:
                     self.free(lock)
@@ -1631,10 +1632,10 @@ class ZakatTracker:
         if self.account_exists(account):
             if ref in self._vault['account'][account]['log']:
                 if file_ref in self._vault['account'][account]['log'][ref]['file']:
-                    x = self._vault['account'][account]['log'][ref]['file'][file_ref]
-                    del self._vault['account'][account]['log'][ref]['file'][file_ref]
                     no_lock = self.nolock()
                     lock = self.lock()
+                    x = self._vault['account'][account]['log'][ref]['file'][file_ref]
+                    del self._vault['account'][account]['log'][ref]['file'][file_ref]
                     self._step(Action.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
                     if no_lock:
                         self.free(lock)
