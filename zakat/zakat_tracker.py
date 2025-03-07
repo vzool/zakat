@@ -293,7 +293,7 @@ class ZakatTracker:
         <b>Returns</b>:
         - str: The current version of the software.
         """
-        return '0.2.98'
+        return '0.2.99'
 
     @staticmethod
     def ZakatCut(x: float) -> float:

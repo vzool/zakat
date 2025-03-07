@@ -18,21 +18,324 @@ For example, if the `--favicon` option does not do what you want, you can specif
     <link rel="manifest" href="https://raw.githubusercontent.com/vzool/zakat/main/images/favicon/site.webmanifest" />
 {% endblock %}
 
-{% defaultmacro module_name() %}
-    <h1 class="modulename">
-        {% set parts = module.modulename.split(".") %}
-        {% for part in parts %}
-            {%- set fullname = ".".join(parts[:loop.index]) -%}
-            {%- if fullname in all_modules and fullname != module.modulename -%}
-                <a href="./{{ "../" * loop.revindex0 }}{{ part }}.html">{{ part }}</a>
-            {%- else -%}
-                {{ part }}
-            {%- endif -%}
-            {%- if loop.nextitem -%}
-                <wbr>.
-            {%- endif -%}
-        {% endfor %}
-        {% if footer_text %}
+
+{% defaultmacro theme_switcher() %}
+<!-- Theme Switcher -->
+<button id="themeButton"></button>
+<style>
+body {
+  transition: background-color 0.3s, color 0.3s;
+}
+
+body.light-mode {
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+body.light-mode .pdoc {
+    --text: #212529;
+    --muted: #6c757d;
+    --link: #3660a5;
+    --link-hover: #1659c5;
+    --code: #f8f8f8;
+    --active: #fff598;
+
+    --accent: #eee;
+    --accent2: #c1c1c1;
+
+    --nav-hover: rgba(255, 255, 255, 0.5);
+    --name: #0066BB;
+    --def: #008800;
+    --annotation: #007020;
+}
+
+/* auto-generated, see templates/README.md */
+body.light-mode pre { line-height: 125%; }
+body.light-mode span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 20px; }
+body.light-mode .pdoc-code .hll { background-color: #ffffcc }
+body.light-mode .pdoc-code { background: #f8f8f8; }
+body.light-mode .pdoc-code .c { color: #3D7B7B; font-style: italic } /* Comment */
+body.light-mode .pdoc-code .err { border: 1px solid #FF0000 } /* Error */
+body.light-mode .pdoc-code .k { color: #008000; font-weight: bold } /* Keyword */
+body.light-mode .pdoc-code .o { color: #666666 } /* Operator */
+body.light-mode .pdoc-code .ch { color: #3D7B7B; font-style: italic } /* Comment.Hashbang */
+body.light-mode .pdoc-code .cm { color: #3D7B7B; font-style: italic } /* Comment.Multiline */
+body.light-mode .pdoc-code .cp { color: #9C6500 } /* Comment.Preproc */
+body.light-mode .pdoc-code .cpf { color: #3D7B7B; font-style: italic } /* Comment.PreprocFile */
+body.light-mode .pdoc-code .c1 { color: #3D7B7B; font-style: italic } /* Comment.Single */
+body.light-mode .pdoc-code .cs { color: #3D7B7B; font-style: italic } /* Comment.Special */
+body.light-mode .pdoc-code .gd { color: #A00000 } /* Generic.Deleted */
+body.light-mode .pdoc-code .ge { font-style: italic } /* Generic.Emph */
+body.light-mode .pdoc-code .gr { color: #E40000 } /* Generic.Error */
+body.light-mode .pdoc-code .gh { color: #000080; font-weight: bold } /* Generic.Heading */
+body.light-mode .pdoc-code .gi { color: #008400 } /* Generic.Inserted */
+body.light-mode .pdoc-code .go { color: #717171 } /* Generic.Output */
+body.light-mode .pdoc-code .gp { color: #000080; font-weight: bold } /* Generic.Prompt */
+body.light-mode .pdoc-code .gs { font-weight: bold } /* Generic.Strong */
+body.light-mode .pdoc-code .gu { color: #800080; font-weight: bold } /* Generic.Subheading */
+body.light-mode .pdoc-code .gt { color: #0044DD } /* Generic.Traceback */
+body.light-mode .pdoc-code .kc { color: #008000; font-weight: bold } /* Keyword.Constant */
+body.light-mode .pdoc-code .kd { color: #008000; font-weight: bold } /* Keyword.Declaration */
+body.light-mode .pdoc-code .kn { color: #008000; font-weight: bold } /* Keyword.Namespace */
+body.light-mode .pdoc-code .kp { color: #008000 } /* Keyword.Pseudo */
+body.light-mode .pdoc-code .kr { color: #008000; font-weight: bold } /* Keyword.Reserved */
+body.light-mode .pdoc-code .kt { color: #B00040 } /* Keyword.Type */
+body.light-mode .pdoc-code .m { color: #666666 } /* Literal.Number */
+body.light-mode .pdoc-code .s { color: #BA2121 } /* Literal.String */
+body.light-mode .pdoc-code .na { color: #687822 } /* Name.Attribute */
+body.light-mode .pdoc-code .nb { color: #008000 } /* Name.Builtin */
+body.light-mode .pdoc-code .nc { color: #0000FF; font-weight: bold } /* Name.Class */
+body.light-mode .pdoc-code .no { color: #880000 } /* Name.Constant */
+body.light-mode .pdoc-code .nd { color: #AA22FF } /* Name.Decorator */
+body.light-mode .pdoc-code .ni { color: #717171; font-weight: bold } /* Name.Entity */
+body.light-mode .pdoc-code .ne { color: #CB3F38; font-weight: bold } /* Name.Exception */
+body.light-mode .pdoc-code .nf { color: #0000FF } /* Name.Function */
+body.light-mode .pdoc-code .nl { color: #767600 } /* Name.Label */
+body.light-mode .pdoc-code .nn { color: #0000FF; font-weight: bold } /* Name.Namespace */
+body.light-mode .pdoc-code .nt { color: #008000; font-weight: bold } /* Name.Tag */
+body.light-mode .pdoc-code .nv { color: #19177C } /* Name.Variable */
+body.light-mode .pdoc-code .ow { color: #AA22FF; font-weight: bold } /* Operator.Word */
+body.light-mode .pdoc-code .w { color: #bbbbbb } /* Text.Whitespace */
+body.light-mode .pdoc-code .mb { color: #666666 } /* Literal.Number.Bin */
+body.light-mode .pdoc-code .mf { color: #666666 } /* Literal.Number.Float */
+body.light-mode .pdoc-code .mh { color: #666666 } /* Literal.Number.Hex */
+body.light-mode .pdoc-code .mi { color: #666666 } /* Literal.Number.Integer */
+body.light-mode .pdoc-code .mo { color: #666666 } /* Literal.Number.Oct */
+body.light-mode .pdoc-code .sa { color: #BA2121 } /* Literal.String.Affix */
+body.light-mode .pdoc-code .sb { color: #BA2121 } /* Literal.String.Backtick */
+body.light-mode .pdoc-code .sc { color: #BA2121 } /* Literal.String.Char */
+body.light-mode .pdoc-code .dl { color: #BA2121 } /* Literal.String.Delimiter */
+body.light-mode .pdoc-code .sd { color: #BA2121; font-style: italic } /* Literal.String.Doc */
+body.light-mode .pdoc-code .s2 { color: #BA2121 } /* Literal.String.Double */
+body.light-mode .pdoc-code .se { color: #AA5D1F; font-weight: bold } /* Literal.String.Escape */
+body.light-mode .pdoc-code .sh { color: #BA2121 } /* Literal.String.Heredoc */
+body.light-mode .pdoc-code .si { color: #A45A77; font-weight: bold } /* Literal.String.Interpol */
+body.light-mode .pdoc-code .sx { color: #008000 } /* Literal.String.Other */
+body.light-mode .pdoc-code .sr { color: #A45A77 } /* Literal.String.Regex */
+body.light-mode .pdoc-code .s1 { color: #BA2121 } /* Literal.String.Single */
+body.light-mode .pdoc-code .ss { color: #19177C } /* Literal.String.Symbol */
+body.light-mode .pdoc-code .bp { color: #008000 } /* Name.Builtin.Pseudo */
+body.light-mode .pdoc-code .fm { color: #0000FF } /* Name.Function.Magic */
+body.light-mode .pdoc-code .vc { color: #19177C } /* Name.Variable.Class */
+body.light-mode .pdoc-code .vg { color: #19177C } /* Name.Variable.Global */
+body.light-mode .pdoc-code .vi { color: #19177C } /* Name.Variable.Instance */
+body.light-mode .pdoc-code .vm { color: #19177C } /* Name.Variable.Magic */
+body.light-mode .pdoc-code .il { color: #666666 } /* Literal.Number.Integer.Long */
+
+/*###########*/
+/* dark-mode */
+/*###########*/
+body.dark-mode {
+  background-color: #333;
+  color: #f9f9f9;
+}
+
+:root {
+    --pdoc-background: #212529;
+}
+
+body.dark-mode .pdoc {
+    --text: #f7f7f7;
+    --muted: #9d9d9d;
+    --link: #58a6ff;
+    --link-hover: #3989ff;
+    --code: #333;
+    --active: #555;
+
+    --accent: #343434;
+    --accent2: #555;
+
+    --nav-hover: rgba(0, 0, 0, 0.1);
+    --name: #77C1FF;
+    --def: #0cdd0c;
+    --annotation: #00c037;
+}
+
+/* monokai color scheme, see pdoc/template/README.md */
+body.dark-mode pre { line-height: 125%; }
+body.dark-mode span.linenos { color: inherit; background-color: transparent; padding-left: 5px; padding-right: 20px; }
+body.dark-mode .pdoc-code .hll { background-color: #49483e }
+body.dark-mode .pdoc-code { background: #272822; color: #f8f8f2 }
+body.dark-mode .pdoc-code .c { color: #75715e } /* Comment */
+body.dark-mode .pdoc-code .err { color: #960050; background-color: #1e0010 } /* Error */
+body.dark-mode .pdoc-code .esc { color: #f8f8f2 } /* Escape */
+body.dark-mode .pdoc-code .g { color: #f8f8f2 } /* Generic */
+body.dark-mode .pdoc-code .k { color: #66d9ef } /* Keyword */
+body.dark-mode .pdoc-code .l { color: #ae81ff } /* Literal */
+body.dark-mode .pdoc-code .n { color: #f8f8f2 } /* Name */
+body.dark-mode .pdoc-code .o { color: #f92672 } /* Operator */
+body.dark-mode .pdoc-code .x { color: #f8f8f2 } /* Other */
+body.dark-mode .pdoc-code .p { color: #f8f8f2 } /* Punctuation */
+body.dark-mode .pdoc-code .ch { color: #75715e } /* Comment.Hashbang */
+body.dark-mode .pdoc-code .cm { color: #75715e } /* Comment.Multiline */
+body.dark-mode .pdoc-code .cp { color: #75715e } /* Comment.Preproc */
+body.dark-mode .pdoc-code .cpf { color: #75715e } /* Comment.PreprocFile */
+body.dark-mode .pdoc-code .c1 { color: #75715e } /* Comment.Single */
+body.dark-mode .pdoc-code .cs { color: #75715e } /* Comment.Special */
+body.dark-mode .pdoc-code .gd { color: #f92672 } /* Generic.Deleted */
+body.dark-mode .pdoc-code .ge { color: #f8f8f2; font-style: italic } /* Generic.Emph */
+body.dark-mode .pdoc-code .gr { color: #f8f8f2 } /* Generic.Error */
+body.dark-mode .pdoc-code .gh { color: #f8f8f2 } /* Generic.Heading */
+body.dark-mode .pdoc-code .gi { color: #a6e22e } /* Generic.Inserted */
+body.dark-mode .pdoc-code .go { color: #66d9ef } /* Generic.Output */
+body.dark-mode .pdoc-code .gp { color: #f92672; font-weight: bold } /* Generic.Prompt */
+body.dark-mode .pdoc-code .gs { color: #f8f8f2; font-weight: bold } /* Generic.Strong */
+body.dark-mode .pdoc-code .gu { color: #75715e } /* Generic.Subheading */
+body.dark-mode .pdoc-code .gt { color: #f8f8f2 } /* Generic.Traceback */
+body.dark-mode .pdoc-code .kc { color: #66d9ef } /* Keyword.Constant */
+body.dark-mode .pdoc-code .kd { color: #66d9ef } /* Keyword.Declaration */
+body.dark-mode .pdoc-code .kn { color: #f92672 } /* Keyword.Namespace */
+body.dark-mode .pdoc-code .kp { color: #66d9ef } /* Keyword.Pseudo */
+body.dark-mode .pdoc-code .kr { color: #66d9ef } /* Keyword.Reserved */
+body.dark-mode .pdoc-code .kt { color: #66d9ef } /* Keyword.Type */
+body.dark-mode .pdoc-code .ld { color: #e6db74 } /* Literal.Date */
+body.dark-mode .pdoc-code .m { color: #ae81ff } /* Literal.Number */
+body.dark-mode .pdoc-code .s { color: #e6db74 } /* Literal.String */
+body.dark-mode .pdoc-code .na { color: #a6e22e } /* Name.Attribute */
+body.dark-mode .pdoc-code .nb { color: #f8f8f2 } /* Name.Builtin */
+body.dark-mode .pdoc-code .nc { color: #a6e22e } /* Name.Class */
+body.dark-mode .pdoc-code .no { color: #66d9ef } /* Name.Constant */
+body.dark-mode .pdoc-code .nd { color: #a6e22e } /* Name.Decorator */
+body.dark-mode .pdoc-code .ni { color: #f8f8f2 } /* Name.Entity */
+body.dark-mode .pdoc-code .ne { color: #a6e22e } /* Name.Exception */
+body.dark-mode .pdoc-code .nf { color: #a6e22e } /* Name.Function */
+body.dark-mode .pdoc-code .nl { color: #f8f8f2 } /* Name.Label */
+body.dark-mode .pdoc-code .nn { color: #f8f8f2 } /* Name.Namespace */
+body.dark-mode .pdoc-code .nx { color: #a6e22e } /* Name.Other */
+body.dark-mode .pdoc-code .py { color: #f8f8f2 } /* Name.Property */
+body.dark-mode .pdoc-code .nt { color: #f92672 } /* Name.Tag */
+body.dark-mode .pdoc-code .nv { color: #f8f8f2 } /* Name.Variable */
+body.dark-mode .pdoc-code .ow { color: #f92672 } /* Operator.Word */
+body.dark-mode .pdoc-code .w { color: #f8f8f2 } /* Text.Whitespace */
+body.dark-mode .pdoc-code .mb { color: #ae81ff } /* Literal.Number.Bin */
+body.dark-mode .pdoc-code .mf { color: #ae81ff } /* Literal.Number.Float */
+body.dark-mode .pdoc-code .mh { color: #ae81ff } /* Literal.Number.Hex */
+body.dark-mode .pdoc-code .mi { color: #ae81ff } /* Literal.Number.Integer */
+body.dark-mode .pdoc-code .mo { color: #ae81ff } /* Literal.Number.Oct */
+body.dark-mode .pdoc-code .sa { color: #e6db74 } /* Literal.String.Affix */
+body.dark-mode .pdoc-code .sb { color: #e6db74 } /* Literal.String.Backtick */
+body.dark-mode .pdoc-code .sc { color: #e6db74 } /* Literal.String.Char */
+body.dark-mode .pdoc-code .dl { color: #e6db74 } /* Literal.String.Delimiter */
+body.dark-mode .pdoc-code .sd { color: #e6db74 } /* Literal.String.Doc */
+body.dark-mode .pdoc-code .s2 { color: #e6db74 } /* Literal.String.Double */
+body.dark-mode .pdoc-code .se { color: #ae81ff } /* Literal.String.Escape */
+body.dark-mode .pdoc-code .sh { color: #e6db74 } /* Literal.String.Heredoc */
+body.dark-mode .pdoc-code .si { color: #e6db74 } /* Literal.String.Interpol */
+body.dark-mode .pdoc-code .sx { color: #e6db74 } /* Literal.String.Other */
+body.dark-mode .pdoc-code .sr { color: #e6db74 } /* Literal.String.Regex */
+body.dark-mode .pdoc-code .s1 { color: #e6db74 } /* Literal.String.Single */
+body.dark-mode .pdoc-code .ss { color: #e6db74 } /* Literal.String.Symbol */
+body.dark-mode .pdoc-code .bp { color: #f8f8f2 } /* Name.Builtin.Pseudo */
+body.dark-mode .pdoc-code .fm { color: #a6e22e } /* Name.Function.Magic */
+body.dark-mode .pdoc-code .vc { color: #f8f8f2 } /* Name.Variable.Class */
+body.dark-mode .pdoc-code .vg { color: #f8f8f2 } /* Name.Variable.Global */
+body.dark-mode .pdoc-code .vi { color: #f8f8f2 } /* Name.Variable.Instance */
+body.dark-mode .pdoc-code .vm { color: #f8f8f2 } /* Name.Variable.Magic */
+
+#themeButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px; /* Adjust as needed */
+}
+
+/* Example icons (you can replace with your preferred icons) */
+.light-mode #themeButton::before {
+  content: "☀️"; /* Sun icon for light mode */
+}
+
+.dark-mode #themeButton::before {
+  content: "🌙"; /* Moon icon for dark mode */
+}
+
+#themeButton::before {
+  content: "⚙️"; /*gear icon for auto mode */
+}
+</style>
+<script>
+function setCookie(name, value, days) {
+  let expires = "";
+  if (days) {
+    let date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    expires = "; expires=" + date.toUTCString();
+  }
+  document.cookie = name + "=" + (value || "") + expires + "; path=/";
+}
+
+function getCookie(name) {
+  let nameEQ = name + "=";
+  let ca = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+  }
+  return null;
+}
+
+function setTheme(mode) {
+  const body = document.body;
+  body.classList.remove('light-mode', 'dark-mode');
+
+  if (mode === 'light') {
+    body.classList.add('light-mode');
+    setCookie('theme', 'light', 30);
+  } else if (mode === 'dark') {
+    body.classList.add('dark-mode');
+    setCookie('theme', 'dark', 30);
+  } else if (mode === 'auto') {
+      const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if(isDarkMode){
+          body.classList.add('dark-mode');
+      } else {
+        body.classList.add('light-mode');
+      }
+      setCookie('theme', 'auto', 30);
+  }
+}
+
+function toggleTheme() {
+  const currentTheme = getCookie('theme');
+
+  if (currentTheme === 'light') {
+    setTheme('dark');
+  } else if (currentTheme === 'dark') {
+    setTheme('auto');
+  } else { /* auto or null */
+    setTheme('light');
+  }
+}
+
+/* Initial theme setup (from cookie or auto) */
+const savedTheme = getCookie('theme');
+if (savedTheme) {
+  setTheme(savedTheme);
+} else {
+    setTheme('auto'); /* defaults to auto on no saved theme */
+}
+
+/* Button event listener */
+document.getElementById('themeButton').addEventListener('click', toggleTheme);
+
+/* Listen for system theme changes for auto mode. */
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+  if (getCookie('theme') === 'auto') {
+    if (event.matches) {
+      document.body.classList.add('dark-mode');
+      document.body.classList.remove('light-mode');
+    } else {
+       document.body.classList.add('light-mode');
+       document.body.classList.remove('dark-mode');
+    }
+  }
+});
+</script>
+<!-- Theme Switcher -->
+{% enddefaultmacro%}
+
+{% defaultmacro version_switcher() %}
+{% if footer_text %}
             <!-- Version Selector -->
             <select id="tagSelect"></select>
             <script>
@@ -57,6 +360,24 @@ For example, if the `--favicon` option does not do what you want, you can specif
             </script>
             <!-- Version Selector -->
         {% endif %}
+{% enddefaultmacro %}
+
+{% defaultmacro module_name() %}
+    <h1 class="modulename">
+        {% set parts = module.modulename.split(".") %}
+        {% for part in parts %}
+            {%- set fullname = ".".join(parts[:loop.index]) -%}
+            {%- if fullname in all_modules and fullname != module.modulename -%}
+                <a href="./{{ "../" * loop.revindex0 }}{{ part }}.html">{{ part }}</a>
+            {%- else -%}
+                {{ part }}
+            {%- endif -%}
+            {%- if loop.nextitem -%}
+                <wbr>.
+            {%- endif -%}
+        {% endfor %}
+        {{ version_switcher() }}
+        {{ theme_switcher() }}
     </h1>
 {% enddefaultmacro %}
 
