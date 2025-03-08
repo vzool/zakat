@@ -2,6 +2,7 @@ import subprocess
 import pathlib
 import shutil
 import json
+import textwrap
 
 def get_git_tags_sorted():
     """
@@ -94,6 +95,31 @@ def save_tags_to_json(tags, filename="docs/tags.json"):
     except Exception as e:
         print(f"Error saving tags to JSON: {e}")
 
+def generate_sitemap(here: pathlib.Path):
+    """
+    Generates a sitemap.xml file in the specified directory, including all sub-folders.
+
+    Args:
+        here: The directory path where the sitemap.xml should be created.
+    """
+    with (here / "sitemap.xml").open("w", newline="\n") as f:
+        f.write(
+            textwrap.dedent(
+                """
+        <?xml version="1.0" encoding="utf-8"?>
+        <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+           xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+           xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd">
+        """
+            ).strip()
+        )
+        for file in here.glob("**/*.html"):
+            if file.name.startswith("_"):
+                continue
+            filename = str(file.relative_to(here).as_posix()).replace("index.html", "")
+            f.write(f"""\n<url><loc>https://vzool.github.io/zakat/{filename}</loc></url>""")
+        f.write("""\n</urlset>""")
+
 if __name__ == "__main__":
     tags = get_git_tags_sorted()
     tags = ['main'] + tags
@@ -121,4 +147,4 @@ if __name__ == "__main__":
             print("Could not return to original branch, as the original branch could not be determined.")
     else:
         print("No tags found.")
-               
+    generate_sitemap(pathlib.Path("docs"))
