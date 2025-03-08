@@ -514,7 +514,7 @@ class ZakatTracker:
         50
         '''
         if not isinstance(x, (float, int, decimal.Decimal)):
-            raise TypeError(f'Input \'{x}\' must be a float, int, or decimal.Decimal.')
+            raise TypeError(f'Input "{x}" must be a float, int, or decimal.Decimal.')
         return int(decimal.Decimal(f'{x:.{decimal_places}f}') * (10 ** decimal_places))
 
     @staticmethod
@@ -1377,7 +1377,7 @@ class ZakatTracker:
         lock = self.lock()
         if rate is not None:
             if rate <= 0:
-                return dict()
+                return {}
             if account not in self._vault['exchange']:
                 self._vault['exchange'][account] = {}
             if len(self._vault['exchange'][account]) == 0 and rate <= 1:
