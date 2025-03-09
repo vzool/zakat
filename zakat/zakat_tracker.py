@@ -2321,12 +2321,13 @@ class ZakatTracker:
                 os.remove(temp)
             return False
 
-    def load(self, path: str = None) -> bool:
+    def load(self, path: str = None, hash_required: bool = True) -> bool:
         '''
         Load the current state of the ZakatTracker object from a camel file.
 
         <b>Parameters</b>:
         - path (str): The path where the camel file is located. If not provided, it will use the default path.
+        - hash_required (bool, optional): Whether to verify the data integrity using a hash. Defaults to True.
 
         <b>Returns</b>:
         - bool: True if the load operation is successful, False otherwise.
@@ -2338,8 +2339,9 @@ class ZakatTracker:
                 with open(path, 'r', encoding='utf-8') as stream:
                     file = stream.read()
                     data, hashed = self.split_at_last_symbol(file, '#')
-                    new_hash = self.hash_data(data.encode())
-                    assert hashed == new_hash
+                    if hash_required:
+                        new_hash = self.hash_data(data.encode())
+                        assert hashed == new_hash, "Hash verification failed. File may be corrupted."
                     self._vault = camel.load(data)
                 return True
             else:
@@ -3283,8 +3285,9 @@ class ZakatTracker:
             assert os.path.getsize(_path) > 0
             self.reset()
             assert self.recall(False, debug) is False
-            self.load()
-            assert self._vault['account'] is not None
+            for status in [False, True]:
+                self.load(hash_required=status)
+                assert self._vault['account'] is not None
 
             # recall
 
