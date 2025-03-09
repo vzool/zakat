@@ -1089,7 +1089,23 @@ class ZakatTracker:
         return -1
 
     @staticmethod
-    def file_hash(file_path: str, algorithm: str = 'blake2b') -> str:
+    def hash_data(data: bytes, algorithm: str = 'blake2b') -> str:
+        """
+        Calculates the hash of given byte data using the specified algorithm.
+
+        <b>Parameters</b>:
+        - data (bytes): The byte data to hash.
+        - algorithm (str, optional): The hashing algorithm to use. Defaults to 'blake2b'.
+
+        <b>Returns</b>:
+        - str: The hexadecimal representation of the data's hash.
+        """
+        hash_obj = hashlib.new(algorithm)
+        hash_obj.update(data)
+        return hash_obj.hexdigest()
+
+    @staticmethod
+    def hash_file(file_path: str, algorithm: str = 'blake2b') -> str:
         '''
         Calculates the hash of a file using the specified algorithm.
 
@@ -1142,7 +1158,7 @@ class ZakatTracker:
         <b>Returns</b>:
         - bool: True if a snapshot with the same hash already exists or if the snapshot is successfully created. False if the snapshot creation fails.
         '''
-        current_hash = self.file_hash(self.path())
+        current_hash = self.hash_file(self.path())
         cache: dict[str, int] = {}  # hash: time_ns
         try:
             with open(self.snapshot_cache_path(), 'r', encoding='utf-8') as stream:
@@ -1181,14 +1197,14 @@ class ZakatTracker:
         if not cache:
             return {}
         result: dict[int, tuple[str, str, bool]] = {}  # time_ns: (hash, path, exists)
-        for file_hash, ref in cache.items():
+        for hash_file, ref in cache.items():
             path = self.base_path('snapshots', f'{ref}.{self.ext()}')
             exists = os.path.exists(path)
-            valid_hash = self.file_hash(path) == file_hash if verified_hash_only else True
+            valid_hash = self.hash_file(path) == hash_file if verified_hash_only else True
             if (verified_hash_only and not valid_hash) or (verified_hash_only and not exists):
                 continue
             if exists or not hide_missing:
-                result[ref] = (file_hash, path, exists)
+                result[ref] = (hash_file, path, exists)
         return result
 
     def ref_exists(self, account: str, ref_type: str, ref: int) -> bool:
@@ -2253,6 +2269,27 @@ class ZakatTracker:
             json.dump(self._vault, file, indent=4, cls=JSONEncoder)
             return True
 
+    @staticmethod
+    def split_at_last_symbol(data, symbol):
+        """Splits a string at the last occurrence of a given symbol.
+    
+        <b>Parameters</b>:
+        - data: The input string.
+        - symbol: The symbol to split at.
+    
+        <b>Returns</b>:
+        - A tuple containing two strings: the part before the last symbol and
+            the part after the last symbol. If the symbol is not found, returns
+            (data, "").
+        """
+        last_symbol_index = data.rfind(symbol)
+    
+        if last_symbol_index != -1:
+            before_symbol = data[:last_symbol_index]
+            after_symbol = data[last_symbol_index + 1:]
+            return before_symbol, after_symbol
+        return data, ""
+
     def save(self, path: str = None) -> bool:
         '''
         Saves the ZakatTracker's current state to a camel file.
@@ -2271,7 +2308,10 @@ class ZakatTracker:
             # first save in tmp file
             temp = f'{path}.tmp'
             with open(temp, 'w', encoding='utf-8') as stream:
-                stream.write(camel.dump(self._vault))
+                data = camel.dump(self._vault)
+                hashed = self.hash_data(data.encode())
+                stream.write(data)
+                stream.write(f'#{hashed}')
             # then move tmp file to original location
             shutil.move(temp, path)
             return True
@@ -2296,7 +2336,11 @@ class ZakatTracker:
         try:
             if os.path.exists(path):
                 with open(path, 'r', encoding='utf-8') as stream:
-                    self._vault = camel.load(stream.read())
+                    file = stream.read()
+                    data, hashed = self.split_at_last_symbol(file, '#')
+                    new_hash = self.hash_data(data.encode())
+                    assert hashed == new_hash
+                    self._vault = camel.load(data)
                 return True
             else:
                 print(f'File not found: {path}')
@@ -2795,6 +2839,24 @@ class ZakatTracker:
             assert date.hour == 18
             assert date.minute == 30
             assert date.second in [44, 45]
+
+        # test ZakatTracker.split_at_last_symbol
+
+        test_cases = [
+            ("This is a string @ with a symbol.", '@', ("This is a string ", " with a symbol.")),
+            ("No symbol here.", '$', ("No symbol here.", "")),
+            ("Multiple $ symbols $ in the string.", '$', ("Multiple $ symbols ", " in the string.")),
+            ("Here is a symbol%", '%', ("Here is a symbol", "")),
+            ("@only a symbol", '@', ("", "only a symbol")),
+            ("", '#', ("", "")),
+            ("test/test/test.txt", '/', ("test/test", "test.txt")),
+            ("abc#def#ghi", "#", ("abc#def", "ghi")),
+            ("abc", "#", ("abc", ""))
+        ]
+        
+        for data, symbol, expected in test_cases:
+            result = ZakatTracker.split_at_last_symbol(data, symbol)
+            assert result == expected, f"Test failed for data='{data}', symbol='{symbol}'. Expected {expected}, got {result}"
 
         # human_readable_size
 
