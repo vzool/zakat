@@ -1373,8 +1373,6 @@ class ZakatTracker:
             created = self.time()
         if created <= 0:
             raise ValueError('The created should be greater than zero.')
-        no_lock = self.nolock()
-        lock = self.lock()
         if rate is not None:
             if rate <= 0:
                 return {}
@@ -1382,6 +1380,8 @@ class ZakatTracker:
                 self._vault['exchange'][account] = {}
             if len(self._vault['exchange'][account]) == 0 and rate <= 1:
                 return {'time': created, 'rate': 1, 'description': None}
+            no_lock = self.nolock()
+            lock = self.lock()
             self._vault['exchange'][account][created] = {'rate': rate, 'description': description}
             self._step(Action.EXCHANGE, account, ref=created, value=rate)
             if no_lock:
@@ -2412,6 +2412,8 @@ class ZakatTracker:
         if bad:
             return created, found, bad
 
+        no_lock = self.nolock()
+        lock = self.lock()
         for date, rows in sorted(data.items()):
             try:
                 len_rows = len(rows)
@@ -2472,6 +2474,8 @@ class ZakatTracker:
                 break
         with open(self.import_csv_cache_path(), 'w', encoding='utf-8') as stream:
             stream.write(camel.dump(cache))
+        if no_lock:
+            self.free(lock)
         return created, found, bad
 
     ########
@@ -3148,7 +3152,7 @@ class ZakatTracker:
                 ),
             ]
             for z in transaction:
-                self.lock()
+                lock = self.lock()
                 x = z[1]
                 y = z[2]
                 self.transfer(
@@ -3192,20 +3196,21 @@ class ZakatTracker:
 
                 assert self.box_size(y) == z[11]
                 assert self.log_size(y) == z[12]
-                assert self.free(self.lock())
+                assert self.free(lock)
 
             if debug:
                 pp().pprint(self.check(2.17))
 
-            assert not self.nolock()
+            assert self.nolock()
             history_count = len(self._vault['history'])
             if debug:
                 print('history-count', history_count)
-            assert history_count == 4
+            transaction_count = len(transaction)
+            assert history_count == transaction_count
             assert not self.free(ZakatTracker.time())
             assert self.free(self.lock())
             assert self.nolock()
-            assert len(self._vault['history']) == 3
+            assert len(self._vault['history']) == transaction_count
 
             # storage
 
@@ -3238,6 +3243,8 @@ class ZakatTracker:
             self.exchange('cash', 22, 3.73, '2024-06-22')
             self.exchange('cash', 15, 3.69, '2024-06-15')
             self.exchange('cash', 10, 3.66)
+
+            assert self.nolock()
 
             for i in range(1, 30):
                 exchange = self.exchange('cash', i)
@@ -3274,11 +3281,12 @@ class ZakatTracker:
                 assert rate == 1
                 assert description is None
 
-            assert len(self._vault['exchange']) > 0
-            assert len(self.exchanges()) > 0
+            assert len(self._vault['exchange']) == 1
+            assert len(self.exchanges()) == 1
             self._vault['exchange'].clear()
             assert len(self._vault['exchange']) == 0
             assert len(self.exchanges()) == 0
+            self.reset()
 
             # حفظ أسعار الصرف باستخدام التواريخ بالنانو ثانية
             self.exchange('cash', ZakatTracker.day_to_time(25), 3.75, '2024-06-25')
@@ -3286,13 +3294,17 @@ class ZakatTracker:
             self.exchange('cash', ZakatTracker.day_to_time(15), 3.69, '2024-06-15')
             self.exchange('cash', ZakatTracker.day_to_time(10), 3.66)
 
+            assert self.nolock()
+
             for i in [x * 0.12 for x in range(-15, 21)]:
                 if i <= 0:
                     assert len(self.exchange('test', ZakatTracker.time(), i, f'range({i})')) == 0
                 else:
                     assert len(self.exchange('test', ZakatTracker.time(), i, f'range({i})')) > 0
 
-            # اختبار النتائج باستخدام التواريخ بالنانو ثانية
+            assert self.nolock()
+
+           # اختبار النتائج باستخدام التواريخ بالنانو ثانية
             for i in range(1, 31):
                 timestamp_ns = ZakatTracker.day_to_time(i)
                 exchange = self.exchange('cash', timestamp_ns)
@@ -3329,133 +3341,7 @@ class ZakatTracker:
                 assert rate == 1
                 assert description is None
 
-            # csv
-
-            csv_count = 1000
-
-            for with_rate, path in {
-                False: 'test-import_csv-no-exchange',
-                True: 'test-import_csv-with-exchange',
-            }.items():
-
-                if debug:
-                    print('test_import_csv', with_rate, path)
-
-                csv_path = path + '.csv'
-                if os.path.exists(csv_path):
-                    os.remove(csv_path)
-                c = self.generate_random_csv_file(csv_path, csv_count, with_rate, debug)
-                if debug:
-                    print('generate_random_csv_file', c)
-                assert c == csv_count
-                assert os.path.getsize(csv_path) > 0
-                cache_path = self.import_csv_cache_path()
-                if os.path.exists(cache_path):
-                    os.remove(cache_path)
-                self.reset()
-                (created, found, bad) = self.import_csv(csv_path, debug)
-                bad_count = len(bad)
-                assert bad_count > 0
-                if debug:
-                    print(f'csv-imported: ({created}, {found}, {bad_count}) = count({csv_count})')
-                    print('bad', bad)
-                tmp_size = os.path.getsize(cache_path)
-                assert tmp_size > 0
-                # TODO: assert created + found + bad_count == csv_count
-                # TODO: assert created == csv_count
-                # TODO: assert bad_count == 0
-                (created_2, found_2, bad_2) = self.import_csv(csv_path)
-                bad_2_count = len(bad_2)
-                if debug:
-                    print(f'csv-imported: ({created_2}, {found_2}, {bad_2_count})')
-                    print('bad', bad)
-                assert bad_2_count > 0
-                # TODO: assert tmp_size == os.path.getsize(cache_path)
-                # TODO: assert created_2 + found_2 + bad_2_count == csv_count
-                # TODO: assert created == found_2
-                # TODO: assert bad_count == bad_2_count
-                # TODO: assert found_2 == csv_count
-                # TODO: assert bad_2_count == 0
-                # TODO: assert created_2 == 0
-
-                # payment parts
-
-                positive_parts = self.build_payment_parts(100, positive_only=True)
-                assert self.check_payment_parts(positive_parts) != 0
-                assert self.check_payment_parts(positive_parts) != 0
-                all_parts = self.build_payment_parts(300, positive_only=False)
-                assert self.check_payment_parts(all_parts) != 0
-                assert self.check_payment_parts(all_parts) != 0
-                if debug:
-                    pp().pprint(positive_parts)
-                    pp().pprint(all_parts)
-                # dynamic discount
-                suite = []
-                count = 3
-                for exceed in [False, True]:
-                    case = []
-                    for parts in [positive_parts, all_parts]:
-                        part = parts.copy()
-                        demand = part['demand']
-                        if debug:
-                            print(demand, part['total'])
-                        i = 0
-                        z = demand / count
-                        cp = {
-                            'account': {},
-                            'demand': demand,
-                            'exceed': exceed,
-                            'total': part['total'],
-                        }
-                        j = ''
-                        for x, y in part['account'].items():
-                            x_exchange = self.exchange(x)
-                            zz = self.exchange_calc(z, 1, x_exchange['rate'])
-                            if exceed and zz <= demand:
-                                i += 1
-                                y['part'] = zz
-                                if debug:
-                                    print(exceed, y)
-                                cp['account'][x] = y
-                                case.append(y)
-                            elif not exceed and y['balance'] >= zz:
-                                i += 1
-                                y['part'] = zz
-                                if debug:
-                                    print(exceed, y)
-                                cp['account'][x] = y
-                                case.append(y)
-                            j = x
-                            if i >= count:
-                                break
-                        if len(cp['account'][j]) > 0:
-                            suite.append(cp)
-                if debug:
-                    print('suite', len(suite))
-                # vault = self._vault.copy()
-                for case in suite:
-                    # self._vault = vault.copy()
-                    if debug:
-                        print('case', case)
-                    result = self.check_payment_parts(case)
-                    if debug:
-                        print('check_payment_parts', result, f'exceed: {exceed}')
-                    assert result == 0
-
-                    report = self.check(2.17, None, debug)
-                    (valid, brief, plan) = report
-                    if debug:
-                        print('valid', valid)
-                    zakat_result = self.zakat(report, parts=case, debug=debug)
-                    if debug:
-                        print('zakat-result', zakat_result)
-                    assert valid == zakat_result
-
-            assert self.save(path + f'.{self.ext()}')
-            assert self.export_json(path + '.json')
-
-            assert self.export_json('1000-transactions-test.json')
-            assert self.save(f'1000-transactions-test.{self.ext()}')
+            assert self.nolock()
 
             self.reset()
 
@@ -3717,6 +3603,138 @@ class ZakatTracker:
             assert report_size == 0
 
             assert self.nolock()
+
+            # csv
+
+            csv_count = 1000
+
+            assert lock > 0
+            for with_rate, path in {
+                False: 'test-import_csv-no-exchange',
+                True: 'test-import_csv-with-exchange',
+            }.items():
+
+                if debug:
+                    print('test_import_csv', with_rate, path)
+
+                csv_path = path + '.csv'
+                if os.path.exists(csv_path):
+                    os.remove(csv_path)
+                c = self.generate_random_csv_file(csv_path, csv_count, with_rate, debug)
+                if debug:
+                    print('generate_random_csv_file', c)
+                assert c == csv_count
+                assert os.path.getsize(csv_path) > 0
+                cache_path = self.import_csv_cache_path()
+                if os.path.exists(cache_path):
+                    os.remove(cache_path)
+                self.reset()
+                lock = self.lock()
+                (created, found, bad) = self.import_csv(csv_path, debug)
+                bad_count = len(bad)
+                assert bad_count > 0
+                if debug:
+                    print(f'csv-imported: ({created}, {found}, {bad_count}) = count({csv_count})')
+                    print('bad', bad)
+                tmp_size = os.path.getsize(cache_path)
+                assert tmp_size > 0
+                # TODO: assert created + found + bad_count == csv_count
+                # TODO: assert created == csv_count
+                # TODO: assert bad_count == 0
+                (created_2, found_2, bad_2) = self.import_csv(csv_path)
+                bad_2_count = len(bad_2)
+                if debug:
+                    print(f'csv-imported: ({created_2}, {found_2}, {bad_2_count})')
+                    print('bad', bad)
+                assert bad_2_count > 0
+                # TODO: assert tmp_size == os.path.getsize(cache_path)
+                # TODO: assert created_2 + found_2 + bad_2_count == csv_count
+                # TODO: assert created == found_2
+                # TODO: assert bad_count == bad_2_count
+                # TODO: assert found_2 == csv_count
+                # TODO: assert bad_2_count == 0
+                # TODO: assert created_2 == 0
+
+                # payment parts
+
+                positive_parts = self.build_payment_parts(100, positive_only=True)
+                assert self.check_payment_parts(positive_parts) != 0
+                assert self.check_payment_parts(positive_parts) != 0
+                all_parts = self.build_payment_parts(300, positive_only=False)
+                assert self.check_payment_parts(all_parts) != 0
+                assert self.check_payment_parts(all_parts) != 0
+                if debug:
+                    pp().pprint(positive_parts)
+                    pp().pprint(all_parts)
+                # dynamic discount
+                suite = []
+                count = 3
+                for exceed in [False, True]:
+                    case = []
+                    for parts in [positive_parts, all_parts]:
+                        part = parts.copy()
+                        demand = part['demand']
+                        if debug:
+                            print(demand, part['total'])
+                        i = 0
+                        z = demand / count
+                        cp = {
+                            'account': {},
+                            'demand': demand,
+                            'exceed': exceed,
+                            'total': part['total'],
+                        }
+                        j = ''
+                        for x, y in part['account'].items():
+                            x_exchange = self.exchange(x)
+                            zz = self.exchange_calc(z, 1, x_exchange['rate'])
+                            if exceed and zz <= demand:
+                                i += 1
+                                y['part'] = zz
+                                if debug:
+                                    print(exceed, y)
+                                cp['account'][x] = y
+                                case.append(y)
+                            elif not exceed and y['balance'] >= zz:
+                                i += 1
+                                y['part'] = zz
+                                if debug:
+                                    print(exceed, y)
+                                cp['account'][x] = y
+                                case.append(y)
+                            j = x
+                            if i >= count:
+                                break
+                        if len(cp['account'][j]) > 0:
+                            suite.append(cp)
+                if debug:
+                    print('suite', len(suite))
+                # vault = self._vault.copy()
+                for case in suite:
+                    # self._vault = vault.copy()
+                    if debug:
+                        print('case', case)
+                    result = self.check_payment_parts(case)
+                    if debug:
+                        print('check_payment_parts', result, f'exceed: {exceed}')
+                    assert result == 0
+
+                    report = self.check(2.17, None, debug)
+                    (valid, brief, plan) = report
+                    if debug:
+                        print('valid', valid)
+                    zakat_result = self.zakat(report, parts=case, debug=debug)
+                    if debug:
+                        print('zakat-result', zakat_result)
+                    assert valid == zakat_result
+
+                assert self.free(lock)
+
+            assert self.save(path + f'.{self.ext()}')
+            assert self.export_json(path + '.json')
+
+            assert self.export_json('1000-transactions-test.json')
+            assert self.save(f'1000-transactions-test.{self.ext()}')
             return True
         except Exception as e:
             # pp().pprint(self._vault)
