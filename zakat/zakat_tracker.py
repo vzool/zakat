@@ -3283,17 +3283,28 @@ class ZakatTracker:
             _path = self.path(f'./zakat_test_db/test.{self.ext()}')
             if os.path.exists(_path):
                 os.remove(_path)
-            for x in [False, True]:
-                self.save(hash_required=x)
+            for hashed in [False, True]:
+                self.save(hash_required=hashed)
                 assert os.path.getsize(_path) > 0
                 self.reset()
                 assert self.recall(False, debug) is False
-                for y in [False, True]:
+                for hash_required in [False, True]:
                     if debug:
-                        print(f'[storage] save({x}) and load({y}) = {x and y}')
-                    self.load(hash_required=x and y)
+                        print(f'[storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
+                    self.load(hash_required=hashed and hash_required)
                     assert self._vault['account'] is not None
-                    
+                if hashed:
+                    continue
+                failed = False
+                try:
+                    hash_required = True
+                    if debug:
+                        print(f'x [storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
+                    self.load(hash_required=True)
+                except:
+                    failed = True
+                assert failed
+
             # recall
 
             assert self.nolock()
