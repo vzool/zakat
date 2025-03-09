@@ -2290,7 +2290,7 @@ class ZakatTracker:
             return before_symbol, after_symbol
         return data, ""
 
-    def save(self, path: str = None) -> bool:
+    def save(self, path: str = None, hash_required: bool = True) -> bool:
         '''
         Saves the ZakatTracker's current state to a camel file.
 
@@ -2298,6 +2298,7 @@ class ZakatTracker:
 
         <b>Parameters</b>:
         - path (str, optional): File path for saving. Defaults to a predefined location.
+        - hash_required (bool, optional): Whether to add the data integrity using a hash. Defaults to True.
 
         <b>Returns</b>:
         - bool: True if the save operation is successful, False otherwise.
@@ -2309,9 +2310,10 @@ class ZakatTracker:
             temp = f'{path}.tmp'
             with open(temp, 'w', encoding='utf-8') as stream:
                 data = camel.dump(self._vault)
-                hashed = self.hash_data(data.encode())
                 stream.write(data)
-                stream.write(f'#{hashed}')
+                if hash_required:
+                    hashed = self.hash_data(data.encode())
+                    stream.write(f'#{hashed}')
             # then move tmp file to original location
             shutil.move(temp, path)
             return True
@@ -3281,14 +3283,17 @@ class ZakatTracker:
             _path = self.path(f'./zakat_test_db/test.{self.ext()}')
             if os.path.exists(_path):
                 os.remove(_path)
-            self.save()
-            assert os.path.getsize(_path) > 0
-            self.reset()
-            assert self.recall(False, debug) is False
-            for status in [False, True]:
-                self.load(hash_required=status)
-                assert self._vault['account'] is not None
-
+            for x in [False, True]:
+                self.save(hash_required=x)
+                assert os.path.getsize(_path) > 0
+                self.reset()
+                assert self.recall(False, debug) is False
+                for y in [False, True]:
+                    if debug:
+                        print(f'[storage] save({x}) and load({y}) = {x and y}')
+                    self.load(hash_required=x and y)
+                    assert self._vault['account'] is not None
+                    
             # recall
 
             assert self.nolock()
