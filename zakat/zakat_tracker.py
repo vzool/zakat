@@ -1,4 +1,4 @@
-'''
+"""
 'رَبَّنَا افْتَحْ بَيْنَنَا وَبَيْنَ قَوْمِنَا بِالْحَقِّ وَأَنتَ خَيْرُ الْفَاتِحِينَ (89)' -- سورة الأعراف
 
 ```
@@ -54,7 +54,7 @@ In this file docstring:
 5.  We provide a simple usage example to illustrate how to use the `ZakatTracker` class.
 
 Feel free to suggest any modifications or additions to tailor this file docstring to your preferences.
-'''
+"""
 import os
 import sys
 import csv
@@ -75,7 +75,7 @@ import camelx
 
 
 class WeekDay(enum.Enum):
-    '''
+    """
     Enumeration representing the days of the week.
 
     <b>Members</b>:
@@ -86,7 +86,7 @@ class WeekDay(enum.Enum):
         - FRIDAY: Represents Friday (4).
         - SATURDAY: Represents Saturday (5).
         - SUNDAY: Represents Sunday (6).
-    '''
+    """
     MONDAY = 0
     TUESDAY = 1
     WEDNESDAY = 2
@@ -97,7 +97,7 @@ class WeekDay(enum.Enum):
 
 
 class Action(enum.Enum):
-    '''
+    """
     Enumeration representing various actions that can be performed.
 
     <b>Members</b>:
@@ -111,7 +111,7 @@ class Action(enum.Enum):
         - EXCHANGE: Represents the exchange action (7).
         - REPORT: Represents the reporting action (8).
         - ZAKAT: Represents a Zakat related action (9).
-    '''
+    """
     CREATE = 0
     TRACK = 1
     LOG = 2
@@ -125,21 +125,21 @@ class Action(enum.Enum):
 
 
 class MathOperation(enum.Enum):
-    '''
+    """
     Enumeration representing mathematical operations.
 
     <b>Members</b>:
         - ADDITION: Represents the addition operation (0).
         - EQUAL: Represents the equality operation (1).
         - SUBTRACTION: Represents the subtraction operation (2).
-    '''
+    """
     ADDITION = 0
     EQUAL = 1
     SUBTRACTION = 2
 
 
 class JSONEncoder(json.JSONEncoder):
-    '''
+    """
     Custom JSON encoder to handle specific object types.
 
     This encoder overrides the default `default` method to serialize:
@@ -151,9 +151,9 @@ class JSONEncoder(json.JSONEncoder):
         ''CREATE''
         >>> json.dumps(decimal.Decimal('10.5'), cls=JSONEncoder)
         '10.5'
-    '''
+    """
     def default(self, o):
-        '''
+        """
         Overrides the default `default` method to serialize specific object types.
 
         <b>Parameters</b>:
@@ -161,7 +161,7 @@ class JSONEncoder(json.JSONEncoder):
 
         <b>Returns</b>:
         - The serialized object.
-        '''
+        """
         if isinstance(o, (Action, MathOperation)):
             return o.name  # Serialize as the enum member's name
         if isinstance(o, decimal.Decimal):
@@ -170,7 +170,7 @@ class JSONEncoder(json.JSONEncoder):
 
 
 def print_stack(simple: bool = True, local: bool = False, skip_first: bool = True):
-    '''
+    """
     Prints the current function call stack.
 
     <b>Parameters</b>:
@@ -207,7 +207,7 @@ def print_stack(simple: bool = True, local: bool = False, skip_first: bool = Tru
           Local Variables:
             local_var = local_value
         ...
-    '''
+    """
     for frame_info in inspect.stack():
         if skip_first:
             skip_first = False
@@ -267,7 +267,7 @@ camel = camelx.Camel([camel_registry])
 
 
 class ZakatTracker:
-    '''
+    """
     A class for tracking and calculating Zakat.
 
     This class provides functionalities for recording transactions, calculating Zakat due,
@@ -337,11 +337,11 @@ class ZakatTracker:
             - report (dict):
                 - {timestamp} (tuple): A tuple storing Zakat report details.
 
-    '''
+    """
 
     @staticmethod
     def Version() -> str:
-        '''
+        """
         Returns the current version of the software.
 
         This function returns a string representing the current version of the software,
@@ -349,12 +349,12 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - str: The current version of the software.
-        '''
+        """
         return '0.2.99'
 
     @staticmethod
     def ZakatCut(x: float) -> float:
-        '''
+        """
         Calculates the Zakat amount due on an asset.
 
         This function calculates the zakat amount due on a given asset value over one lunar year.
@@ -366,12 +366,12 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - float: The amount of Zakat due on the asset, calculated as 2.5% of the asset's value.
-        '''
+        """
         return 0.025 * x  # Zakat Cut in one Lunar Year
 
     @staticmethod
     def TimeCycle(days: int = 355) -> int:
-        '''
+        """
         Calculates the approximate duration of a lunar year in nanoseconds.
 
         This function calculates the approximate duration of a lunar year based on the given number of days.
@@ -383,12 +383,12 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - int: The approximate duration of a lunar year in nanoseconds.
-        '''
+        """
         return int(60 * 60 * 24 * days * 1e9)  # Lunar Year in nanoseconds
 
     @staticmethod
     def Nisab(gram_price: float, gram_quantity: float = 595) -> float:
-        '''
+        """
         Calculate the total value of Nisab (a unit of weight in Islamic jurisprudence) based on the given price per gram.
 
         This function calculates the Nisab value, which is the minimum threshold of wealth,
@@ -402,12 +402,12 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - float: The total value of Nisab based on the given price per gram.
-        '''
+        """
         return gram_price * gram_quantity
 
     @staticmethod
     def ext() -> str:
-        '''
+        """
         Returns the file extension used by the ZakatTracker class.
 
         <b>Parameters</b>:
@@ -415,11 +415,11 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - str: The file extension used by the ZakatTracker class, which is 'camel'.
-        '''
+        """
         return 'camel'
 
     def __init__(self, db_path: str = './zakat_db/', history_mode: bool = True):
-        '''
+        """
         Initialize ZakatTracker with database path and history mode.
 
         <b>Parameters</b>:
@@ -428,7 +428,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         None
-        '''
+        """
         self._base_path = None
         self._vault_path = None
         self._vault = None
@@ -437,7 +437,7 @@ class ZakatTracker:
         self.path(f'{db_path}/db.{self.ext()}')
 
     def path(self, path: str = None) -> str:
-        '''
+        """
         Set or get the path to the database file.
 
         If no path is provided, the current path is returned.
@@ -449,7 +449,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - str: The current or new path to the database file.
-        '''
+        """
         if path is None:
             return self._vault_path
         self._vault_path = pathlib.Path(path).resolve()
@@ -461,7 +461,7 @@ class ZakatTracker:
         return str(self._vault_path)
 
     def base_path(self, *args) -> str:
-        '''
+        """
         Generate a base path by joining the provided arguments with the existing base path.
 
         <b>Parameters</b>:
@@ -469,7 +469,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - str: The generated base path. If no arguments are provided, the existing base path is returned.
-        '''
+        """
         if not args:
             return str(self._base_path)
         filtered_args = []
@@ -488,7 +488,7 @@ class ZakatTracker:
 
     @staticmethod
     def scale(x: float | int | decimal.Decimal, decimal_places: int = 2) -> int:
-        '''
+        """
         Scales a numerical value by a specified power of 10, returning an integer.
 
         This function is designed to handle various numeric types (`float`, `int`, or `decimal.Decimal`) and
@@ -510,16 +510,16 @@ class ZakatTracker:
         314
         >>> ZakatTracker.scale(1234, decimal_places=3)
         1234000
-        >>> ZakatTracker.scale(Decimal('0.005'), decimal_places=4)
+        >>> ZakatTracker.scale(decimal.Decimal('0.005'), decimal_places=4)
         50
-        '''
+        """
         if not isinstance(x, (float, int, decimal.Decimal)):
             raise TypeError(f'Input "{x}" must be a float, int, or decimal.Decimal.')
         return int(decimal.Decimal(f'{x:.{decimal_places}f}') * (10 ** decimal_places))
 
     @staticmethod
     def unscale(x: int, return_type: type = float, decimal_places: int = 2) -> float | decimal.Decimal:
-        '''
+        """
         Unscales an integer by a power of 10.
 
         <b>Parameters</b>:
@@ -532,13 +532,13 @@ class ZakatTracker:
 
         <b>Raises</b>:
         - TypeError: If the return_type is not float or decimal.Decimal.
-        '''
+        """
         if return_type not in (float, decimal.Decimal):
             raise TypeError(f'Invalid return_type({return_type}). Supported types are float, int, and decimal.Decimal.')
         return round(return_type(x / (10 ** decimal_places)), decimal_places)
 
     def reset(self) -> None:
-        '''
+        """
         Reset the internal data structure to its initial state.
 
         <b>Parameters</b>:
@@ -546,7 +546,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         None
-        '''
+        """
         self._vault = {
             'account': {},
             'exchange': {},
@@ -560,7 +560,7 @@ class ZakatTracker:
 
     @staticmethod
     def minimum_time_diff_ns() -> tuple[int, int]:
-        '''
+        """
         Calculates the minimum time difference between two consecutive calls to
         `ZakatTracker._time()` in nanoseconds.
 
@@ -568,10 +568,10 @@ class ZakatTracker:
         time measurements within the system.
 
         <b>Returns</b>:
-        tuple[int, int]:
+        - tuple[int, int]:
             - The minimum time difference in nanoseconds.
             - The number of iterations required to measure the difference.
-        '''
+        """
         i = 0
         x = y = ZakatTracker._time()
         while x == y:
@@ -581,7 +581,7 @@ class ZakatTracker:
 
     @staticmethod
     def _time(now: datetime.datetime = None) -> int:
-        '''
+        """
         Internal method to generate a nanosecond-precision timestamp from a datetime object.
 
         <b>Parameters</b>:
@@ -590,7 +590,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - int: The timestamp in nanoseconds since the epoch (January 1, 1AD).
-        '''
+        """
         if now is None:
             now = datetime.datetime.now()
         ns_in_day = (now - now.replace(
@@ -603,7 +603,7 @@ class ZakatTracker:
 
     @staticmethod
     def time(now: datetime.datetime = None) -> int:
-        '''
+        """
         Generates a unique, monotonically increasing timestamp based on the provided
         datetime object or the current datetime.
 
@@ -617,7 +617,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - int: The unique timestamp in nanoseconds since the epoch (January 1, 1AD).
-        '''
+        """
         new_time = ZakatTracker._time(now)
         if ZakatTracker._last_time_ns is None:
             ZakatTracker._last_time_ns = new_time
@@ -633,7 +633,7 @@ class ZakatTracker:
 
     @staticmethod
     def time_to_datetime(ordinal_ns: int) -> datetime.datetime:
-        '''
+        """
         Converts a nanosecond-precision timestamp (ordinal number of nanoseconds since 1AD)
         back to a datetime object.
 
@@ -642,13 +642,13 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - datetime.datetime: The corresponding datetime object.
-        '''
+        """
         d = datetime.datetime.fromordinal(ordinal_ns // 86_400_000_000_000)
         t = datetime.timedelta(seconds=(ordinal_ns % 86_400_000_000_000) // 10 ** 9)
         return datetime.datetime.combine(d, datetime.time()) + t
 
     def clean_history(self, lock: int | None = None) -> int:
-        '''
+        """
         Cleans up the empty history records of actions performed on the ZakatTracker instance.
 
         <b>Parameters</b>:
@@ -657,7 +657,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - int: The number of locks cleaned up.
-        '''
+        """
         count = 0
         if lock in self._vault['history']:
             if len(self._vault['history'][lock]) <= 0:
@@ -672,7 +672,7 @@ class ZakatTracker:
         return count
 
     def _history(self, status: bool = None) -> bool:
-        '''
+        """
         Enable or disable history tracking.
 
         <b>Parameters</b>:
@@ -680,14 +680,14 @@ class ZakatTracker:
 
         <b>Returns</b>:
         None
-        '''
+        """
         if status is not None:
             self._history_mode = status
         return self._history_mode
 
     def _step(self, action: Action = None, account: str = None, ref: int = None, file: int = None, value: float = None,
               key: str = None, math_operation: MathOperation = None, lock_once: bool = True, debug: bool = False) -> int:
-        '''
+        """
         This method is responsible for recording the actions performed on the ZakatTracker.
 
         <b>Parameters</b>:
@@ -703,7 +703,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - int: The lock time of the recorded action. If no lock was performed, it returns 0.
-        '''
+        """
         if not self._history():
             return 0
         no_lock = self.nolock()
@@ -731,7 +731,7 @@ class ZakatTracker:
         return lock
 
     def nolock(self) -> bool:
-        '''
+        """
         Check if the vault lock is currently not set.
 
         <b>Parameters</b>:
@@ -739,11 +739,11 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - bool: True if the vault lock is not set, False otherwise.
-        '''
+        """
         return self._vault['lock'] is None
 
     def _lock(self) -> int:
-        '''
+        """
         Acquires a lock, potentially repeatedly, by calling the internal `_step` method.
 
         This method specifically invokes the `_step` method with `lock_once` set to `False`
@@ -752,11 +752,11 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - int: The status code or result returned by the `_step` method, indicating theoutcome of the lock acquisition attempt.
-        '''
+        """
         return self._step(lock_once=False)
 
     def lock(self) -> int:
-        '''
+        """
         Acquires a lock on the ZakatTracker instance.
 
         <b>Parameters</b>:
@@ -764,11 +764,11 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - int: The lock ID. This ID can be used to release the lock later.
-        '''
+        """
         return self._step()
 
     def steps(self) -> dict:
-        '''
+        """
         Returns a copy of the history of steps taken in the ZakatTracker.
 
         The history is a dictionary where each key is a unique identifier for a step,
@@ -779,11 +779,11 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - dict: A copy of the history of steps taken in the ZakatTracker.
-        '''
+        """
         return self._vault['history'].copy()
 
     def free(self, lock: int, auto_save: bool = True) -> bool:
-        '''
+        """
         Releases the lock on the database.
 
         <b>Parameters</b>:
@@ -792,7 +792,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - bool: True if the lock is successfully released and (optionally) saved, False otherwise.
-        '''
+        """
         if lock == self._vault['lock']:
             self.clean_history(lock)
             self._vault['lock'] = None
@@ -802,7 +802,7 @@ class ZakatTracker:
         return False
 
     def recall(self, dry: bool = True, debug: bool = False) -> bool:
-        '''
+        """
         Revert the last operation.
 
         <b>Parameters</b>:
@@ -811,7 +811,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - bool: True if the operation was successful, False otherwise.
-        '''
+        """
         if not self.nolock() or len(self._vault['history']) == 0:
             return False
         if len(self._vault['history']) <= 0:
@@ -951,7 +951,7 @@ class ZakatTracker:
         return True
 
     def vault(self) -> dict:
-        '''
+        """
         Returns a copy of the internal vault dictionary.
 
         This method is used to retrieve the current state of the ZakatTracker object.
@@ -963,11 +963,12 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - dict: A copy of the internal vault dictionary.
-        '''
+        """
         return self._vault.copy()
 
-    def stats_init(self) -> dict[str, tuple[int, str]]:
-        '''
+    @staticmethod
+    def stats_init() -> dict[str, tuple[int, str]]:
+        """
         Initialize and return a dictionary containing initial statistics for the ZakatTracker instance.
 
         The dictionary contains two keys: 'database' and 'ram'. Each key maps to a tuple containing two elements:
@@ -979,14 +980,14 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - dict[str, tuple]: A dictionary with initial statistics for the ZakatTracker instance.
-        '''
+        """
         return {
             'database': (0, '0'),
             'ram': (0, '0'),
         }
 
     def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
-        '''
+        """
         Calculates and returns statistics about the object's data storage.
 
         This method determines the size of the database file on disk and the
@@ -1008,12 +1009,13 @@ class ZakatTracker:
                 - The RAM usage in human-readable format (str).
 
         <b>Example</b>:
-        >>> stats = my_object.stats()
+        >>> x = ZakatTracker()
+        >>> stats = x.stats()
         >>> print(stats['database'])
         (256000, '250.0 KB')
         >>> print(stats['ram'])
         (12345, '12.1 KB')
-        '''
+        """
         ram_size = 0.0 if ignore_ram else self.get_dict_size(self.vault())
         file_size = os.path.getsize(self.path())
         return {
@@ -1022,7 +1024,7 @@ class ZakatTracker:
         }
 
     def files(self) -> list[dict[str, str | int]]:
-        '''
+        """
         Retrieves information about files associated with this class.
 
         This class method provides a standardized way to gather details about
@@ -1047,7 +1049,7 @@ class ZakatTracker:
         for info in file_info:
             print(f'Type: {info['type']}, Exists: {info['exists']}, Size: {info['human_readable_size']}')
         ```
-        '''
+        """
         result = []
         for file_type, path in {
             'database': self.path(),
@@ -1067,7 +1069,7 @@ class ZakatTracker:
         return result
 
     def account_exists(self, account) -> bool:
-        '''
+        """
         Check if the given account exists in the vault.
 
         <b>Parameters</b>:
@@ -1075,11 +1077,11 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - bool: True if the account exists, False otherwise.
-        '''
+        """
         return account in self._vault['account']
 
     def box_size(self, account) -> int:
-        '''
+        """
         Calculate the size of the box for a specific account.
 
         <b>Parameters</b>:
@@ -1087,13 +1089,13 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - int: The size of the box for the given account. If the account does not exist, -1 is returned.
-        '''
+        """
         if self.account_exists(account):
             return len(self._vault['account'][account]['box'])
         return -1
 
     def log_size(self, account) -> int:
-        '''
+        """
         Get the size of the log for a specific account.
 
         <b>Parameters</b>:
@@ -1101,7 +1103,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - int: The size of the log for the given account. If the account does not exist, -1 is returned.
-        '''
+        """
         if self.account_exists(account):
             return len(self._vault['account'][account]['log'])
         return -1
@@ -1124,7 +1126,7 @@ class ZakatTracker:
 
     @staticmethod
     def hash_file(file_path: str, algorithm: str = 'blake2b') -> str:
-        '''
+        """
         Calculates the hash of a file using the specified algorithm.
 
         <b>Parameters</b>:
@@ -1133,7 +1135,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - str: The hexadecimal representation of the file's hash.
-        '''
+        """
         hash_obj = hashlib.new(algorithm)  # Create the hash object
         with open(file_path, 'rb') as file:  # Open file in binary mode for reading
             for chunk in iter(lambda: file.read(4096), b''):  # Read file in chunks
@@ -1141,7 +1143,7 @@ class ZakatTracker:
         return hash_obj.hexdigest()  # Return the hash as a hexadecimal string
 
     def snapshot_cache_path(self):
-        '''
+        """
         Generate the path for the cache file used to store snapshots.
 
         The cache file is a camel file that stores the timestamps of the snapshots.
@@ -1152,7 +1154,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - str: The path to the cache file.
-        '''
+        """
         path = str(self.path())
         ext = self.ext()
         ext_len = len(ext)
@@ -1162,7 +1164,7 @@ class ZakatTracker:
         return self.base_path(filename)
 
     def snapshot(self) -> bool:
-        '''
+        """
         This function creates a snapshot of the current database state.
 
         The function calculates the hash of the current database file and checks if a snapshot with the same hash already exists.
@@ -1175,7 +1177,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - bool: True if a snapshot with the same hash already exists or if the snapshot is successfully created. False if the snapshot creation fails.
-        '''
+        """
         current_hash = self.hash_file(self.path())
         cache: dict[str, int] = {}  # hash: time_ns
         try:
@@ -1195,7 +1197,7 @@ class ZakatTracker:
 
     def snapshots(self, hide_missing: bool = True, verified_hash_only: bool = False) \
             -> dict[int, tuple[str, str, bool]]:
-        '''
+        """
         Retrieve a dictionary of snapshots, with their respective hashes, paths, and existence status.
 
         <b>Parameters</b>:
@@ -1205,7 +1207,7 @@ class ZakatTracker:
         <b>Returns</b>:
         - dict[int, tuple[str, str, bool]]: A dictionary where the keys are the timestamps of the snapshots,
         and the values are tuples containing the snapshot's hash, path, and existence status.
-        '''
+        """
         cache: dict[str, int] = {}  # hash: time_ns
         try:
             with open(self.snapshot_cache_path(), 'r', encoding='utf-8') as stream:
@@ -1226,7 +1228,7 @@ class ZakatTracker:
         return result
 
     def ref_exists(self, account: str, ref_type: str, ref: int) -> bool:
-        '''
+        """
         Check if a specific reference (transaction) exists in the vault for a given account and reference type.
 
         <b>Parameters</b>:
@@ -1236,13 +1238,13 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - bool: True if the reference exists for the given account and reference type, False otherwise.
-        '''
+        """
         if account in self._vault['account']:
             return ref in self._vault['account'][account][ref_type]
         return False
 
     def box_exists(self, account: str, ref: int) -> bool:
-        '''
+        """
         Check if a specific box (transaction) exists in the vault for a given account and reference.
 
         <b>Parameters</b>:
@@ -1251,13 +1253,13 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - bool: True if the box exists for the given account and reference, False otherwise.
-        '''
+        """
         return self.ref_exists(account, 'box', ref)
 
     def track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: str = 1, logging: bool = True,
               created: int = None,
               debug: bool = False) -> int:
-        '''
+        """
         This function tracks a transaction for a specific account, so it do creates a new account if it doesn't exist, logs the transaction if logging is True, and updates the account's balance and box.
 
         <b>Parameters</b>:
@@ -1275,7 +1277,7 @@ class ZakatTracker:
         - ValueError: The created should be greater than zero.
         - ValueError: The log transaction happened again in the same nanosecond time.
         - ValueError: The box transaction happened again in the same nanosecond time.
-        '''
+        """
         if debug:
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
         if created is None:
@@ -1323,7 +1325,7 @@ class ZakatTracker:
         return created
 
     def log_exists(self, account: str, ref: int) -> bool:
-        '''
+        """
         Checks if a specific transaction log entry exists for a given account.
 
         <b>Parameters</b>:
@@ -1332,12 +1334,12 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - bool: True if the transaction log entry exists, False otherwise.
-        '''
+        """
         return self.ref_exists(account, 'log', ref)
 
     def _log(self, value: float, desc: str = '', account: str = 1, created: int = None, ref: int = None,
              debug: bool = False) -> int:
-        '''
+        """
         Log a transaction into the account's log by updates the account's balance, count, and log with the transaction details.
         It also creates a step in the history of the transaction.
 
@@ -1355,7 +1357,7 @@ class ZakatTracker:
         <b>Raises</b>:
         - ValueError: The created should be greater than zero.
         - ValueError: The log transaction happened again in the same nanosecond time.
-        '''
+        """
         if debug:
             print('_log', f'debug={debug}')
         if created is None:
@@ -1384,7 +1386,7 @@ class ZakatTracker:
 
     def exchange(self, account, created: int = None, rate: float = None, description: str = None,
                  debug: bool = False) -> dict:
-        '''
+        """
         This method is used to record or retrieve exchange rates for a specific account.
 
         <b>Parameters</b>:
@@ -1400,7 +1402,7 @@ class ZakatTracker:
 
         <b>Raises</b>:
         - ValueError: The created should be greater than zero.
-        '''
+        """
         if debug:
             print('exchange', f'debug={debug}')
         if created is None:
@@ -1441,7 +1443,7 @@ class ZakatTracker:
 
     @staticmethod
     def exchange_calc(x: float, x_rate: float, y_rate: float) -> float:
-        '''
+        """
         This function calculates the exchanged amount of a currency.
 
         <b>Parameters</b>:
@@ -1451,11 +1453,11 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - float: The exchanged amount of the target currency.
-        '''
+        """
         return (x * x_rate) / y_rate
 
     def exchanges(self) -> dict:
-        '''
+        """
         Retrieve the recorded exchange rates for all accounts.
 
         <b>Parameters</b>:
@@ -1465,11 +1467,11 @@ class ZakatTracker:
         - dict: A dictionary containing all recorded exchange rates.
         The keys are account names or numbers, and the values are dictionaries containing the exchange rates.
         Each exchange rate dictionary has timestamps as keys and exchange rate details as values.
-        '''
+        """
         return self._vault['exchange'].copy()
 
     def accounts(self) -> dict:
-        '''
+        """
         Returns a dictionary containing account numbers as keys and their respective balances as values.
 
         <b>Parameters</b>:
@@ -1477,14 +1479,14 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - dict: A dictionary where keys are account numbers and values are their respective balances.
-        '''
+        """
         result = {}
         for i in self._vault['account']:
             result[i] = self._vault['account'][i]['balance']
         return result
 
     def boxes(self, account) -> dict:
-        '''
+        """
         Retrieve the boxes (transactions) associated with a specific account.
 
         <b>Parameters</b>:
@@ -1493,13 +1495,13 @@ class ZakatTracker:
         <b>Returns</b>:
         - dict: A dictionary containing the boxes associated with the given account.
         If the account does not exist, an empty dictionary is returned.
-        '''
+        """
         if self.account_exists(account):
             return self._vault['account'][account]['box']
         return {}
 
     def logs(self, account) -> dict:
-        '''
+        """
         Retrieve the logs (transactions) associated with a specific account.
 
         <b>Parameters</b>:
@@ -1508,13 +1510,14 @@ class ZakatTracker:
         <b>Returns</b>:
         - dict: A dictionary containing the logs associated with the given account.
         If the account does not exist, an empty dictionary is returned.
-        '''
+        """
         if self.account_exists(account):
             return self._vault['account'][account]['log']
         return {}
 
-    def daily_logs_init(self) -> dict[str, dict]:
-        '''
+    @staticmethod
+    def daily_logs_init() -> dict[str, dict]:
+        """
         Initialize a dictionary to store daily, weekly, monthly, and yearly logs.
 
         <b>Parameters</b>:
@@ -1523,7 +1526,7 @@ class ZakatTracker:
         <b>Returns</b>:
         - dict: A dictionary with keys 'daily', 'weekly', 'monthly', and 'yearly', each containing an empty dictionary.
             Later each key maps to another dictionary, which will store the logs for the corresponding time period.
-        '''
+        """
         return {
             'daily': {},
             'weekly': {},
@@ -1532,7 +1535,7 @@ class ZakatTracker:
         }
 
     def daily_logs(self, weekday: WeekDay = WeekDay.FRIDAY, debug: bool = False):
-        '''
+        """
         Retrieve the daily logs (transactions) from all accounts.
 
         The function groups the logs by day, month, and year, and calculates the total value for each group.
@@ -1608,7 +1611,7 @@ class ZakatTracker:
                 },
             },
         }
-        '''
+        """
         logs = {}
         for account in self.accounts():
             for k, v in self.logs(account).items():
@@ -1690,7 +1693,7 @@ class ZakatTracker:
         return y
 
     def add_file(self, account: str, ref: int, path: str) -> int:
-        '''
+        """
         Adds a file reference to a specific transaction log entry in the vault.
 
         <b>Parameters</b>:
@@ -1700,7 +1703,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - int: The reference of the added file. If the account or transaction log entry does not exist, returns 0.
-        '''
+        """
         if self.account_exists(account):
             if ref in self._vault['account'][account]['log']:
                 no_lock = self.nolock()
@@ -1714,7 +1717,7 @@ class ZakatTracker:
         return 0
 
     def remove_file(self, account: str, ref: int, file_ref: int) -> bool:
-        '''
+        """
         Removes a file reference from a specific transaction log entry in the vault.
 
         <b>Parameters</b>:
@@ -1724,7 +1727,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - bool: True if the file reference is successfully removed, False otherwise.
-        '''
+        """
         if self.account_exists(account):
             if ref in self._vault['account'][account]['log']:
                 if file_ref in self._vault['account'][account]['log'][ref]['file']:
@@ -1739,7 +1742,7 @@ class ZakatTracker:
         return False
 
     def balance(self, account: str = 1, cached: bool = True) -> int:
-        '''
+        """
         Calculate and return the balance of a specific account.
 
         <b>Parameters</b>:
@@ -1752,14 +1755,14 @@ class ZakatTracker:
         Notes:
         - If cached is True, the function returns the cached balance.
         - If cached is False, the function calculates the balance from the box by summing up the 'rest' values of all box items.
-        '''
+        """
         if cached:
             return self._vault['account'][account]['balance']
         x = 0
         return [x := x + y['rest'] for y in self._vault['account'][account]['box'].values()][-1]
 
     def hide(self, account, status: bool = None) -> bool:
-        '''
+        """
         Check or set the hide status of a specific account.
 
         <b>Parameters</b>:
@@ -1783,7 +1786,7 @@ class ZakatTracker:
         True
         >>> tracker.hide('account1', False)
         False
-        '''
+        """
         if self.account_exists(account):
             if status is None:
                 return self._vault['account'][account]['hide']
@@ -1792,7 +1795,7 @@ class ZakatTracker:
         return False
 
     def zakatable(self, account, status: bool = None) -> bool:
-        '''
+        """
         Check or set the zakatable status of a specific account.
 
         <b>Parameters</b>:
@@ -1816,7 +1819,7 @@ class ZakatTracker:
         True
         >>> tracker.zakatable('account1', False)
         False
-        '''
+        """
         if self.account_exists(account):
             if status is None:
                 return self._vault['account'][account]['zakatable']
@@ -1832,7 +1835,7 @@ class ZakatTracker:
                        tuple[int, int],
                    ],
                ] | tuple:
-        '''
+        """
         Subtracts a specified value from an account's balance, if the amount to subtract is greater than the account's balance,
         the remaining amount will be transferred to a new transaction with a negative value.
 
@@ -1850,7 +1853,7 @@ class ZakatTracker:
         - ValueError: The created should be greater than zero.
         - ValueError: The box transaction happened again in the same nanosecond time.
         - ValueError: The log transaction happened again in the same nanosecond time.
-        '''
+        """
         if debug:
             print('sub', f'debug={debug}')
         if unscaled_value < 0:
@@ -1908,7 +1911,7 @@ class ZakatTracker:
     def transfer(self, unscaled_amount: float | int | decimal.Decimal, from_account: str, to_account: str, desc: str = '',
                  created: int = None,
                  debug: bool = False) -> list[int]:
-        '''
+        """
         Transfers a specified value from one account to another.
 
         <b>Parameters</b>:
@@ -1927,7 +1930,7 @@ class ZakatTracker:
         - ValueError: The created should be greater than zero.
         - ValueError: The box transaction happened again in the same nanosecond time.
         - ValueError: The log transaction happened again in the same nanosecond time.
-        '''
+        """
         if debug:
             print('transfer', f'debug={debug}')
         if from_account == to_account:
@@ -1993,7 +1996,7 @@ class ZakatTracker:
               debug: bool = False,
               now: int = None,
               cycle: float = None) -> tuple:
-        '''
+        """
         Check the eligibility for Zakat based on the given parameters.
 
         <b>Parameters</b>:
@@ -2007,7 +2010,7 @@ class ZakatTracker:
         <b>Returns</b>:
         - tuple: A tuple containing a boolean indicating the eligibility for Zakat, a list of brief statistics,
         and a dictionary containing the Zakat plan.
-        '''
+        """
         if debug:
             print('check', f'debug={debug}')
         if now is None:
@@ -2105,7 +2108,7 @@ class ZakatTracker:
         return valid, brief, plan
 
     def build_payment_parts(self, scaled_demand: int, positive_only: bool = True) -> dict:
-        '''
+        """
         Build payment parts for the Zakat distribution.
 
         <b>Parameters</b>:
@@ -2123,7 +2126,7 @@ class ZakatTracker:
             'demand': int,
             'total': float,
         }
-        '''
+        """
         total = 0
         parts = {
             'account': {},
@@ -2141,7 +2144,7 @@ class ZakatTracker:
 
     @staticmethod
     def check_payment_parts(parts: dict, debug: bool = False) -> int:
-        '''
+        """
         Checks the validity of payment parts.
 
         <b>Parameters</b>:
@@ -2158,7 +2161,7 @@ class ZakatTracker:
         4: If 'exceed' is False, 'balance' value in parts['account'][x] is less than or equal to 0.
         5: If 'exceed' is False, 'part' value in parts['account'][x] is greater than 'balance' value.
         6: The sum of 'part' values in parts['account'] does not match with 'demand' value.
-        '''
+        """
         if debug:
             print('check_payment_parts', f'debug={debug}')
         for i in ['demand', 'account', 'total', 'exceed']:
@@ -2191,7 +2194,7 @@ class ZakatTracker:
         return 0
 
     def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
-        '''
+        """
         Perform Zakat calculation based on the given report and optional parts.
 
         <b>Parameters</b>:
@@ -2201,7 +2204,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - bool: True if the zakat calculation is successful, False otherwise.
-        '''
+        """
         if debug:
             print('zakat', f'debug={debug}')
         valid, _, plan = report
@@ -2271,7 +2274,7 @@ class ZakatTracker:
         return True
 
     def export_json(self, path: str = 'data.json') -> bool:
-        '''
+        """
         Exports the current state of the ZakatTracker object to a JSON file.
 
         <b>Parameters</b>:
@@ -2282,7 +2285,7 @@ class ZakatTracker:
 
         <b>Raises</b>:
         No specific exceptions are raised by this method.
-        '''
+        """
         with open(path, 'w', encoding='utf-8') as file:
             json.dump(self._vault, file, indent=4, cls=JSONEncoder)
             return True
@@ -2309,7 +2312,7 @@ class ZakatTracker:
         return data, ""
 
     def save(self, path: str = None, hash_required: bool = True) -> bool:
-        '''
+        """
         Saves the ZakatTracker's current state to a camel file.
 
         This method serializes the internal data (`_vault`).
@@ -2320,12 +2323,12 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - bool: True if the save operation is successful, False otherwise.
-        '''
+        """
         if path is None:
             path = self.path()
+        # first save in tmp file
+        temp = f'{path}.tmp'
         try:
-            # first save in tmp file
-            temp = f'{path}.tmp'
             with open(temp, 'w', encoding='utf-8') as stream:
                 data = camel.dump(self._vault)
                 stream.write(data)
@@ -2342,7 +2345,7 @@ class ZakatTracker:
             return False
 
     def load(self, path: str = None, hash_required: bool = True) -> bool:
-        '''
+        """
         Load the current state of the ZakatTracker object from a camel file.
 
         <b>Parameters</b>:
@@ -2351,7 +2354,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - bool: True if the load operation is successful, False otherwise.
-        '''
+        """
         if path is None:
             path = self.path()
         try:
@@ -2372,7 +2375,7 @@ class ZakatTracker:
             return False
 
     def import_csv_cache_path(self):
-        '''
+        """
         Generates the cache file path for imported CSV data.
 
         This function constructs the file path where cached data from CSV imports
@@ -2389,7 +2392,7 @@ class ZakatTracker:
             >>> obj = ZakatTracker('/data/reports')
             >>> obj.import_csv_cache_path()
             '/data/reports.import_csv.camel'
-        '''
+        """
         path = str(self.path())
         ext = self.ext()
         ext_len = len(ext)
@@ -2399,7 +2402,7 @@ class ZakatTracker:
         return self.base_path(filename)
 
     def import_csv(self, path: str = 'file.csv', scale_decimal_places: int = 0, debug: bool = False) -> tuple:
-        '''
+        """
         The function reads the CSV file, checks for duplicate transactions, and creates the transactions in the system.
 
         <b>Parameters</b>:
@@ -2425,7 +2428,7 @@ class ZakatTracker:
             account, desc, value, date, rate
             For <b>example</b>:
             safe-45, 'Some text', 34872, 1988-06-30 00:00:00, 1
-        '''
+        """
         if debug:
             print('import_csv', f'debug={debug}')
         cache: list[int] = []
@@ -2550,7 +2553,7 @@ class ZakatTracker:
 
     @staticmethod
     def human_readable_size(size: float, decimal_places: int = 2) -> str:
-        '''
+        """
         Converts a size in bytes to a human-readable format (e.g., KB, MB, GB).
 
         This function iterates through progressively larger units of information
@@ -2568,7 +2571,7 @@ class ZakatTracker:
                 - '1.50 KB' (1536 bytes)
                 - '23.00 MB' (24117248 bytes)
                 - '1.23 GB' (1325899906 bytes)
-        '''
+        """
         if type(size) not in (float, int):
             raise TypeError('size must be a float or integer')
         if type(decimal_places) != int:
@@ -2581,7 +2584,7 @@ class ZakatTracker:
 
     @staticmethod
     def get_dict_size(obj: dict, seen: set = None) -> float:
-        '''
+        """
         Recursively calculates the approximate memory size of a dictionary and its contents in bytes.
 
         This function traverses the dictionary structure, accounting for the size of keys, values,
@@ -2605,7 +2608,7 @@ class ZakatTracker:
         - Circular references are handled to prevent infinite recursion.
         - Basic numeric types (int, float, complex) are assumed to have fixed sizes.
         - String sizes are estimated based on character length and encoding.
-        '''
+        """
         size = 0
         if seen is None:
             seen = set()
@@ -2645,7 +2648,7 @@ class ZakatTracker:
                                   micro_seconds: str = 'MicroSeconds',
                                   nano_seconds: str = 'NanoSeconds',
                                   ) -> tuple:
-        '''
+        """
         REF https://github.com/JayRizzo/Random_Scripts/blob/master/time_measure.py#L106
         Convert NanoSeconds to Human Readable Time Format.
         A NanoSeconds is a unit of time in the International System of Units (SI) equal
@@ -2661,7 +2664,7 @@ class ZakatTracker:
         **'Millennium:Century:Years:Days:Hours:Minutes:Seconds:MilliSeconds:MicroSeconds:NanoSeconds'**
         Example Output: ('039:0001:047:325:05:02:03:456:789:012', ' 39 Millennia,    1 Century,  47 Years,  325 Days,  5 Hours,  2 Minutes,  3 Seconds,  456 MilliSeconds,  789 MicroSeconds,  12 NanoSeconds')
         duration_from_nanoseconds(1234567890123456789012)
-        '''
+        """
         us, ns = divmod(ns, 1000)
         ms, us = divmod(us, 1000)
         s, ms = divmod(ms, 1000)
@@ -2697,7 +2700,7 @@ class ZakatTracker:
 
     @staticmethod
     def day_to_time(day: int, month: int = 6, year: int = 2024) -> int:  # افتراض أن الشهر هو يونيو والسنة 2024
-        '''
+        """
         Convert a specific day, month, and year into a timestamp.
 
         <b>Parameters</b>:
@@ -2710,12 +2713,12 @@ class ZakatTracker:
 
         Note:
         - This method assumes the default month and year if not provided.
-        '''
+        """
         return ZakatTracker.time(datetime.datetime(year, month, day))
 
     @staticmethod
     def generate_random_date(start_date: datetime.datetime, end_date: datetime.datetime) -> datetime.datetime:
-        '''
+        """
         Generate a random date between two given dates.
 
         <b>Parameters</b>:
@@ -2724,16 +2727,16 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - datetime.datetime: A random date between the start_date and end_date.
-        '''
+        """
         time_between_dates = end_date - start_date
         days_between_dates = time_between_dates.days
         random_number_of_days = random.randrange(days_between_dates)
         return start_date + datetime.timedelta(days=random_number_of_days)
 
     @staticmethod
-    def generate_random_csv_file(path: str = 'data.csv', count: int = 1000, with_rate: bool = False,
+    def generate_random_csv_file(path: str = 'data.csv', count: int = 1_000, with_rate: bool = False,
                                  debug: bool = False) -> int:
-        '''
+        """
         Generate a random CSV file with specified parameters.
         The function generates a CSV file at the specified path with the given count of rows.
         Each row contains a randomly generated account, description, value, and date.
@@ -2749,7 +2752,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         None
-        '''
+        """
         if debug:
             print('generate_random_csv_file', f'debug={debug}')
         i = 0
@@ -2777,7 +2780,7 @@ class ZakatTracker:
 
     @staticmethod
     def create_random_list(max_sum, min_value=0, max_value=10):
-        '''
+        """
         Creates a list of random integers whose sum does not exceed the specified maximum.
 
         <b>Parameters</b>:
@@ -2787,7 +2790,7 @@ class ZakatTracker:
 
         <b>Returns</b>:
         - A list of random integers.
-        '''
+        """
         result = []
         current_sum = 0
 
@@ -3602,6 +3605,7 @@ class ZakatTracker:
 
             # check & zakat with exchange rates for many cycles
 
+            lock = None
             for rate, values in {
                 1: {
                     'in': [1000, 2000, 10000],
@@ -3749,7 +3753,7 @@ class ZakatTracker:
                     print('bad', bad)
                 tmp_size = os.path.getsize(cache_path)
                 assert tmp_size > 0
-                #assert self.free(lock)
+
                 # TODO: assert created + found + bad_count == csv_count
                 # TODO: assert created == csv_count
                 # TODO: assert bad_count == 0
