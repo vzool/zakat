@@ -686,7 +686,7 @@ class ZakatTracker:
         return self._history_mode
 
     def _step(self, action: Action = None, account: str = None, ref: int = None, file: int = None, value: float = None,
-              key: str = None, math_operation: MathOperation = None, debug: bool = False) -> int:
+              key: str = None, math_operation: MathOperation = None, lock_once: bool = True, debug: bool = False) -> int:
         '''
         This method is responsible for recording the actions performed on the ZakatTracker.
 
@@ -698,6 +698,7 @@ class ZakatTracker:
         - value (int): The value associated with the action.
         - key (str): The key associated with the action.
         - math_operation (MathOperation): The mathematical operation performed during the action.
+        - lock_once (bool, optional): Indicates whether a lock should be acquired only once. Defaults to True.
         - debug (bool): If True, the function will print debug information. Default is False.
 
         <b>Returns</b>:
@@ -705,14 +706,18 @@ class ZakatTracker:
         '''
         if not self._history():
             return 0
+        no_lock = self.nolock()
         lock = self._vault['lock']
-        if self.nolock():
+        if no_lock:
             lock = self._vault['lock'] = self.time()
             self._vault['history'][lock] = []
         if action is None:
+            if lock_once:
+                assert no_lock, 'forbidden: lock called twice!!!'
             return lock
         if debug:
              print_stack()
+        assert lock > 0
         assert account is None or action != Action.REPORT
         self._vault['history'][lock].append({
             'action': action,
@@ -736,6 +741,19 @@ class ZakatTracker:
         - bool: True if the vault lock is not set, False otherwise.
         '''
         return self._vault['lock'] is None
+
+    def _lock(self) -> int:
+        '''
+        Acquires a lock, potentially repeatedly, by calling the internal `_step` method.
+
+        This method specifically invokes the `_step` method with `lock_once` set to `False`
+        indicating that the lock should be acquired even if it was previously acquired.
+        This is useful for ensuring a lock is held throughout a critical section of code
+
+        <b>Returns</b>:
+        - int: The status code or result returned by the `_step` method, indicating theoutcome of the lock acquisition attempt.
+        '''
+        return self._step(lock_once=False)
 
     def lock(self) -> int:
         '''
@@ -776,8 +794,8 @@ class ZakatTracker:
         - bool: True if the lock is successfully released and (optionally) saved, False otherwise.
         '''
         if lock == self._vault['lock']:
-            self._vault['lock'] = None
             self.clean_history(lock)
+            self._vault['lock'] = None
             if auto_save:
                 return self.save(self.path())
             return True
@@ -1265,7 +1283,7 @@ class ZakatTracker:
         if created <= 0:
             raise ValueError('The created should be greater than zero.')
         no_lock = self.nolock()
-        lock = self.lock()
+        lock = self._lock()
         if not self.account_exists(account):
             if debug:
                 print(f'account {account} created')
@@ -1397,7 +1415,7 @@ class ZakatTracker:
             if len(self._vault['exchange'][account]) == 0 and rate <= 1:
                 return {'time': created, 'rate': 1, 'description': None}
             no_lock = self.nolock()
-            lock = self.lock()
+            lock = self._lock()
             self._vault['exchange'][account][created] = {'rate': rate, 'description': description}
             self._step(Action.EXCHANGE, account, ref=created, value=rate)
             if no_lock:
@@ -1686,7 +1704,7 @@ class ZakatTracker:
         if self.account_exists(account):
             if ref in self._vault['account'][account]['log']:
                 no_lock = self.nolock()
-                lock = self.lock()
+                lock = self._lock()
                 file_ref = self.time()
                 self._vault['account'][account]['log'][ref]['file'][file_ref] = path
                 self._step(Action.ADD_FILE, account, ref=ref, file=file_ref)
@@ -1711,7 +1729,7 @@ class ZakatTracker:
             if ref in self._vault['account'][account]['log']:
                 if file_ref in self._vault['account'][account]['log'][ref]['file']:
                     no_lock = self.nolock()
-                    lock = self.lock()
+                    lock = self._lock()
                     x = self._vault['account'][account]['log'][ref]['file'][file_ref]
                     del self._vault['account'][account]['log'][ref]['file'][file_ref]
                     self._step(Action.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
@@ -1845,7 +1863,7 @@ class ZakatTracker:
         if created <= 0:
             raise ValueError('The created should be greater than zero.')
         no_lock = self.nolock()
-        lock = self.lock()
+        lock = self._lock()
         self.track(0, '', account)
         value = self.scale(unscaled_value)
         self._log(value=-value, desc=desc, account=account, created=created, ref=None, debug=debug)
@@ -1921,7 +1939,7 @@ class ZakatTracker:
         if created <= 0:
             raise ValueError('The created should be greater than zero.')
         no_lock = self.nolock()
-        lock = self.lock()
+        lock = self._lock()
         (_, ages) = self.sub(unscaled_amount, desc, from_account, created, debug=debug)
         times = []
         source_exchange = self.exchange(from_account, created)
@@ -2197,7 +2215,7 @@ class ZakatTracker:
             print('######### zakat #######')
             print('parts_exist', parts_exist)
         no_lock = self.nolock()
-        lock = self.lock()
+        lock = self._lock()
         report_time = self.time()
         self._vault['report'][report_time] = report
         self._step(Action.REPORT, ref=report_time)
@@ -2461,7 +2479,7 @@ class ZakatTracker:
             return created, found, bad
 
         no_lock = self.nolock()
-        lock = self.lock()
+        lock = self._lock()
         for date, rows in sorted(data.items()):
             try:
                 len_rows = len(rows)
@@ -2932,8 +2950,20 @@ class ZakatTracker:
             print(f'total: {total}, error({error}): {100 * error / total}%')
         assert error == 0
 
+        # test lock
+
         assert self.nolock()
         assert self._history() is True
+        lock = self.lock()
+        assert lock > 0
+        failed = False
+        try:
+            self.lock()
+        except:
+            failed = True
+        assert failed
+        assert self.free(lock)
+        assert not self.free(lock)
 
         table = {
             1: [
@@ -2953,7 +2983,7 @@ class ZakatTracker:
         }
         for x in table:
             for y in table[x]:
-                self.lock()
+                lock = self.lock()
                 if y[0] == 0:
                     ref = self.track(
                         unscaled_value=y[1],
@@ -3010,7 +3040,7 @@ class ZakatTracker:
                 assert self.box_size(x) == y[5]
                 assert self.log_size(x) == y[6]
                 assert not self.nolock()
-                self.free(self.lock())
+                self.free(lock)
                 assert self.nolock()
             assert self.boxes(x) != {}
             assert self.logs(x) != {}
@@ -3618,7 +3648,8 @@ class ZakatTracker:
                     # history_size = len(self._vault['history'])
                     # print('history_size', history_size)
                     # assert history_size == 2
-                    assert self.lock()
+                    lock = self.lock()
+                    assert lock
                     assert not self.nolock()
                     report = self.check(2.17, None, debug)
                     (valid, brief, plan) = report
@@ -3655,7 +3686,7 @@ class ZakatTracker:
             assert history_size == 3
             assert not self.nolock()
             assert self.recall(False, debug) is False
-            self.free(self.lock())
+            self.free(lock)
             assert self.nolock()
 
             for i in range(3, 0, -1):
@@ -3689,7 +3720,6 @@ class ZakatTracker:
 
             csv_count = 1000
 
-            assert lock > 0
             for with_rate, path in {
                 False: 'test-import_csv-no-exchange',
                 True: 'test-import_csv-with-exchange',
@@ -3719,6 +3749,7 @@ class ZakatTracker:
                     print('bad', bad)
                 tmp_size = os.path.getsize(cache_path)
                 assert tmp_size > 0
+                #assert self.free(lock)
                 # TODO: assert created + found + bad_count == csv_count
                 # TODO: assert created == csv_count
                 # TODO: assert bad_count == 0
