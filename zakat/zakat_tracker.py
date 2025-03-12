@@ -801,12 +801,16 @@ class ZakatTracker:
             return True
         return False
 
-    def recall(self, dry: bool = True, debug: bool = False) -> bool:
+    def recall(self, dry: bool = True, lock: int = None, debug: bool = False) -> bool:
         """
         Revert the last operation.
 
         <b>Parameters</b>:
         - dry (bool): If True, the function will not modify the data, but will simulate the operation. Default is True.
+        - lock (int, optional): An optional lock value to ensure the recall
+                operation is performed on the expected history entry. If provided,
+                it checks if the current lock and the most recent history key
+                match the given lock value. Defaults to None.
         - debug (bool): If True, the function will print debug information. Default is False.
 
         <b>Returns</b>:
@@ -822,6 +826,10 @@ class ZakatTracker:
         memory = self._vault['history'][ref]
         if debug:
             print(type(memory), 'memory', memory)
+        if lock is not None:
+            assert self._vault['lock'] == lock, "Invalid current lock"
+            assert ref == lock, "Invalid last lock"
+            assert self._history(), "History mode should be enabled, found off!!!"
         limit = len(memory) + 1
         sub_positive_log_negative = 0
         for i in range(-1, -limit, -1):
@@ -1892,9 +1900,9 @@ class ZakatTracker:
             elif target > rest > 0:
                 chunk = rest
                 target -= chunk
+                self._vault['account'][account]['box'][j]['rest'] = 0
                 self._step(Action.SUB, account, ref=j, value=chunk)
                 ages.append((j, chunk))
-                self._vault['account'][account]['box'][j]['rest'] = 0
         if target > 0:
             self.track(
                 unscaled_value=self.unscale(-target),
@@ -3061,13 +3069,21 @@ class ZakatTracker:
             assert self.zakatable(x)
 
         if restore is True:
+            # invalid restore point
+            for lock in [0, time.time_ns(), ZakatTracker.time()]:
+                failed = False
+                try:
+                    self.recall(True, lock)
+                except:
+                    failed = True
+                assert failed
             count = len(self._vault['history'])
             if debug:
                 print('history-count', count)
             assert count == 10
             # try mode
             for _ in range(count):
-                assert self.recall(True, debug)
+                assert self.recall(True, debug=debug)
             count = len(self._vault['history'])
             if debug:
                 print('history-count', count)
@@ -3085,8 +3101,8 @@ class ZakatTracker:
                         print(row, self.balance(account), self.balance(account, False))
                     assert self.balance(account) == self.balance(account, False)
                     assert self.balance(account) == row[2]
-                    assert self.recall(False, debug)
-            assert self.recall(False, debug) is False
+                    assert self.recall(False, debug=debug)
+            assert self.recall(False, debug=debug) is False
             count = len(self._vault['history'])
             if debug:
                 print('history-count', count)
@@ -3320,7 +3336,7 @@ class ZakatTracker:
                 self.save(hash_required=hashed)
                 assert os.path.getsize(_path) > 0
                 self.reset()
-                assert self.recall(False, debug) is False
+                assert self.recall(False, debug=debug) is False
                 for hash_required in [False, True]:
                     if debug:
                         print(f'[storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
@@ -3342,13 +3358,13 @@ class ZakatTracker:
 
             assert self.nolock()
             assert len(self._vault['history']) == 3
-            assert self.recall(False, debug) is True
+            assert self.recall(False, debug=debug) is True
             assert len(self._vault['history']) == 2
-            assert self.recall(False, debug) is True
+            assert self.recall(False, debug=debug) is True
             assert len(self._vault['history']) == 1
-            assert self.recall(False, debug) is True
+            assert self.recall(False, debug=debug) is True
             assert len(self._vault['history']) == 0
-            assert self.recall(False, debug) is False
+            assert self.recall(False, debug=debug) is False
             assert len(self._vault['history']) == 0
 
             # exchange
@@ -3689,7 +3705,7 @@ class ZakatTracker:
                 print('history_size', history_size)
             assert history_size == 3
             assert not self.nolock()
-            assert self.recall(False, debug) is False
+            assert self.recall(False, debug=debug) is False
             self.free(lock)
             assert self.nolock()
 
@@ -3698,10 +3714,10 @@ class ZakatTracker:
                 if debug:
                     print('history_size', history_size)
                 assert history_size == i
-                assert self.recall(False, debug) is True
+                assert self.recall(False, debug=debug) is True
 
             assert self.nolock()
-            assert self.recall(False, debug) is False
+            assert self.recall(False, debug=debug) is False
 
             history_size = len(self._vault['history'])
             if debug:
