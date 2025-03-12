@@ -378,7 +378,7 @@ class ZakatTracker:
         It converts the given number of days into nanoseconds for use in high-precision timing applications.
 
         <b>Parameters</b>:
-        - days (int): The number of days in a lunar year. Defaults to 355,
+        - days (int, optional): The number of days in a lunar year. Defaults to 355,
               which is an approximation of the average length of a lunar year.
 
         <b>Returns</b>:
@@ -398,7 +398,7 @@ class ZakatTracker:
 
         <b>Parameters</b>:
         - gram_price (float): The price per gram of Nisab.
-        - gram_quantity (float): The quantity of grams in a Nisab. Default is 595 grams of silver.
+        - gram_quantity (float, optional): The quantity of grams in a Nisab. Default is 595 grams of silver.
 
         <b>Returns</b>:
         - float: The total value of Nisab based on the given price per gram.
@@ -423,8 +423,8 @@ class ZakatTracker:
         Initialize ZakatTracker with database path and history mode.
 
         <b>Parameters</b>:
-        - db_path (str): The path to the database  directory. Default is './zakat_db'.
-        - history_mode (bool): The mode for tracking history. Default is True.
+        - db_path (str, optional): The path to the database  directory. Default is './zakat_db'.
+        - history_mode (bool, optional): The mode for tracking history. Default is True.
 
         <b>Returns</b>:
         None
@@ -445,7 +445,7 @@ class ZakatTracker:
         The function also creates the necessary directories if the provided path is a file.
 
         <b>Parameters</b>:
-        - path (str): The new path to the database file. If not provided, the current path is returned.
+        - path (str, optional): The new path to the database file. If not provided, the current path is returned.
 
         <b>Returns</b>:
         - str: The current or new path to the database file.
@@ -496,7 +496,7 @@ class ZakatTracker:
 
         <b>Parameters</b>:
         - x (float | int | decimal.Decimal): The numeric value to scale. Can be a floating-point number, integer, or decimal.
-        - decimal_places (int): The exponent for the scaling factor (10**y). Defaults to 2, meaning the input is scaled
+        - decimal_places (int, optional): The exponent for the scaling factor (10**y). Defaults to 2, meaning the input is scaled
             by a factor of 100 (e.g., converts 1.23 to 123).
 
         <b>Returns</b>:
@@ -524,8 +524,8 @@ class ZakatTracker:
 
         <b>Parameters</b>:
         - x (int): The integer to unscale.
-        - return_type (type): The desired type for the returned value. Can be float, int, or decimal.Decimal. Defaults to float.
-        - decimal_places (int): The power of 10 to use. Defaults to 2.
+        - return_type (type, optional): The desired type for the returned value. Can be float, int, or decimal.Decimal. Defaults to float.
+        - decimal_places (int, optional): The power of 10 to use. Defaults to 2.
 
         <b>Returns</b>:
         - float | int | decimal.Decimal: The unscaled number, converted to the specified return_type.
@@ -676,7 +676,7 @@ class ZakatTracker:
         Enable or disable history tracking.
 
         <b>Parameters</b>:
-        - status (bool): The status of history tracking. Default is True.
+        - status (bool, optional): The status of history tracking. Default is True.
 
         <b>Returns</b>:
         None
@@ -691,15 +691,15 @@ class ZakatTracker:
         This method is responsible for recording the actions performed on the ZakatTracker.
 
         <b>Parameters</b>:
-        - action (Action): The type of action performed.
-        - account (str): The account number on which the action was performed.
-        - ref (int): The reference number of the action.
-        - file (int): The file reference number of the action.
-        - value (int): The value associated with the action.
-        - key (str): The key associated with the action.
-        - math_operation (MathOperation): The mathematical operation performed during the action.
+        - action (Action, optional): The type of action performed.
+        - account (str, optional): The account number on which the action was performed.
+        - ref (int, optional): The reference number of the action.
+        - file (int, optional): The file reference number of the action.
+        - value (int, optional): The value associated with the action.
+        - key (str, optional): The key associated with the action.
+        - math_operation (MathOperation, optional): The mathematical operation performed during the action.
         - lock_once (bool, optional): Indicates whether a lock should be acquired only once. Defaults to True.
-        - debug (bool): If True, the function will print debug information. Default is False.
+        - debug (bool, optional): If True, the function will print debug information. Default is False.
 
         <b>Returns</b>:
         - int: The lock time of the recorded action. If no lock was performed, it returns 0.
@@ -788,7 +788,7 @@ class ZakatTracker:
 
         <b>Parameters</b>:
         - lock (int): The lock ID to be released.
-        - auto_save (bool): Whether to automatically save the database after releasing the lock.
+        - auto_save (bool, optional): Whether to automatically save the database after releasing the lock.
 
         <b>Returns</b>:
         - bool: True if the lock is successfully released and (optionally) saved, False otherwise.
@@ -811,7 +811,7 @@ class ZakatTracker:
                 operation is performed on the expected history entry. If provided,
                 it checks if the current lock and the most recent history key
                 match the given lock value. Defaults to None.
-        - debug (bool): If True, the function will print debug information. Default is False.
+        - debug (bool, optional): If True, the function will print debug information. Default is False.
 
         <b>Returns</b>:
         - bool: True if the operation was successful, False otherwise.
@@ -1004,7 +1004,7 @@ class ZakatTracker:
         (e.g., KB, MB).
 
         <b>Parameters</b>:
-        - ignore_ram (bool): Whether to ignore the RAM size. Default is True
+        - ignore_ram (bool, optional): Whether to ignore the RAM size. Default is True
 
         <b>Returns</b>:
         - dict[str, tuple]: A dictionary containing the following statistics:
@@ -1209,8 +1209,8 @@ class ZakatTracker:
         Retrieve a dictionary of snapshots, with their respective hashes, paths, and existence status.
 
         <b>Parameters</b>:
-        - hide_missing (bool): If True, only include snapshots that exist in the dictionary. Default is True.
-        - verified_hash_only (bool): If True, only include snapshots with a valid hash. Default is False.
+        - hide_missing (bool, optional): If True, only include snapshots that exist in the dictionary. Default is True.
+        - verified_hash_only (bool, optional): If True, only include snapshots with a valid hash. Default is False.
 
         <b>Returns</b>:
         - dict[int, tuple[str, str, bool]]: A dictionary where the keys are the timestamps of the snapshots,
@@ -1264,33 +1264,34 @@ class ZakatTracker:
         """
         return self.ref_exists(account, 'box', ref)
 
-    def track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: str = 1, logging: bool = True,
-              created: int = None,
+    def track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: str = 1,
+              logging: bool = True,
+              created_time_ns: int = None,
               debug: bool = False) -> int:
         """
         This function tracks a transaction for a specific account, so it do creates a new account if it doesn't exist, logs the transaction if logging is True, and updates the account's balance and box.
 
         <b>Parameters</b>:
-        - unscaled_value (float | int | decimal.Decimal): The value of the transaction. Default is 0.
-        - desc (str): The description of the transaction. Default is an empty string.
-        - account (str): The account for which the transaction is being tracked. Default is '1'.
-        - logging (bool): Whether to log the transaction. Default is True.
-        - created (int): The timestamp of the transaction. If not provided, it will be generated. Default is None.
-        - debug (bool): Whether to print debug information. Default is False.
+        - unscaled_value (float | int | decimal.Decimal, optional): The value of the transaction. Default is 0.
+        - desc (str, optional): The description of the transaction. Default is an empty string.
+        - account (str, optional): The account for which the transaction is being tracked. Default is '1'.
+        - logging (bool, optional): Whether to log the transaction. Default is True.
+        - created_time_ns (int, optional): The timestamp of the transaction in nanoseconds since epoch(1AD). If not provided, it will be generated. Default is None.
+        - debug (bool, optional): Whether to print debug information. Default is False.
 
         <b>Returns</b>:
-        - int: The timestamp of the transaction.
+        - int: The timestamp of the transaction in nanoseconds since epoch(1AD).
 
         <b>Raises</b>:
-        - ValueError: The created should be greater than zero.
+        - ValueError: The created_time_ns should be greater than zero.
         - ValueError: The log transaction happened again in the same nanosecond time.
         - ValueError: The box transaction happened again in the same nanosecond time.
         """
         if debug:
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
-        if created is None:
-            created = self.time()
-        if created <= 0:
+        if created_time_ns is None:
+            created_time_ns = self.time()
+        if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         no_lock = self.nolock()
         lock = self._lock()
@@ -1304,7 +1305,7 @@ class ZakatTracker:
                 'log': {},
                 'hide': False,
                 'zakatable': True,
-                'created': created,
+                'created': created_time_ns,
             }
             self._step(Action.CREATE, account)
         if unscaled_value == 0:
@@ -1313,24 +1314,24 @@ class ZakatTracker:
             return 0
         value = self.scale(unscaled_value)
         if logging:
-            self._log(value=value, desc=desc, account=account, created=created, ref=None, debug=debug)
+            self._log(value=value, desc=desc, account=account, created_time_ns=created_time_ns, ref=None, debug=debug)
         if debug:
-            print('create-box', created)
-        if self.box_exists(account, created):
-            raise ValueError(f'The box transaction happened again in the same nanosecond time({created}).')
+            print('create-box', created_time_ns)
+        if self.box_exists(account, created_time_ns):
+            raise ValueError(f'The box transaction happened again in the same nanosecond time({created_time_ns}).')
         if debug:
-            print('created-box', created)
-        self._vault['account'][account]['box'][created] = {
+            print('created-box', created_time_ns)
+        self._vault['account'][account]['box'][created_time_ns] = {
             'capital': value,
             'count': 0,
             'last': 0,
             'rest': value,
             'total': 0,
         }
-        self._step(Action.TRACK, account, ref=created, value=value)
+        self._step(Action.TRACK, account, ref=created_time_ns, value=value)
         if no_lock:
             self.free(lock)
-        return created
+        return created_time_ns
 
     def log_exists(self, account: str, ref: int) -> bool:
         """
@@ -1345,7 +1346,7 @@ class ZakatTracker:
         """
         return self.ref_exists(account, 'log', ref)
 
-    def _log(self, value: float, desc: str = '', account: str = 1, created: int = None, ref: int = None,
+    def _log(self, value: float, desc: str = '', account: str = 1, created_time_ns: int = None, ref: int = None,
              debug: bool = False) -> int:
         """
         Log a transaction into the account's log by updates the account's balance, count, and log with the transaction details.
@@ -1353,24 +1354,25 @@ class ZakatTracker:
 
         <b>Parameters</b>:
         - value (float): The value of the transaction.
-        - desc (str): The description of the transaction.
-        - account (str): The account to log the transaction into. Default is '1'.
-        - created (int): The timestamp of the transaction. If not provided, it will be generated.
-        - ref (int): The reference of the object.
-        - debug (bool): Whether to print debug information. Default is False.
+        - desc (str, optional): The description of the transaction.
+        - account (str, optional): The account to log the transaction into. Default is '1'.
+        - created_time_ns (int, optional): The timestamp of the transaction in nanoseconds since epoch(1AD).
+                                           If not provided, it will be generated.
+        - ref (int, optional): The reference of the object.
+        - debug (bool, optional): Whether to print debug information. Default is False.
 
         <b>Returns</b>:
         - int: The timestamp of the logged transaction.
 
         <b>Raises</b>:
-        - ValueError: The created should be greater than zero.
+        - ValueError: The created_time_ns should be greater than zero.
         - ValueError: The log transaction happened again in the same nanosecond time.
         """
         if debug:
             print('_log', f'debug={debug}')
-        if created is None:
-            created = self.time()
-        if created <= 0:
+        if created_time_ns is None:
+            created_time_ns = self.time()
+        if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         try:
             self._vault['account'][account]['balance'] += value
@@ -1378,31 +1380,31 @@ class ZakatTracker:
             self._vault['account'][account]['balance'] += decimal.Decimal(value)
         self._vault['account'][account]['count'] += 1
         if debug:
-            print('create-log', created)
-        if self.log_exists(account, created):
-            raise ValueError(f'The log transaction happened again in the same nanosecond time({created}).')
+            print('create-log', created_time_ns)
+        if self.log_exists(account, created_time_ns):
+            raise ValueError(f'The log transaction happened again in the same nanosecond time({created_time_ns}).')
         if debug:
-            print('created-log', created)
-        self._vault['account'][account]['log'][created] = {
+            print('created-log', created_time_ns)
+        self._vault['account'][account]['log'][created_time_ns] = {
             'value': value,
             'desc': desc,
             'ref': ref,
             'file': {},
         }
-        self._step(Action.LOG, account, ref=created, value=value)
-        return created
+        self._step(Action.LOG, account, ref=created_time_ns, value=value)
+        return created_time_ns
 
-    def exchange(self, account, created: int = None, rate: float = None, description: str = None,
+    def exchange(self, account, created_time_ns: int = None, rate: float = None, description: str = None,
                  debug: bool = False) -> dict:
         """
         This method is used to record or retrieve exchange rates for a specific account.
 
         <b>Parameters</b>:
         - account (str): The account number for which the exchange rate is being recorded or retrieved.
-        - created (int): The timestamp of the exchange rate. If not provided, the current timestamp will be used.
-        - rate (float): The exchange rate to be recorded. If not provided, the method will retrieve the latest exchange rate.
-        - description (str): A description of the exchange rate.
-        - debug (bool): Whether to print debug information. Default is False.
+        - created_time_ns (int, optional): The timestamp of the exchange rate. If not provided, the current timestamp will be used.
+        - rate (float, optional): The exchange rate to be recorded. If not provided, the method will retrieve the latest exchange rate.
+        - description (str, optional): A description of the exchange rate.
+        - debug (bool, optional): Whether to print debug information. Default is False.
 
         <b>Returns</b>:
         - dict: A dictionary containing the latest exchange rate and its description. If no exchange rate is found,
@@ -1413,9 +1415,9 @@ class ZakatTracker:
         """
         if debug:
             print('exchange', f'debug={debug}')
-        if created is None:
-            created = self.time()
-        if created <= 0:
+        if created_time_ns is None:
+            created_time_ns = self.time()
+        if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         if rate is not None:
             if rate <= 0:
@@ -1423,31 +1425,31 @@ class ZakatTracker:
             if account not in self._vault['exchange']:
                 self._vault['exchange'][account] = {}
             if len(self._vault['exchange'][account]) == 0 and rate <= 1:
-                return {'time': created, 'rate': 1, 'description': None}
+                return {'time': created_time_ns, 'rate': 1, 'description': None}
             no_lock = self.nolock()
             lock = self._lock()
-            self._vault['exchange'][account][created] = {'rate': rate, 'description': description}
-            self._step(Action.EXCHANGE, account, ref=created, value=rate)
+            self._vault['exchange'][account][created_time_ns] = {'rate': rate, 'description': description}
+            self._step(Action.EXCHANGE, account, ref=created_time_ns, value=rate)
             if no_lock:
                 self.free(lock)
             if debug:
                 print('exchange-created-1',
-                      f'account: {account}, created: {created}, rate:{rate}, description:{description}')
+                      f'account: {account}, created: {created_time_ns}, rate:{rate}, description:{description}')
 
         if account in self._vault['exchange']:
-            valid_rates = [(ts, r) for ts, r in self._vault['exchange'][account].items() if ts <= created]
+            valid_rates = [(ts, r) for ts, r in self._vault['exchange'][account].items() if ts <= created_time_ns]
             if valid_rates:
                 latest_rate = max(valid_rates, key=lambda x: x[0])
                 if debug:
                     print('exchange-read-1',
-                          f'account: {account}, created: {created}, rate:{rate}, description:{description}',
+                          f'account: {account}, created: {created_time_ns}, rate:{rate}, description:{description}',
                           'latest_rate', latest_rate)
                 result = latest_rate[1]
                 result['time'] = latest_rate[0]
                 return result  # إرجاع قاموس يحتوي على المعدل والوصف
         if debug:
-            print('exchange-read-0', f'account: {account}, created: {created}, rate:{rate}, description:{description}')
-        return {'time': created, 'rate': 1, 'description': None}  # إرجاع القيمة الافتراضية مع وصف فارغ
+            print('exchange-read-0', f'account: {account}, created: {created_time_ns}, rate:{rate}, description:{description}')
+        return {'time': created_time_ns, 'rate': 1, 'description': None}  # إرجاع القيمة الافتراضية مع وصف فارغ
 
     @staticmethod
     def exchange_calc(x: float, x_rate: float, y_rate: float) -> float:
@@ -1551,8 +1553,8 @@ class ZakatTracker:
         and the values are dictionaries containing the total value and the logs for that group.
 
         <b>Parameters</b>:
-        - weekday (WeekDay): Select the weekday is collected for the week data. Default is WeekDay.Friday.
-        - debug (bool): Whether to print debug information. Default is False.
+        - weekday (WeekDay, optional): Select the weekday is collected for the week data. Default is WeekDay.Friday.
+        - debug (bool, optional): Whether to print debug information. Default is False.
 
         <b>Returns</b>:
         - dict: A dictionary containing the daily logs.
@@ -1754,8 +1756,8 @@ class ZakatTracker:
         Calculate and return the balance of a specific account.
 
         <b>Parameters</b>:
-        - account (str): The account number. Default is '1'.
-        - cached (bool): If True, use the cached balance. If False, calculate the balance from the box. Default is True.
+        - account (str, optional): The account number. Default is '1'.
+        - cached (bool, optional): If True, use the cached balance. If False, calculate the balance from the box. Default is True.
 
         <b>Returns</b>:
         - int: The balance of the account.
@@ -1835,7 +1837,8 @@ class ZakatTracker:
             return status
         return False
 
-    def sub(self, unscaled_value: float | int | decimal.Decimal, desc: str = '', account: str = 1, created: int = None,
+    def sub(self, unscaled_value: float | int | decimal.Decimal, desc: str = '', account: str = 1,
+            created_time_ns: int = None,
             debug: bool = False) \
             -> tuple[
                    int,
@@ -1849,16 +1852,17 @@ class ZakatTracker:
 
         <b>Parameters</b>:
         - unscaled_value (float | int | decimal.Decimal): The amount to be subtracted.
-        - desc (str): A description for the transaction. Defaults to an empty string.
-        - account (str): The account from which the value will be subtracted. Defaults to '1'.
-        - created (int): The timestamp of the transaction. If not provided, the current timestamp will be used.
-        - debug (bool): A flag indicating whether to print debug information. Defaults to False.
+        - desc (str, optional): A description for the transaction. Defaults to an empty string.
+        - account (str, optional): The account from which the value will be subtracted. Defaults to '1'.
+        - created_time_ns (int, optional): The timestamp of the transaction in nanoseconds since epoch(1AD).
+                                           If not provided, the current timestamp will be used.
+        - debug (bool, optional): A flag indicating whether to print debug information. Defaults to False.
 
         <b>Returns</b>:
         - tuple: A tuple containing the timestamp of the transaction and a list of tuples representing the age of each transaction.
 
         <b>Raises</b>:
-        - ValueError: The created should be greater than zero.
+        - ValueError: The created_time_ns should be greater than zero.
         - ValueError: The box transaction happened again in the same nanosecond time.
         - ValueError: The log transaction happened again in the same nanosecond time.
         """
@@ -1869,15 +1873,15 @@ class ZakatTracker:
         if unscaled_value == 0:
             ref = self.track(unscaled_value, '', account)
             return ref, ref
-        if created is None:
-            created = self.time()
-        if created <= 0:
+        if created_time_ns is None:
+            created_time_ns = self.time()
+        if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         no_lock = self.nolock()
         lock = self._lock()
         self.track(0, '', account)
         value = self.scale(unscaled_value)
-        self._log(value=-value, desc=desc, account=account, created=created, ref=None, debug=debug)
+        self._log(value=-value, desc=desc, account=account, created_time_ns=created_time_ns, ref=None, debug=debug)
         ids = sorted(self._vault['account'][account]['box'].keys())
         limit = len(ids) + 1
         target = value
@@ -1909,15 +1913,15 @@ class ZakatTracker:
                 desc=desc,
                 account=account,
                 logging=False,
-                created=created,
+                created_time_ns=created_time_ns,
             )
-            ages.append((created, target))
+            ages.append((created_time_ns, target))
         if no_lock:
             self.free(lock)
-        return created, ages
+        return created_time_ns, ages
 
     def transfer(self, unscaled_amount: float | int | decimal.Decimal, from_account: str, to_account: str, desc: str = '',
-                 created: int = None,
+                 created_time_ns: int = None,
                  debug: bool = False) -> list[int]:
         """
         Transfers a specified value from one account to another.
@@ -1927,15 +1931,15 @@ class ZakatTracker:
         - from_account (str): The account from which the value will be transferred.
         - to_account (str): The account to which the value will be transferred.
         - desc (str, optional): A description for the transaction. Defaults to an empty string.
-        - created (int, optional): The timestamp of the transaction. If not provided, the current timestamp will be used.
-        - debug (bool): A flag indicating whether to print debug information. Defaults to False.
+        - created_time_ns (int, optional): The timestamp of the transaction in nanoseconds since epoch(1AD). If not provided, the current timestamp will be used.
+        - debug (bool, optional): A flag indicating whether to print debug information. Defaults to False.
 
         <b>Returns</b>:
         - list[int]: A list of timestamps corresponding to the transactions made during the transfer.
 
         <b>Raises</b>:
         - ValueError: Transfer to the same account is forbidden.
-        - ValueError: The created should be greater than zero.
+        - ValueError: The created_time_ns should be greater than zero.
         - ValueError: The box transaction happened again in the same nanosecond time.
         - ValueError: The log transaction happened again in the same nanosecond time.
         """
@@ -1945,16 +1949,16 @@ class ZakatTracker:
             raise ValueError(f'Transfer to the same account is forbidden. {to_account}')
         if unscaled_amount <= 0:
             return []
-        if created is None:
-            created = self.time()
-        if created <= 0:
+        if created_time_ns is None:
+            created_time_ns = self.time()
+        if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         no_lock = self.nolock()
         lock = self._lock()
-        (_, ages) = self.sub(unscaled_amount, desc, from_account, created, debug=debug)
+        (_, ages) = self.sub(unscaled_amount, desc, from_account, created_time_ns, debug=debug)
         times = []
-        source_exchange = self.exchange(from_account, created)
-        target_exchange = self.exchange(to_account, created)
+        source_exchange = self.exchange(from_account, created_time_ns)
+        target_exchange = self.exchange(to_account, created_time_ns)
 
         if debug:
             print('ages', ages)
@@ -1979,7 +1983,7 @@ class ZakatTracker:
                 self._vault['account'][to_account]['box'][age]['rest'] += target_amount
                 self._step(Action.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
                 y = self._log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account,
-                              created=None, ref=None, debug=debug)
+                              created_time_ns=None, ref=None, debug=debug)
                 times.append((age, y))
                 continue
             if debug:
@@ -1990,7 +1994,7 @@ class ZakatTracker:
                 desc=desc,
                 account=to_account,
                 logging=True,
-                created=age,
+                created_time_ns=age,
                 debug=debug,
             )
             times.append(y)
@@ -2002,18 +2006,18 @@ class ZakatTracker:
               silver_gram_price: float,
               unscaled_nisab: float | int | decimal.Decimal = None,
               debug: bool = False,
-              now: int = None,
+              created_time_ns: int = None,
               cycle: float = None) -> tuple:
         """
         Check the eligibility for Zakat based on the given parameters.
 
         <b>Parameters</b>:
         - silver_gram_price (float): The price of a gram of silver.
-        - unscaled_nisab (float | int | decimal.Decimal): The minimum amount of wealth required for Zakat. If not provided,
-                        it will be calculated based on the silver_gram_price.
-        - debug (bool): Flag to enable debug mode.
-        - now (int): The current timestamp. If not provided, it will be calculated using ZakatTracker.time().
-        - cycle (float): The time cycle for Zakat. If not provided, it will be calculated using ZakatTracker.TimeCycle().
+        - unscaled_nisab (float | int | decimal.Decimal, optional): The minimum amount of wealth required for Zakat.
+                        If not provided, it will be calculated based on the silver_gram_price.
+        - debug (bool, optional): Flag to enable debug mode.
+        - created_time_ns (int, optional): The current timestamp. If not provided, it will be calculated using ZakatTracker.time().
+        - cycle (float, optional): The time cycle for Zakat. If not provided, it will be calculated using ZakatTracker.TimeCycle().
 
         <b>Returns</b>:
         - tuple: A tuple containing a boolean indicating the eligibility for Zakat, a list of brief statistics,
@@ -2021,8 +2025,8 @@ class ZakatTracker:
         """
         if debug:
             print('check', f'debug={debug}')
-        if now is None:
-            now = self.time()
+        if created_time_ns is None:
+            created_time_ns = self.time()
         if cycle is None:
             cycle = ZakatTracker.TimeCycle()
         if unscaled_nisab is None:
@@ -2046,15 +2050,15 @@ class ZakatTracker:
                 rest = float(_box[j]['rest'])
                 if rest <= 0:
                     continue
-                exchange = self.exchange(x, created=self.time())
+                exchange = self.exchange(x, created_time_ns=self.time())
                 rest = ZakatTracker.exchange_calc(rest, float(exchange['rate']), 1)
                 brief[0] += rest
                 index = limit + i - 1
-                epoch = (now - j) / cycle
+                epoch = (created_time_ns - j) / cycle
                 if debug:
                     print(f'Epoch: {epoch}', _box[j])
                 if _box[j]['last'] > 0:
-                    epoch = (now - _box[j]['last']) / cycle
+                    epoch = (created_time_ns - _box[j]['last']) / cycle
                 if debug:
                     print(f'Epoch: {epoch}')
                 epoch = math.floor(epoch)
@@ -2121,7 +2125,7 @@ class ZakatTracker:
 
         <b>Parameters</b>:
         - scaled_demand (int): The total demand for payment in local currency.
-        - positive_only (bool): If True, only consider accounts with positive balance. Default is True.
+        - positive_only (bool, optional): If True, only consider accounts with positive balance. Default is True.
 
         <b>Returns</b>:
         - dict: A dictionary containing the payment parts for each account. The dictionary has the following structure:
@@ -2157,7 +2161,7 @@ class ZakatTracker:
 
         <b>Parameters</b>:
         - parts (dict): A dictionary containing payment parts information.
-        - debug (bool): Flag to enable debug mode.
+        - debug (bool, optional): Flag to enable debug mode.
 
         <b>Returns</b>:
         - int: Returns 0 if the payment parts are valid, otherwise returns the error code.
@@ -2207,8 +2211,8 @@ class ZakatTracker:
 
         <b>Parameters</b>:
         - report (tuple): A tuple containing the validity of the report, the report data, and the zakat plan.
-        - parts (dict): A dictionary containing the payment parts for the zakat.
-        - debug (bool): A flag indicating whether to print debug information.
+        - parts (dict, optional): A dictionary containing the payment parts for the zakat.
+        - debug (bool, optional): A flag indicating whether to print debug information.
 
         <b>Returns</b>:
         - bool: True if the zakat calculation is successful, False otherwise.
@@ -2230,7 +2234,7 @@ class ZakatTracker:
         report_time = self.time()
         self._vault['report'][report_time] = report
         self._step(Action.REPORT, ref=report_time)
-        created = self.time()
+        created_time_ns = self.time()
         for x in plan:
             target_exchange = self.exchange(x)
             if debug:
@@ -2247,7 +2251,7 @@ class ZakatTracker:
                 self._step(Action.ZAKAT, account=x, ref=j, value=self._vault['account'][x]['box'][j]['last'],
                            key='last',
                            math_operation=MathOperation.EQUAL)
-                self._vault['account'][x]['box'][j]['last'] = created
+                self._vault['account'][x]['box'][j]['last'] = created_time_ns
                 amount = ZakatTracker.exchange_calc(float(plan[x][i]['total']), 1, float(target_exchange['rate']))
                 self._vault['account'][x]['box'][j]['total'] += amount
                 self._step(Action.ZAKAT, account=x, ref=j, value=amount, key='total',
@@ -2262,7 +2266,7 @@ class ZakatTracker:
                         self._vault['account'][x]['box'][j]['rest'] -= decimal.Decimal(amount)
                     # self._step(Action.ZAKAT, account=x, ref=j, value=amount, key='rest',
                     #            math_operation=MathOperation.SUBTRACTION)
-                    self._log(-float(amount), desc='zakat-زكاة', account=x, created=None, ref=j, debug=debug)
+                    self._log(-float(amount), desc='zakat-زكاة', account=x, created_time_ns=None, ref=j, debug=debug)
         if parts_exist:
             for account, part in parts['account'].items():
                 if part['part'] == 0:
@@ -2286,7 +2290,7 @@ class ZakatTracker:
         Exports the current state of the ZakatTracker object to a JSON file.
 
         <b>Parameters</b>:
-        - path (str): The path where the JSON file will be saved. Default is 'data.json'.
+        - path (str, optional): The path where the JSON file will be saved. Default is 'data.json'.
 
         <b>Returns</b>:
         - bool: True if the export is successful, False otherwise.
@@ -2357,7 +2361,7 @@ class ZakatTracker:
         Load the current state of the ZakatTracker object from a camel file.
 
         <b>Parameters</b>:
-        - path (str): The path where the camel file is located. If not provided, it will use the default path.
+        - path (str, optional): The path where the camel file is located. If not provided, it will use the default path.
         - hash_required (bool, optional): Whether to verify the data integrity using a hash. Defaults to True.
 
         <b>Returns</b>:
@@ -2414,9 +2418,9 @@ class ZakatTracker:
         The function reads the CSV file, checks for duplicate transactions, and creates the transactions in the system.
 
         <b>Parameters</b>:
-        - path (str): The path to the CSV file. Default is 'file.csv'.
-        - scale_decimal_places (int): The number of decimal places to scale the value. Default is 0.
-        - debug (bool): A flag indicating whether to print debug information.
+        - path (str, optional): The path to the CSV file. Default is 'file.csv'.
+        - scale_decimal_places (int, optional): The number of decimal places to scale the value. Default is 0.
+        - debug (bool, optional): A flag indicating whether to print debug information.
 
         <b>Returns</b>:
         - tuple: A tuple containing the number of transactions created, the number of transactions found in the cache,
@@ -2501,11 +2505,11 @@ class ZakatTracker:
                         decimal_places=scale_decimal_places,
                     ) if scale_decimal_places > 0 else unscaled_value
                     if rate > 0:
-                        self.exchange(account=account, created=date, rate=rate)
+                        self.exchange(account=account, created_time_ns=date, rate=rate)
                     if value > 0:
-                        self.track(unscaled_value=value, desc=desc, account=account, logging=True, created=date)
+                        self.track(unscaled_value=value, desc=desc, account=account, logging=True, created_time_ns=date)
                     elif value < 0:
-                        self.sub(unscaled_value=-value, desc=desc, account=account, created=date)
+                        self.sub(unscaled_value=-value, desc=desc, account=account, created_time_ns=date)
                     created += 1
                     cache.append(hashed)
                     continue
@@ -2523,9 +2527,9 @@ class ZakatTracker:
                         unscaled_value2) or date1 != date2:
                     raise Exception('invalid transfer')
                 if rate1 > 0:
-                    self.exchange(account1, created=date1, rate=rate1)
+                    self.exchange(account1, created_time_ns=date1, rate=rate1)
                 if rate2 > 0:
-                    self.exchange(account2, created=date2, rate=rate2)
+                    self.exchange(account2, created_time_ns=date2, rate=rate2)
                 value1 = self.unscale(
                     unscaled_value1,
                     decimal_places=scale_decimal_places,
@@ -2543,7 +2547,7 @@ class ZakatTracker:
                     from_account=values[min(values.keys())],
                     to_account=values[max(values.keys())],
                     desc=desc1,
-                    created=date1,
+                    created_time_ns=date1,
                 )
             except Exception as e:
                 for (i, account, desc, value, date, rate, _) in rows:
@@ -2713,8 +2717,8 @@ class ZakatTracker:
 
         <b>Parameters</b>:
         - day (int): The day of the month.
-        - month (int): The month of the year. Default is 6 (June).
-        - year (int): The year. Default is 2024.
+        - month (int, optional): The month of the year. Default is 6 (June).
+        - year (int, optional): The year. Default is 2024.
 
         <b>Returns</b>:
         - int: The timestamp representing the given day, month, and year.
@@ -2753,10 +2757,10 @@ class ZakatTracker:
         If the row number is not divisible by 13, the value is multiplied by -1.
 
         <b>Parameters</b>:
-        - path (str): The path where the CSV file will be saved. Default is 'data.csv'.
-        - count (int): The number of rows to generate in the CSV file. Default is 1000.
-        - with_rate (bool): If True, a random rate between 1.2% and 12% is added. Default is False.
-        - debug (bool): A flag indicating whether to print debug information.
+        - path (str, optional): The path where the CSV file will be saved. Default is 'data.csv'.
+        - count (int, optional): The number of rows to generate in the CSV file. Default is 1000.
+        - with_rate (bool, optional): If True, a random rate between 1.2% and 12% is added. Default is False.
+        - debug (bool, optional): A flag indicating whether to print debug information.
 
         <b>Returns</b>:
         None
@@ -2787,14 +2791,14 @@ class ZakatTracker:
         return i
 
     @staticmethod
-    def create_random_list(max_sum, min_value=0, max_value=10):
+    def create_random_list(max_sum: int, min_value: int = 0, max_value: int = 10):
         """
         Creates a list of random integers whose sum does not exceed the specified maximum.
 
         <b>Parameters</b>:
-        - max_sum: The maximum allowed sum of the list elements.
-        - min_value: The minimum possible value for an element (inclusive).
-        - max_value: The maximum possible value for an element (inclusive).
+        - max_sum (int): The maximum allowed sum of the list elements.
+        - min_value (int, optional): The minimum possible value for an element (inclusive).
+        - max_value (int, optional): The maximum possible value for an element (inclusive).
 
         <b>Returns</b>:
         - A list of random integers.
@@ -3001,7 +3005,7 @@ class ZakatTracker:
                         desc='test-add',
                         account=x,
                         logging=True,
-                        created=ZakatTracker.time(),
+                        created_time_ns=ZakatTracker.time(),
                         debug=debug,
                     )
                 else:
@@ -3009,7 +3013,7 @@ class ZakatTracker:
                         unscaled_value=y[1],
                         desc='test-sub',
                         account=x,
-                        created=ZakatTracker.time(),
+                        created_time_ns=ZakatTracker.time(),
                     )
                     if debug:
                         print('_sub', z, ZakatTracker.time())
@@ -3187,7 +3191,7 @@ class ZakatTracker:
                         desc=f'test-{x} ages',
                         account='ages',
                         logging=True,
-                        created=selected_time * x[1],
+                        created_time_ns=selected_time * x[1],
                     )
 
                 unscaled_total = self.unscale(total)
@@ -3508,14 +3512,14 @@ class ZakatTracker:
                         assert fresh_value == balance
                     case 1:  # check-exchange
                         _, account, expected_rate = case
-                        t_exchange = self.exchange(account, created=ZakatTracker.time(), debug=debug)
+                        t_exchange = self.exchange(account, created_time_ns=ZakatTracker.time(), debug=debug)
                         if debug:
                             print('t-exchange', t_exchange)
                         assert t_exchange['rate'] == expected_rate
                     case 2:  # do-exchange
                         _, account, rate = case
                         self.exchange(account, rate=rate, debug=debug)
-                        b_exchange = self.exchange(account, created=ZakatTracker.time(), debug=debug)
+                        b_exchange = self.exchange(account, created_time_ns=ZakatTracker.time(), debug=debug)
                         if debug:
                             print('b-exchange', b_exchange)
                         assert b_exchange['rate'] == rate
@@ -3654,13 +3658,13 @@ class ZakatTracker:
                         print(f'############# check(rate: {rate}) #############')
                         print('case', case)
                     self.reset()
-                    self.exchange(account=case[1], created=case[2], rate=rate)
+                    self.exchange(account=case[1], created_time_ns=case[2], rate=rate)
                     self.track(
                         unscaled_value=case[0],
                         desc='test-check',
                         account=case[1],
                         logging=True,
-                        created=case[2],
+                        created_time_ns=case[2],
                     )
                     assert self.snapshot()
 
