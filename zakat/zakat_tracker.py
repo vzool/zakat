@@ -71,7 +71,6 @@ import enum
 import pathlib
 import tempfile
 from pprint import PrettyPrinter as pp
-from typing import Dict, Any
 import camelx
 
 
@@ -419,6 +418,10 @@ class ZakatTracker:
         """
         return 'camel'
 
+    _base_path = str | None
+    _vault_path = str | None
+    _vault = dict[str, dict[str, int | bool | dict[int, dict[str, int]] | None]] | None
+
     def __init__(self, db_path: str = './zakat_db/', history_mode: bool = True):
         """
         Initialize ZakatTracker with database path and history mode.
@@ -430,14 +433,11 @@ class ZakatTracker:
         Returns:
         None
         """
-        self._base_path = None
-        self._vault_path = None
-        self._vault = None
         self.reset()
         self._history(history_mode)
         self.path(f'{db_path}/db.{self.ext()}')
 
-    def path(self, path: str = None) -> str:
+    def path(self, path: str | None = None) -> str:
         """
         Set or get the path to the database file.
 
@@ -581,7 +581,7 @@ class ZakatTracker:
         return y - x, i
 
     @staticmethod
-    def _time(now: datetime.datetime = None) -> int:
+    def _time(now: datetime.datetime | None = None) -> int:
         """
         Internal method to generate a nanosecond-precision timestamp from a datetime object.
 
@@ -603,7 +603,7 @@ class ZakatTracker:
         return int(now.toordinal() * 86_400_000_000_000 + ns_in_day)
 
     @staticmethod
-    def time(now: datetime.datetime = None) -> int:
+    def time(now: datetime.datetime | None = None) -> int:
         """
         Generates a unique, monotonically increasing timestamp based on the provided
         datetime object or the current datetime.
@@ -672,7 +672,7 @@ class ZakatTracker:
                 del self._vault['history'][key]
         return count
 
-    def _history(self, status: bool = None) -> bool:
+    def _history(self, status: bool | None = None) -> bool:
         """
         Enable or disable history tracking.
 
@@ -686,8 +686,16 @@ class ZakatTracker:
             self._history_mode = status
         return self._history_mode
 
-    def _step(self, action: Action = None, account: str = None, ref: int = None, file: int = None, value: float = None,
-              key: str = None, math_operation: MathOperation = None, lock_once: bool = True, debug: bool = False) -> int:
+    def _step(self, action: Action | None = None,
+                    account: str | None = None,
+                    ref: int | None = None,
+                    file: int | None = None,
+                    value: float | None = None,
+                    key: str | None = None,
+                    math_operation: MathOperation | None = None,
+                    lock_once: bool = True,
+                    debug: bool = False,
+                ) -> int:
         """
         This method is responsible for recording the actions performed on the ZakatTracker.
 
@@ -802,7 +810,7 @@ class ZakatTracker:
             return True
         return False
 
-    def recall(self, dry: bool = True, lock: int = None, debug: bool = False) -> bool:
+    def recall(self, dry: bool = True, lock: int | None = None, debug: bool = False) -> bool:
         """
         Revert the last operation.
 
@@ -995,7 +1003,7 @@ class ZakatTracker:
             'ram': (0, '0'),
         }
 
-    def stats(self, ignore_ram: bool = True) -> dict[str, tuple[int, str]]:
+    def stats(self, ignore_ram: bool = True) -> dict[str, tuple[float, str]]:
         """
         Calculates and returns statistics about the object's data storage.
 
@@ -1008,13 +1016,13 @@ class ZakatTracker:
         - ignore_ram (bool, optional): Whether to ignore the RAM size. Default is True
 
         Returns:
-        - dict[str, tuple]: A dictionary containing the following statistics:
+        - dict[str, tuple[float, str]]: A dictionary containing the following statistics:
 
             * 'database': A tuple with two elements:
-                - The database file size in bytes (int).
+                - The database file size in bytes (float).
                 - The database file size in human-readable format (str).
             * 'ram': A tuple with two elements:
-                - The RAM usage (dictionary size) in bytes (int).
+                - The RAM usage (dictionary size) in bytes (float).
                 - The RAM usage in human-readable format (str).
 
         Example:
@@ -2008,7 +2016,7 @@ class ZakatTracker:
               unscaled_nisab: float | int | decimal.Decimal = None,
               debug: bool = False,
               created_time_ns: int = None,
-              cycle: float = None) -> tuple:
+              cycle: float = None) -> tuple[bool, list[int], dict[str, float | int | str]]:
         """
         Check the eligibility for Zakat based on the given parameters.
 
@@ -2021,8 +2029,8 @@ class ZakatTracker:
         - cycle (float, optional): The time cycle for Zakat. If not provided, it will be calculated using ZakatTracker.TimeCycle().
 
         Returns:
-        - tuple: A tuple containing a boolean indicating the eligibility for Zakat, a list of brief statistics,
-        and a dictionary containing the Zakat plan.
+        - tuple[bool, list[int], dict[str, float | int | str]]: A tuple containing a boolean indicating the eligibility for Zakat,
+            a list of brief statistics, and a dictionary containing the Zakat plan.
         """
         if debug:
             print('check', f'debug={debug}')
@@ -2120,7 +2128,7 @@ class ZakatTracker:
             print(f'below_nisab({below_nisab}) >= nisab({nisab})')
         return valid, brief, plan
 
-    def build_payment_parts(self, scaled_demand: int, positive_only: bool = True) -> dict:
+    def build_payment_parts(self, scaled_demand: int, positive_only: bool = True) -> dict[str, dict[str, float] | bool | int | float]:
         """
         Build payment parts for the Zakat distribution.
 
@@ -2129,7 +2137,7 @@ class ZakatTracker:
         - positive_only (bool, optional): If True, only consider accounts with positive balance. Default is True.
 
         Returns:
-        - dict: A dictionary containing the payment parts for each account. The dictionary has the following structure:
+        - dict[str, dict[str, float] | bool | int | float]: A dictionary containing the payment parts for each account. The dictionary has the following structure:
         {
             'account': {
                 'account_id': {'balance': float, 'rate': float, 'part': float},
@@ -2156,12 +2164,12 @@ class ZakatTracker:
         return parts
 
     @staticmethod
-    def check_payment_parts(parts: dict, debug: bool = False) -> int:
+    def check_payment_parts(parts: dict[str, dict[str, float] | bool | int | float], debug: bool = False) -> int:
         """
         Checks the validity of payment parts.
 
         Parameters:
-        - parts (dict): A dictionary containing payment parts information.
+        - parts (dict[str, dict[str, float] | bool | int | float]): A dictionary containing payment parts information.
         - debug (bool, optional): Flag to enable debug mode.
 
         Returns:
@@ -2206,13 +2214,14 @@ class ZakatTracker:
             return 6
         return 0
 
-    def zakat(self, report: tuple, parts: Dict[str, Dict | bool | Any] = None, debug: bool = False) -> bool:
+    def zakat(self, report: tuple[bool, list[int], dict[str, float | int | str]],
+        parts: dict[str, dict[str, float] | bool | int | float] = None, debug: bool = False) -> bool:
         """
         Perform Zakat calculation based on the given report and optional parts.
 
         Parameters:
-        - report (tuple): A tuple containing the validity of the report, the report data, and the zakat plan.
-        - parts (dict, optional): A dictionary containing the payment parts for the zakat.
+        - report (tuple[bool, list[int], dict[str, float | int | str]]): A tuple containing the validity of the report, the report data, and the zakat plan.
+        - parts (dict[str, dict[str, float] | bool | int | float], optional): A dictionary containing the payment parts for the zakat.
         - debug (bool, optional): A flag indicating whether to print debug information.
 
         Returns:
@@ -2304,17 +2313,16 @@ class ZakatTracker:
             return True
 
     @staticmethod
-    def split_at_last_symbol(data, symbol):
+    def split_at_last_symbol(data: str, symbol: str) -> tuple[str, str]:
         """Splits a string at the last occurrence of a given symbol.
     
         Parameters:
-        - data: The input string.
-        - symbol: The symbol to split at.
+        - data (str): The input string.
+        - symbol (str): The symbol to split at.
     
         Returns:
-        - A tuple containing two strings: the part before the last symbol and
-            the part after the last symbol. If the symbol is not found, returns
-            (data, "").
+        - tuple[str, str]: A tuple containing two strings, the part before the last symbol and
+            the part after the last symbol. If the symbol is not found, returns (data, "").
         """
         last_symbol_index = data.rfind(symbol)
     
