@@ -56,14 +56,70 @@ python -c "import zakat, sys; sys.exit(zakat.test())"
 
 ```python
 from zakat import ZakatTracker
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
-tracker = ZakatTracker()
-tracker.track(10000, "Initial deposit")
-tracker.sub(500, "Expense")
-# نفترض أن سعر الفضة 2.5 لكل جرام
-report = tracker.check(2.5)
-tracker.zakat(report)
+ledger = ZakatTracker(':memory:') # or './zakat_db'
+
+# إضافة رصيد (تتبع عملية مالية)
+ledger.track(10000, "ايداع مبدئي") # default account is 1
+# أو
+ledger.track(
+    10000, # المبلغ
+    "ايداع مبدئي",
+    account="الجيب",
+    created_time_ns=ZakatTracker.time(datetime.now()),
+)
+# أو معاملة بتاريخ قديم
+ledger.track(
+    10000, # المبلغ
+    "Initial deposit", # الوصف
+    account="المخبئ",
+    created_time_ns=ZakatTracker.time(datetime.now() - relativedelta(years=1)),
+)
+
+# ملحوظة: إذا لم يكن هناك حساب موجود، فسيتم إنشاؤه تلقائيًا.
+
+# خصم
+ledger.sub(500, "Plummer maintenance expense") # الحساب الافتراضي هو 1
+# or
+ledger.sub(
+    500, # المبلغ
+    "اشتراك الانترنت الشهري",
+    account="الجيب",
+    created_time_ns=ZakatTracker.time(datetime.now()),
+)
+
+# تحويل الأرصدة
+ledger.transfer(100, "الجيب", "البنك") # الوقت الافتراضي هو الآن
+# أو
+ledger.transfer(
+    100,
+    "الجيب", # from account
+    "الخزنة", # to account
+    created_time_ns=ZakatTracker.time(datetime.now()),
+)
+# أو
+ledger.exchange("البنك (USD)", 3.75) # معدل الصرف
+ledger.transfer(
+    375,
+    "الجيب",
+    "البنك (USD)",
+) # هذه المرة تم النظر في أسعار الصرف
+
+# ملحوظة: يتم الاحتفاظ بعمر الأرصدة في جميع المعاملات أثناء النقل.
+
+# تقدير الزكاة (إنشاء تقرير)
+report = ledger.check(silver_gram_price=2.5)
+
+# أداء الزكاة (تطبيق الزكاة)
+# الخصم من نفس الحسابات إذا كانت الزكاة واجبة فرديا أو جماعيا
+ledger.zakat(report)
+# أو قم بتحصيل جميع الزكاة والخصم من الحسابات المحددة
+parts = ledger.build_payment_parts()
+ledger.zakat(report, parts)
 ```
+
 
 ### الميزات الرئيسية:
 
