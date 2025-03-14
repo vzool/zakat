@@ -112,12 +112,22 @@ ledger.transfer(
 # تقدير الزكاة (إنشاء تقرير)
 report = ledger.check(silver_gram_price=2.5)
 
+valid, brief, plan = report # True, [2900000.0, 1000000.0, 25000.0], ...
+
+# valid (bool): هل وصلت أي من المعاملات إلى حدي الإجارة والنصاب مجتمعين؟
+# brief (list:3) = [a, b, c]
+
+a, b, c = brief
+# a: مجموع كل الأرصدة
+# b: مجموع المعاملات التي تجب فيها الزكاة مجتمعة
+# c: ملخص قطع الزكاة المستحق
+
 # أداء الزكاة (تطبيق الزكاة)
 # الخصم من نفس الحسابات إذا كانت الزكاة واجبة فرديا أو جماعيا
 ledger.zakat(report)
-# أو قم بتحصيل جميع الزكاة والخصم من الحسابات المحددة
-parts = ledger.build_payment_parts()
-ledger.zakat(report, parts)
+# أو قم بتحصيل جميع الزكاة والخصم من الحسابات المحددةparts = ledger.build_payment_parts(c)
+# تعديل "الأجزاء" لتوزيع الزكاة على الحسابات المحددة
+ledger.zakat(report, parts) # --> False
 ```
 
 

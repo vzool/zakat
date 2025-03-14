@@ -102,12 +102,23 @@ ledger.transfer(375, "pocket", "bank (USD)") # This time exchange rates consider
 # Estimate Zakat (generate a report)
 report = ledger.check(silver_gram_price=2.5)
 
+valid, brief, plan = report # True, [2900000.0, 1000000.0, 25000.0], ...
+
+# valid (bool): any transactions reached Haul and Nisab limits collectively?
+# brief (list:3) = [a, b, c]
+
+a, b, c = brief
+# a: sum of all balances
+# b: sum of all transactions applicable to Zakat collectively
+# c: Zakat cut summary due
+
 # Perform Zakat (Apply Zakat)
 # discount from the same accounts if Zakat applicable individually or collectively
-ledger.zakat(report)
+ledger.zakat(report) # --> True
 # or Collect all Zakat and discount from selected accounts
-parts = ledger.build_payment_parts()
-ledger.zakat(report, parts)
+parts = ledger.build_payment_parts(c)
+# modify `parts` to distribute your Zakat on selected accounts
+ledger.zakat(report, parts) # --> False
 ```
 
 ### Key Features:

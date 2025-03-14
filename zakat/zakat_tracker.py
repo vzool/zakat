@@ -3920,11 +3920,13 @@ def test(path: str = None, debug: bool = False):
         path = tempfile.mkdtemp()
     if os.path.exists(path):
         shutil.rmtree(path)
+    assert ZakatTracker(':memory:')._memory_mode
     ledger = ZakatTracker(
         db_path=path,
         history_mode=True,
     )
     start = time.time_ns()
+    assert not ledger._memory_mode
     assert ledger.test(debug=debug)
     if no_path and os.path.exists(path):
         shutil.rmtree(path)
