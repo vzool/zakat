@@ -46,16 +46,68 @@ pip install zakat
 python -c "import zakat, sys; sys.exit(zakat.test())"
 ```
 
-###### Quick Example
+###### Example
 
 ```python
 from zakat import ZakatTracker
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 
-tracker = ZakatTracker()
-tracker.track(10000, "Initial deposit") # default account name is "1"
-tracker.sub(500, "Expense")
-report = tracker.check(2.5)  # Assuming silver price is 2.5 per gram
-tracker.zakat(report)
+ledger = ZakatTracker(':memory:') # or './zakat_db'
+
+# Add balance (track a transaction)
+ledger.track(10000, "Initial deposit") # default account is 1
+# or
+ledger.track(
+    10000, # amount
+    "Initial deposit", # description
+    account="pocket",
+    created_time_ns=ZakatTracker.time(datetime.now()),
+)
+# or old transaction
+ledger.track(
+    10000, # amount
+    "Initial deposit", # description
+    account="bunker",
+    created_time_ns=ZakatTracker.time(datetime.now() - relativedelta(years=1)),
+)
+
+# Note: If any account does not exist it will be automatically created.
+
+# Subtract balance
+ledger.sub(500, "Plummer maintenance expense") # default account is 1
+# or
+ledger.sub(
+    500, # amount
+    "Internet monthly subscription", # description
+    account="pocket",
+    created_time_ns=ZakatTracker.time(datetime.now()),
+)
+
+# Transfer balance
+ledger.transfer(100, "pocket", "bank") # default time is now
+# or
+ledger.transfer(
+    100,
+    "pocket", # from account
+    "safe", # to account
+    created_time_ns=ZakatTracker.time(datetime.now()),
+)
+# or
+ledger.exchange("bank (USD)", 3.75) # rate
+ledger.transfer(375, "pocket", "bank (USD)") # This time exchange rates considered
+
+# Note: The age of balances in all transactions are preserved while transfering.
+
+# Estimate Zakat (generate a report)
+report = ledger.check(silver_gram_price=2.5)
+
+# Perform Zakat (Apply Zakat)
+# discount from the same accounts if Zakat applicable individually or collectively
+ledger.zakat(report)
+# or Collect all Zakat and discount from selected accounts
+parts = ledger.build_payment_parts()
+ledger.zakat(report, parts)
 ```
 
 ### Key Features:

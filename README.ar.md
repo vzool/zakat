@@ -52,7 +52,7 @@ pip install zakat
 python -c "import zakat, sys; sys.exit(zakat.test())"
 ```
 
-###### مثال سريع
+###### مثال
 
 ```python
 from zakat import ZakatTracker

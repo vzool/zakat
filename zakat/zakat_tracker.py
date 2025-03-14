@@ -418,26 +418,29 @@ class ZakatTracker:
         """
         return 'camel'
 
-    _base_path = str | None
-    _vault_path = str | None
-    _vault = dict[str, dict[str, int | bool | dict[int, dict[str, int]] | None]] | None
+    _base_path = ""
+    _vault_path = ""
+    _memory_mode = False
+    _vault: dict[str, dict[str, int | bool | dict[int, dict[str, int]] | None]]
 
     def __init__(self, db_path: str = './zakat_db/', history_mode: bool = True):
         """
         Initialize ZakatTracker with database path and history mode.
 
         Parameters:
-        - db_path (str, optional): The path to the database  directory. Default is './zakat_db'.
+        - db_path (str, optional): The path to the database  directory. Defaults to './zakat_db/'. Use ':memory:' for an in-memory database.
         - history_mode (bool, optional): The mode for tracking history. Default is True.
 
         Returns:
         None
         """
         self.reset()
+        self._memory_mode = db_path == ':memory:'
         self._history(history_mode)
-        self.path(f'{db_path}/db.{self.ext()}')
+        if not self._memory_mode:
+            self.path(f'{db_path}/db.{self.ext()}')
 
-    def path(self, path: str | None = None) -> str:
+    def path(self, path: str = None) -> str:
         """
         Set or get the path to the database file.
 
@@ -581,7 +584,7 @@ class ZakatTracker:
         return y - x, i
 
     @staticmethod
-    def _time(now: datetime.datetime | None = None) -> int:
+    def _time(now: datetime.datetime = None) -> int:
         """
         Internal method to generate a nanosecond-precision timestamp from a datetime object.
 
@@ -603,7 +606,7 @@ class ZakatTracker:
         return int(now.toordinal() * 86_400_000_000_000 + ns_in_day)
 
     @staticmethod
-    def time(now: datetime.datetime | None = None) -> int:
+    def time(now: datetime.datetime = None) -> int:
         """
         Generates a unique, monotonically increasing timestamp based on the provided
         datetime object or the current datetime.
@@ -648,7 +651,7 @@ class ZakatTracker:
         t = datetime.timedelta(seconds=(ordinal_ns % 86_400_000_000_000) // 10 ** 9)
         return datetime.datetime.combine(d, datetime.time()) + t
 
-    def clean_history(self, lock: int | None = None) -> int:
+    def clean_history(self, lock: int = None) -> int:
         """
         Cleans up the empty history records of actions performed on the ZakatTracker instance.
 
@@ -672,7 +675,7 @@ class ZakatTracker:
                 del self._vault['history'][key]
         return count
 
-    def _history(self, status: bool | None = None) -> bool:
+    def _history(self, status: bool = None) -> bool:
         """
         Enable or disable history tracking.
 
@@ -686,13 +689,13 @@ class ZakatTracker:
             self._history_mode = status
         return self._history_mode
 
-    def _step(self, action: Action | None = None,
-                    account: str | None = None,
-                    ref: int | None = None,
-                    file: int | None = None,
-                    value: float | None = None,
-                    key: str | None = None,
-                    math_operation: MathOperation | None = None,
+    def _step(self, action: Action = None,
+                    account: str = None,
+                    ref: int = None,
+                    file: int = None,
+                    value: float = None,
+                    key: str = None,
+                    math_operation: MathOperation = None,
                     lock_once: bool = True,
                     debug: bool = False,
                 ) -> int:
@@ -805,12 +808,12 @@ class ZakatTracker:
         if lock == self._vault['lock']:
             self.clean_history(lock)
             self._vault['lock'] = None
-            if auto_save:
+            if auto_save and not self._memory_mode:
                 return self.save(self.path())
             return True
         return False
 
-    def recall(self, dry: bool = True, lock: int | None = None, debug: bool = False) -> bool:
+    def recall(self, dry: bool = True, lock: int = None, debug: bool = False) -> bool:
         """
         Revert the last operation.
 
@@ -3854,9 +3857,7 @@ class ZakatTracker:
                             suite.append(cp)
                 if debug:
                     print('suite', len(suite))
-                # vault = self._vault.copy()
                 for case in suite:
-                    # self._vault = vault.copy()
                     if debug:
                         print('case', case)
                     result = self.check_payment_parts(case)
