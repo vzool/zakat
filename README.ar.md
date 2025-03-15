@@ -124,8 +124,8 @@ a, b, c = brief
 
 # أداء الزكاة (تطبيق الزكاة)
 # الخصم من نفس الحسابات إذا كانت الزكاة واجبة فرديا أو جماعيا
-ledger.zakat(report)
-
+ledger.zakat(report) # --> True
+# أو قم بتحصيل جميع الزكاة والخصم من الحسابات المحددة
 parts = ledger.build_payment_parts(c)
 # تعديل "الأجزاء" لتوزيع الزكاة على الحسابات المحددة
 ledger.zakat(report, parts) # --> False
