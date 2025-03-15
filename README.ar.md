@@ -100,7 +100,7 @@ ledger.transfer(
     created_time_ns=ZakatTracker.time(datetime.now()),
 )
 # أو
-ledger.exchange("البنك (USD)", 3.75) # معدل الصرف
+ledger.exchange("البنك (USD)", rate=3.75) #افترض أن العملة الحالية هي سعر صرف ريال سعودي = 1
 ledger.transfer(
     375,
     "الجيب",
@@ -125,11 +125,568 @@ a, b, c = brief
 # أداء الزكاة (تطبيق الزكاة)
 # الخصم من نفس الحسابات إذا كانت الزكاة واجبة فرديا أو جماعيا
 ledger.zakat(report)
-# أو قم بتحصيل جميع الزكاة والخصم من الحسابات المحددةparts = ledger.build_payment_parts(c)
+
+parts = ledger.build_payment_parts(c)
 # تعديل "الأجزاء" لتوزيع الزكاة على الحسابات المحددة
 ledger.zakat(report, parts) # --> False
 ```
 
+###### بنية بيانات قاعدة البيانات (vault):
+
+نظام ملفات تخزين البيانات الرئيسي على القرص هو تنسيق [`camelX`](https://github.com/vzool/camelX)، ولكنه يظهر هنا بتنسيق JSON للبيانات التي تم إنشاؤها بواسطة المثال أعلاه (ملاحظة: ستختلف الأوقات إذا قمت بإعادة تطبيقها بنفسك):
+
+```JSON
+{
+    "account": {
+        "1": {
+            "balance": 950000,
+            "box": {
+                "63877702571799379968": {
+                    "capital": 1000000,
+                    "count": 0,
+                    "last": 0,
+                    "rest": 950000,
+                    "total": 0
+                }
+            },
+            "count": 2,
+            "log": {
+                "63877702571799379968": {
+                    "value": 1000000,
+                    "desc": "\u0627\u064a\u062f\u0627\u0639 \u0645\u0628\u062f\u0626\u064a",
+                    "ref": null,
+                    "file": {}
+                },
+                "63877702571799691264": {
+                    "value": -50000,
+                    "desc": "Plummer maintenance expense",
+                    "ref": null,
+                    "file": {}
+                }
+            },
+            "hide": false,
+            "zakatable": true,
+            "created": 63877702571799379968
+        },
+        "\u0627\u0644\u062c\u064a\u0628": {
+            "balance": 892500,
+            "box": {
+                "63877702571799511040": {
+                    "capital": 1000000,
+                    "count": 0,
+                    "last": 0,
+                    "rest": 892500,
+                    "total": 0
+                }
+            },
+            "count": 5,
+            "log": {
+                "63877702571799511040": {
+                    "value": 1000000,
+                    "desc": "\u0627\u064a\u062f\u0627\u0639 \u0645\u0628\u062f\u0626\u064a",
+                    "ref": null,
+                    "file": {}
+                },
+                "63877702571799756800": {
+                    "value": -50000,
+                    "desc": "\u0627\u0634\u062a\u0631\u0627\u0643 \u0627\u0644\u0627\u0646\u062a\u0631\u0646\u062a \u0627\u0644\u0634\u0647\u0631\u064a",
+                    "ref": null,
+                    "file": {}
+                },
+                "63877702571799805952": {
+                    "value": -10000,
+                    "desc": "",
+                    "ref": null,
+                    "file": {}
+                },
+                "63877702571799904256": {
+                    "value": -10000,
+                    "desc": "",
+                    "ref": null,
+                    "file": {}
+                },
+                "63877702571800043520": {
+                    "value": -37500,
+                    "desc": "",
+                    "ref": null,
+                    "file": {}
+                }
+            },
+            "hide": false,
+            "zakatable": true,
+            "created": 63877702571799511040
+        },
+        "\u0627\u0644\u0645\u062e\u0628\u0626": {
+            "balance": 975000.0,
+            "box": {
+                "63846166571799568384": {
+                    "capital": 1000000,
+                    "count": 1,
+                    "last": 63877702571800305664,
+                    "rest": 975000.0,
+                    "total": 25000.0
+                }
+            },
+            "count": 2,
+            "log": {
+                "63846166571799568384": {
+                    "value": 1000000,
+                    "desc": "Initial deposit",
+                    "ref": null,
+                    "file": {}
+                },
+                "63877702571800338432": {
+                    "value": -25000.0,
+                    "desc": "zakat-\u0632\u0643\u0627\u0629",
+                    "ref": 63846166571799568384,
+                    "file": {}
+                }
+            },
+            "hide": false,
+            "zakatable": true,
+            "created": 63846166571799568384
+        },
+        "\u0627\u0644\u0628\u0646\u0643": {
+            "balance": 10000,
+            "box": {
+                "63877702571799511040": {
+                    "capital": 10000,
+                    "count": 0,
+                    "last": 0,
+                    "rest": 10000,
+                    "total": 0
+                }
+            },
+            "count": 1,
+            "log": {
+                "63877702571799511040": {
+                    "value": 10000,
+                    "desc": "",
+                    "ref": null,
+                    "file": {}
+                }
+            },
+            "hide": false,
+            "zakatable": true,
+            "created": 63877702571799511040
+        },
+        "\u0627\u0644\u062e\u0632\u0646\u0629": {
+            "balance": 10000,
+            "box": {
+                "63877702571799511040": {
+                    "capital": 10000,
+                    "count": 0,
+                    "last": 0,
+                    "rest": 10000,
+                    "total": 0
+                }
+            },
+            "count": 1,
+            "log": {
+                "63877702571799511040": {
+                    "value": 10000,
+                    "desc": "",
+                    "ref": null,
+                    "file": {}
+                }
+            },
+            "hide": false,
+            "zakatable": true,
+            "created": 63877702571799511040
+        },
+        "\u0627\u0644\u0628\u0646\u0643 (USD)": {
+            "balance": 10000,
+            "box": {
+                "63877702571799511040": {
+                    "capital": 10000,
+                    "count": 0,
+                    "last": 0,
+                    "rest": 10000,
+                    "total": 0
+                }
+            },
+            "count": 1,
+            "log": {
+                "63877702571799511040": {
+                    "value": 10000,
+                    "desc": "",
+                    "ref": null,
+                    "file": {}
+                }
+            },
+            "hide": false,
+            "zakatable": true,
+            "created": 63877702571799511040
+        }
+    },
+    "exchange": {
+        "\u0627\u0644\u0628\u0646\u0643 (USD)": {
+            "63877702571800002560": {
+                "rate": 3.75,
+                "description": null,
+                "time": 63877702571800002560
+            }
+        }
+    },
+    "history": {
+        "63877702571799412736": [
+            {
+                "action": "CREATE",
+                "account": 1,
+                "ref": null,
+                "file": null,
+                "key": null,
+                "value": null,
+                "math": null
+            },
+            {
+                "action": "LOG",
+                "account": 1,
+                "ref": 63877702571799379968,
+                "file": null,
+                "key": null,
+                "value": 1000000,
+                "math": null
+            },
+            {
+                "action": "TRACK",
+                "account": 1,
+                "ref": 63877702571799379968,
+                "file": null,
+                "key": null,
+                "value": 1000000,
+                "math": null
+            }
+        ],
+        "63877702571799519232": [
+            {
+                "action": "CREATE",
+                "account": "\u0627\u0644\u062c\u064a\u0628",
+                "ref": null,
+                "file": null,
+                "key": null,
+                "value": null,
+                "math": null
+            },
+            {
+                "action": "LOG",
+                "account": "\u0627\u0644\u062c\u064a\u0628",
+                "ref": 63877702571799511040,
+                "file": null,
+                "key": null,
+                "value": 1000000,
+                "math": null
+            },
+            {
+                "action": "TRACK",
+                "account": "\u0627\u0644\u062c\u064a\u0628",
+                "ref": 63877702571799511040,
+                "file": null,
+                "key": null,
+                "value": 1000000,
+                "math": null
+            }
+        ],
+        "63877702571799650304": [
+            {
+                "action": "CREATE",
+                "account": "\u0627\u0644\u0645\u062e\u0628\u0626",
+                "ref": null,
+                "file": null,
+                "key": null,
+                "value": null,
+                "math": null
+            },
+            {
+                "action": "LOG",
+                "account": "\u0627\u0644\u0645\u062e\u0628\u0626",
+                "ref": 63846166571799568384,
+                "file": null,
+                "key": null,
+                "value": 1000000,
+                "math": null
+            },
+            {
+                "action": "TRACK",
+                "account": "\u0627\u0644\u0645\u062e\u0628\u0626",
+                "ref": 63846166571799568384,
+                "file": null,
+                "key": null,
+                "value": 1000000,
+                "math": null
+            }
+        ],
+        "63877702571799699456": [
+            {
+                "action": "LOG",
+                "account": 1,
+                "ref": 63877702571799691264,
+                "file": null,
+                "key": null,
+                "value": -50000,
+                "math": null
+            },
+            {
+                "action": "SUB",
+                "account": 1,
+                "ref": 63877702571799379968,
+                "file": null,
+                "key": null,
+                "value": 50000,
+                "math": null
+            }
+        ],
+        "63877702571799764992": [
+            {
+                "action": "LOG",
+                "account": "\u0627\u0644\u062c\u064a\u0628",
+                "ref": 63877702571799756800,
+                "file": null,
+                "key": null,
+                "value": -50000,
+                "math": null
+            },
+            {
+                "action": "SUB",
+                "account": "\u0627\u0644\u062c\u064a\u0628",
+                "ref": 63877702571799511040,
+                "file": null,
+                "key": null,
+                "value": 50000,
+                "math": null
+            }
+        ],
+        "63877702571799822336": [
+            {
+                "action": "LOG",
+                "account": "\u0627\u0644\u062c\u064a\u0628",
+                "ref": 63877702571799805952,
+                "file": null,
+                "key": null,
+                "value": -10000,
+                "math": null
+            },
+            {
+                "action": "SUB",
+                "account": "\u0627\u0644\u062c\u064a\u0628",
+                "ref": 63877702571799511040,
+                "file": null,
+                "key": null,
+                "value": 10000,
+                "math": null
+            },
+            {
+                "action": "CREATE",
+                "account": "\u0627\u0644\u0628\u0646\u0643",
+                "ref": null,
+                "file": null,
+                "key": null,
+                "value": null,
+                "math": null
+            },
+            {
+                "action": "LOG",
+                "account": "\u0627\u0644\u0628\u0646\u0643",
+                "ref": 63877702571799511040,
+                "file": null,
+                "key": null,
+                "value": 10000,
+                "math": null
+            },
+            {
+                "action": "TRACK",
+                "account": "\u0627\u0644\u0628\u0646\u0643",
+                "ref": 63877702571799511040,
+                "file": null,
+                "key": null,
+                "value": 10000,
+                "math": null
+            }
+        ],
+        "63877702571799912448": [
+            {
+                "action": "LOG",
+                "account": "\u0627\u0644\u062c\u064a\u0628",
+                "ref": 63877702571799904256,
+                "file": null,
+                "key": null,
+                "value": -10000,
+                "math": null
+            },
+            {
+                "action": "SUB",
+                "account": "\u0627\u0644\u062c\u064a\u0628",
+                "ref": 63877702571799511040,
+                "file": null,
+                "key": null,
+                "value": 10000,
+                "math": null
+            },
+            {
+                "action": "CREATE",
+                "account": "\u0627\u0644\u062e\u0632\u0646\u0629",
+                "ref": null,
+                "file": null,
+                "key": null,
+                "value": null,
+                "math": null
+            },
+            {
+                "action": "LOG",
+                "account": "\u0627\u0644\u062e\u0632\u0646\u0629",
+                "ref": 63877702571799511040,
+                "file": null,
+                "key": null,
+                "value": 10000,
+                "math": null
+            },
+            {
+                "action": "TRACK",
+                "account": "\u0627\u0644\u062e\u0632\u0646\u0629",
+                "ref": 63877702571799511040,
+                "file": null,
+                "key": null,
+                "value": 10000,
+                "math": null
+            }
+        ],
+        "63877702571800010752": [
+            {
+                "action": "EXCHANGE",
+                "account": "\u0627\u0644\u0628\u0646\u0643 (USD)",
+                "ref": 63877702571800002560,
+                "file": null,
+                "key": null,
+                "value": 3.75,
+                "math": null
+            }
+        ],
+        "63877702571800051712": [
+            {
+                "action": "LOG",
+                "account": "\u0627\u0644\u062c\u064a\u0628",
+                "ref": 63877702571800043520,
+                "file": null,
+                "key": null,
+                "value": -37500,
+                "math": null
+            },
+            {
+                "action": "SUB",
+                "account": "\u0627\u0644\u062c\u064a\u0628",
+                "ref": 63877702571799511040,
+                "file": null,
+                "key": null,
+                "value": 37500,
+                "math": null
+            },
+            {
+                "action": "CREATE",
+                "account": "\u0627\u0644\u0628\u0646\u0643 (USD)",
+                "ref": null,
+                "file": null,
+                "key": null,
+                "value": null,
+                "math": null
+            },
+            {
+                "action": "LOG",
+                "account": "\u0627\u0644\u0628\u0646\u0643 (USD)",
+                "ref": 63877702571799511040,
+                "file": null,
+                "key": null,
+                "value": 10000,
+                "math": null
+            },
+            {
+                "action": "TRACK",
+                "account": "\u0627\u0644\u0628\u0646\u0643 (USD)",
+                "ref": 63877702571799511040,
+                "file": null,
+                "key": null,
+                "value": 10000,
+                "math": null
+            }
+        ],
+        "63877702571800281088": [
+            {
+                "action": "REPORT",
+                "account": null,
+                "ref": 63877702571800289280,
+                "file": null,
+                "key": null,
+                "value": null,
+                "math": null
+            },
+            {
+                "action": "ZAKAT",
+                "account": "\u0627\u0644\u0645\u062e\u0628\u0626",
+                "ref": 63846166571799568384,
+                "file": null,
+                "key": "last",
+                "value": 0,
+                "math": "EQUAL"
+            },
+            {
+                "action": "ZAKAT",
+                "account": "\u0627\u0644\u0645\u062e\u0628\u0626",
+                "ref": 63846166571799568384,
+                "file": null,
+                "key": "total",
+                "value": 25000.0,
+                "math": "ADDITION"
+            },
+            {
+                "action": "ZAKAT",
+                "account": "\u0627\u0644\u0645\u062e\u0628\u0626",
+                "ref": 63846166571799568384,
+                "file": null,
+                "key": "count",
+                "value": 1,
+                "math": "ADDITION"
+            },
+            {
+                "action": "LOG",
+                "account": "\u0627\u0644\u0645\u062e\u0628\u0626",
+                "ref": 63877702571800338432,
+                "file": null,
+                "key": null,
+                "value": -25000.0,
+                "math": null
+            }
+        ]
+    },
+    "lock": null,
+    "report": {
+        "63877702571800289280": [
+            true,
+            [
+                2900000.0,
+                1000000.0,
+                25000.0
+            ],
+            {
+                "\u0627\u0644\u0645\u062e\u0628\u0626": {
+                    "0": {
+                        "total": 25000.0,
+                        "count": 1,
+                        "box_time": 63846166571799568384,
+                        "box_capital": 1000000,
+                        "box_rest": 1000000,
+                        "box_last": 0,
+                        "box_total": 0,
+                        "box_count": 0,
+                        "box_log": "Initial deposit",
+                        "exchange_rate": 1,
+                        "exchange_time": 63877702571800199168,
+                        "exchange_desc": null
+                    }
+                }
+            }
+        ]
+    }
+}
+```
 
 ### الميزات الرئيسية:
 
