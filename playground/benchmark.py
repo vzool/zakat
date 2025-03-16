@@ -4,8 +4,11 @@ import shelve
 import sys
 import shutil
 import os
+import random
 sys.path.append('../zakat')
 from zakat_tracker import ZakatTracker, JSONEncoder, JSONDecoder
+
+random.seed(1234567890)
 
 path = './benchmark'
 
@@ -13,13 +16,14 @@ if os.path.exists(path):
     shutil.rmtree(path)
 
 x = ZakatTracker(f'{path}/db')
+
 t = ZakatTracker.time()
 x.generate_random_csv_file(f'{path}/data.csv', 1_000_000, True)
 print('generate_csv', ZakatTracker.duration_from_nanoseconds(ZakatTracker.time() - t))
 
 t = ZakatTracker.time()
 y = x.import_csv(f'{path}/data.csv')
-print(y)
+print(len(x.accounts()))
 print('import_csv', ZakatTracker.duration_from_nanoseconds(ZakatTracker.time() - t))
 
 t = ZakatTracker.time()
