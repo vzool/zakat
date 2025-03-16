@@ -18,6 +18,7 @@ from zakat.zakat_tracker import (
     test,
     Action,
     JSONEncoder,
+    JSONDecoder,
     MathOperation,
     WeekDay,
 )
@@ -35,6 +36,7 @@ __all__ = [
     "test",
     "Action",
     "JSONEncoder",
+    "JSONDecoder",
     "MathOperation",
     "WeekDay",
     "start_file_server",

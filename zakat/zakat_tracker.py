@@ -168,6 +168,38 @@ class JSONEncoder(json.JSONEncoder):
             return float(o)
         return super().default(o)
 
+class JSONDecoder(json.JSONDecoder):
+    """
+    Custom JSON decoder to handle specific object types.
+
+    This decoder overrides the `object_hook` method to deserialize:
+    - Strings representing enum member names back to their respective enum values.
+    - Floats back to `decimal.Decimal` instances.
+
+    Example:
+        >>> json.loads('{"action": "CREATE"}', cls=JSONDecoder)
+        {'action': <Action.CREATE: 1>}
+        >>> json.loads('{"value": 10.5}', cls=JSONDecoder)
+        {'value': Decimal('10.5')}
+    """
+    def object_hook(self, obj):
+        """
+        Overrides the default `object_hook` method to deserialize specific object types.
+
+        Parameters:
+        - obj: The object to deserialize.
+
+        Returns:
+        - The deserialized object.
+        """
+        if isinstance(obj, str) and obj in Action.__members__:
+            return Action[obj]
+        if isinstance(obj, str) and obj in MathOperation.__members__:
+            return MathOperation[obj]
+        if isinstance(obj, float):
+            return decimal.Decimal(str(obj))
+        return obj
+
 
 def print_stack(simple: bool = True, local: bool = False, skip_first: bool = True):
     """
@@ -2783,8 +2815,8 @@ class ZakatTracker:
         with open(path, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
             for i in range(count):
-                account = f'acc-{random.randint(1, 1000)}'
-                desc = f'Some text {random.randint(1, 1000)}'
+                account = f'acc-{random.randint(1, count)}'
+                desc = f'Some text {random.randint(1, count)}'
                 value = random.randint(1000, 100000)
                 date = ZakatTracker.generate_random_date(datetime.datetime(1000, 1, 1),
                                                          datetime.datetime(2023, 12, 31)).strftime('%Y-%m-%d %H:%M:%S')
