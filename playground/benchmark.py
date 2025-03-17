@@ -31,9 +31,12 @@ x.generate_random_csv_file(f'{path}/data.csv', 1_000_000, True)
 print('generate_csv', ZakatTracker.duration_from_nanoseconds(ZakatTracker.time() - t))
 
 t = ZakatTracker.time()
-y = x.import_csv(f'{path}/data.csv')
+y = x.import_csv(f'{path}/data.csv', debug=True)
 print('import_csv', ZakatTracker.duration_from_nanoseconds(ZakatTracker.time() - t))
-print("accounts", len(x.accounts()))
+print("accounts", len(x.accounts()), y)
+
+#with open(f'{path}/debug.json', 'w', encoding='utf-8') as file:
+#    json.dump(y, file, indent=4, cls=JSONEncoder)
 
 t = ZakatTracker.time()
 print(x.save())

@@ -166,6 +166,8 @@ class JSONEncoder(json.JSONEncoder):
             return o.name  # Serialize as the enum member's name
         if isinstance(o, decimal.Decimal):
             return float(o)
+        if isinstance(o, Exception):
+            return str(o)
         return super().default(o)
 
 class JSONDecoder(json.JSONDecoder):
@@ -2601,7 +2603,13 @@ class ZakatTracker:
             stream.write(camel.dump(cache))
         if no_lock:
             self.free(lock)
-        return created, found, bad
+        y = created, found, bad
+        if debug:
+            debug_path = f'{self.import_csv_cache_path()}.debug.json'
+            with open(debug_path, 'w', encoding='utf-8') as file:
+                json.dump(y, file, indent=4, cls=JSONEncoder)
+                print(f'generated debug report @ `{debug_path}`...')
+        return y
 
     ########
     # TESTS #
