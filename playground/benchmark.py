@@ -35,9 +35,6 @@ y = x.import_csv(f'{path}/data.csv', debug=True)
 print('import_csv', ZakatTracker.duration_from_nanoseconds(ZakatTracker.time() - t))
 print("accounts", len(x.accounts()), y)
 
-#with open(f'{path}/debug.json', 'w', encoding='utf-8') as file:
-#    json.dump(y, file, indent=4, cls=JSONEncoder)
-
 t = ZakatTracker.time()
 print(x.save())
 print('Save-camel', ZakatTracker.duration_from_nanoseconds(ZakatTracker.time() - t))

@@ -2498,7 +2498,7 @@ class ZakatTracker:
         date_formats = [
             '%Y-%m-%d %H:%M:%S',
             '%Y-%m-%dT%H:%M:%S',
-            '%Y-%m-%dT%H%M%S',
+            '%Y-%m-%dT%H%M%S.%f',
             '%Y-%m-%d',
         ]
         created, found, bad = 0, 0, {}
