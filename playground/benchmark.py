@@ -5,8 +5,17 @@ import sys
 import shutil
 import os
 import random
-sys.path.append('../zakat')
-from zakat_tracker import ZakatTracker, JSONEncoder, JSONDecoder
+try:
+    print("Trying method #1")
+    sys.path.append('./zakat')
+    from zakat_tracker import ZakatTracker, JSONEncoder, JSONDecoder
+    print("Loaded method #1")
+except Exception as e:
+    print(e)
+    print("Trying method #2")
+    sys.path.append('../zakat')
+    from zakat_tracker import ZakatTracker, JSONEncoder, JSONDecoder
+    print("Loaded method #2" )
 
 random.seed(1234567890)
 
@@ -23,8 +32,8 @@ print('generate_csv', ZakatTracker.duration_from_nanoseconds(ZakatTracker.time()
 
 t = ZakatTracker.time()
 y = x.import_csv(f'{path}/data.csv')
-print(len(x.accounts()))
 print('import_csv', ZakatTracker.duration_from_nanoseconds(ZakatTracker.time() - t))
+print("accounts", len(x.accounts()))
 
 t = ZakatTracker.time()
 print(x.save())
