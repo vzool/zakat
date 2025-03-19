@@ -69,7 +69,7 @@ class Vault:
 
 # Example Usage
 def create_attrs_instance():
-    vault = Vault(
+    y = Vault(
         account={
             "my_account": AccountDetail(
                 balance=500,
@@ -95,11 +95,12 @@ def create_attrs_instance():
         lock=None,
         report={}
     )
-    return vault
+    #print(id(y))
+    return y
 
 def access_attrs_attribute(vault):
     return vault.account["my_account"].balance
 
 if __name__ == "__main__":
-    vault = create_attrs_instance()
-    print(vault)
+    x = create_attrs_instance()
+    print(x)

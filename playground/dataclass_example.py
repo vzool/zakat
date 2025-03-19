@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, fields
 from typing import Dict, Optional, List, Tuple
 from enum import Enum
 
@@ -20,9 +20,32 @@ class MathOperation(Enum):
     MULTIPLY = "MULTIPLY"
     DIVIDE = "DIVIDE"
 
+class Object:
+    # Frozen implemention REF https://discuss.python.org/t/dataclasses-freezing-specific-fields-should-be-possible/59968/2
+    def __post_init__(self):
+        self.__set_fields_frozen(self)
+    @classmethod
+    def __set_fields_frozen(cls, self):
+        flds = fields(cls)
+        for fld in flds:
+            if fld.metadata.get("frozen"):
+                field_name = fld.name
+                field_value = getattr(self, fld.name)
+                setattr(self, f"_{fld.name}", field_value)
+
+                def local_getter(self):
+                    return getattr(self, f"_{field_name}")
+
+                def frozen(name):
+                    def local_setter(self, value):
+                        raise RuntimeError(f"Field '{name}' is frozen!")
+                    return local_setter
+
+                setattr(cls, field_name, property(local_getter, frozen(field_name)))
+
 @dataclass
-class TransactionDetail:
-    capital: int
+class TransactionDetail(Object):
+    capital: int #= field(metadata={"frozen": True})
     count: int
     last: int
     rest: int
@@ -69,7 +92,7 @@ class Vault:
 
 # Example Usage
 def create_dataclass_instance():
-    vault = Vault(
+    y = Vault(
         account={
             "my_account": AccountDetail(
                 balance=500,
@@ -85,7 +108,7 @@ def create_dataclass_instance():
             )
         },
         exchange = {
-            "my_account{" : {
+            "my_account" : {
                 1234567890 : ExchangeRate(rate=1.0, description = "USD to local")
             }
         },
@@ -95,11 +118,12 @@ def create_dataclass_instance():
         lock=None,
         report={}
     )
-    return vault
+    #print(id(y))
+    return y
 
 def access_dataclass_attribute(vault):
     return vault.account["my_account"].balance
 
 if __name__ == "__main__":
-    vault = create_dataclass_instance()
-    print(vault)
+    x = create_dataclass_instance()
+    print(x)
