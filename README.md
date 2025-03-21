@@ -65,7 +65,7 @@ ledger.track(
     created_time_ns=ZakatTracker.time(datetime.now()),
 )
 # or old transaction
-ledger.track(
+box_ref = ledger.track(
     10000, # amount
     "Initial deposit", # description
     account="bunker",
@@ -75,9 +75,9 @@ ledger.track(
 # Note: If any account does not exist it will be automatically created.
 
 # Subtract balance
-ledger.sub(500, "Plummer maintenance expense") # default account is 1
+ledger.subtract(500, "Plummer maintenance expense") # default account is 1
 # or
-ledger.sub(
+subtract_report = ledger.subtract(
     500, # amount
     "Internet monthly subscription", # description
     account="pocket",
@@ -87,7 +87,7 @@ ledger.sub(
 # Transfer balance
 ledger.transfer(100, "pocket", "bank") # default time is now
 # or
-ledger.transfer(
+transfer_report = ledger.transfer(
     100,
     "pocket", # from account
     "safe", # to account
@@ -100,25 +100,16 @@ ledger.transfer(375, "pocket", "bank (USD)") # This time exchange rates consider
 # Note: The age of balances in all transactions are preserved while transfering.
 
 # Estimate Zakat (generate a report)
-report = ledger.check(silver_gram_price=2.5)
+zakat_report = ledger.check(silver_gram_price=2.5)
 
-valid, brief, plan = report # True, [2900000.0, 1000000.0, 25000.0], ...
-
-# valid (bool): any transactions reached Haul and Nisab limits collectively?
-# brief (list:3) = [a, b, c]
-
-a, b, c = brief
-# a: sum of all balances
-# b: sum of all transactions applicable to Zakat collectively
-# c: Zakat cut summary due
 
 # Perform Zakat (Apply Zakat)
 # discount from the same accounts if Zakat applicable individually or collectively
-ledger.zakat(report) # --> True
+ledger.zakat(zakat_report) # --> True
 # or Collect all Zakat and discount from selected accounts
 parts = ledger.build_payment_parts(c)
 # modify `parts` to distribute your Zakat on selected accounts
-ledger.zakat(report, parts) # --> False
+ledger.zakat(zakat_report, parts) # --> False
 ```
 
 ###### Vault data structure:

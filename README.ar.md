@@ -71,7 +71,7 @@ ledger.track(
     created_time_ns=ZakatTracker.time(datetime.now()),
 )
 # أو معاملة بتاريخ قديم
-ledger.track(
+box_ref = ledger.track(
     10000, # المبلغ
     "Initial deposit", # الوصف
     account="المخبئ",
@@ -81,9 +81,9 @@ ledger.track(
 # ملحوظة: إذا لم يكن هناك حساب موجود، فسيتم إنشاؤه تلقائيًا.
 
 # خصم
-ledger.sub(500, "Plummer maintenance expense") # الحساب الافتراضي هو 1
+ledger.subtract(500, "Plummer maintenance expense") # الحساب الافتراضي هو 1
 # or
-ledger.sub(
+subtract_report = ledger.subtract(
     500, # المبلغ
     "اشتراك الانترنت الشهري",
     account="الجيب",
@@ -93,7 +93,7 @@ ledger.sub(
 # تحويل الأرصدة
 ledger.transfer(100, "الجيب", "البنك") # الوقت الافتراضي هو الآن
 # أو
-ledger.transfer(
+transfer_report = ledger.transfer(
     100,
     "الجيب", # from account
     "الخزنة", # to account
@@ -110,25 +110,16 @@ ledger.transfer(
 # ملحوظة: يتم الاحتفاظ بعمر الأرصدة في جميع المعاملات أثناء النقل.
 
 # تقدير الزكاة (إنشاء تقرير)
-report = ledger.check(silver_gram_price=2.5)
+zakat_report = ledger.check(silver_gram_price=2.5)
 
-valid, brief, plan = report # True, [2900000.0, 1000000.0, 25000.0], ...
-
-# valid (bool): هل وصلت أي من المعاملات إلى حدي الإجارة والنصاب مجتمعين؟
-# brief (list:3) = [a, b, c]
-
-a, b, c = brief
-# a: مجموع كل الأرصدة
-# b: مجموع المعاملات التي تجب فيها الزكاة مجتمعة
-# c: ملخص قطع الزكاة المستحق
 
 # أداء الزكاة (تطبيق الزكاة)
 # الخصم من نفس الحسابات إذا كانت الزكاة واجبة فرديا أو جماعيا
-ledger.zakat(report) # --> True
+ledger.zakat(zakat_report) # --> True
 # أو قم بتحصيل جميع الزكاة والخصم من الحسابات المحددة
 parts = ledger.build_payment_parts(c)
 # تعديل "الأجزاء" لتوزيع الزكاة على الحسابات المحددة
-ledger.zakat(report, parts) # --> False
+ledger.zakat(zakat_report, parts) # --> False
 ```
 
 ###### بنية بيانات قاعدة البيانات (vault):
