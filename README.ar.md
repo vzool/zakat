@@ -117,7 +117,7 @@ zakat_report = ledger.check(silver_gram_price=2.5)
 # الخصم من نفس الحسابات إذا كانت الزكاة واجبة فرديا أو جماعيا
 ledger.zakat(zakat_report) # --> True
 # أو قم بتحصيل جميع الزكاة والخصم من الحسابات المحددة
-parts = ledger.build_payment_parts(c)
+parts = ledger.build_payment_parts(zakat_report.statistics.zakat_cut_balances)
 # تعديل "الأجزاء" لتوزيع الزكاة على الحسابات المحددة
 ledger.zakat(zakat_report, parts) # --> False
 ```
