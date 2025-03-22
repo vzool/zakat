@@ -2676,7 +2676,7 @@ class ZakatTracker:
     
         if last_symbol_index != -1:
             before_symbol = data[:last_symbol_index]
-            after_symbol = data[last_symbol_index + 1:]
+            after_symbol = data[last_symbol_index + len(symbol):]
             return before_symbol, after_symbol
         return data, ""
 
@@ -2703,7 +2703,7 @@ class ZakatTracker:
                 stream.write(data)
                 if hash_required:
                     hashed = self.hash_data(data.encode())
-                    stream.write(f'#{hashed}')
+                    stream.write(f'//{hashed}')
             # then move tmp file to original location
             shutil.move(temp, path)
             return True
@@ -2793,7 +2793,7 @@ class ZakatTracker:
             if os.path.exists(path):
                 with open(path, 'r', encoding='utf-8') as stream:
                     file = stream.read()
-                    data, hashed = self.split_at_last_symbol(file, '#')
+                    data, hashed = self.split_at_last_symbol(file, '//')
                     if hash_required:
                         assert hashed
                         if debug:
@@ -3320,7 +3320,8 @@ class ZakatTracker:
             ("", '#', ("", "")),
             ("test/test/test.txt", '/', ("test/test", "test.txt")),
             ("abc#def#ghi", "#", ("abc#def", "ghi")),
-            ("abc", "#", ("abc", ""))
+            ("abc", "#", ("abc", "")),
+            ("//https://test", '//', ("//https:", "test")),
         ]
         
         for data, symbol, expected in test_cases:
