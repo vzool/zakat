@@ -1,8 +1,9 @@
 from setuptools import find_packages, setup
+from zakat.zakat_tracker import ZakatTracker
 
 setup(
     name='zakat',
-    version='0.3.1',
+    version=ZakatTracker.Version(),
     description='A Python Library for Islamic Financial Management.',
     author='Abdelaziz Elrashed Elshaikh Mohamed',
     author_email='aeemh.sdn@gmail.com',
@@ -24,6 +25,5 @@ setup(
         ],
     ),
     requires=[
-        'camelx',
     ],
 )

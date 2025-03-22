@@ -80,13 +80,13 @@ class WeekDay(enum.Enum):
     Enumeration representing the days of the week.
 
     Members:
-        - MONDAY: Represents Monday (0).
-        - TUESDAY: Represents Tuesday (1).
-        - WEDNESDAY: Represents Wednesday (2).
-        - THURSDAY: Represents Thursday (3).
-        - FRIDAY: Represents Friday (4).
-        - SATURDAY: Represents Saturday (5).
-        - SUNDAY: Represents Sunday (6).
+    - MONDAY: Represents Monday (0).
+    - TUESDAY: Represents Tuesday (1).
+    - WEDNESDAY: Represents Wednesday (2).
+    - THURSDAY: Represents Thursday (3).
+    - FRIDAY: Represents Friday (4).
+    - SATURDAY: Represents Saturday (5).
+    - SUNDAY: Represents Sunday (6).
     """
     MONDAY = 0
     TUESDAY = 1
@@ -102,16 +102,16 @@ class Action(enum.Enum):
     Enumeration representing various actions that can be performed.
 
     Members:
-        - CREATE: Represents the creation action ('CREATE').
-        - TRACK: Represents the tracking action ('TRACK').
-        - LOG: Represents the logging action ('LOG').
-        - SUB: Represents the subtract action ('SUB').
-        - ADD_FILE: Represents the action of adding a file ('ADD_FILE').
-        - REMOVE_FILE: Represents the action of removing a file ('REMOVE_FILE').
-        - BOX_TRANSFER: Represents the action of transferring a box ('BOX_TRANSFER').
-        - EXCHANGE: Represents the exchange action ('EXCHANGE').
-        - REPORT: Represents the reporting action ('REPORT').
-        - ZAKAT: Represents a Zakat related action ('ZAKAT').
+    - CREATE: Represents the creation action ('CREATE').
+    - TRACK: Represents the tracking action ('TRACK').
+    - LOG: Represents the logging action ('LOG').
+    - SUB: Represents the subtract action ('SUB').
+    - ADD_FILE: Represents the action of adding a file ('ADD_FILE').
+    - REMOVE_FILE: Represents the action of removing a file ('REMOVE_FILE').
+    - BOX_TRANSFER: Represents the action of transferring a box ('BOX_TRANSFER').
+    - EXCHANGE: Represents the exchange action ('EXCHANGE').
+    - REPORT: Represents the reporting action ('REPORT').
+    - ZAKAT: Represents a Zakat related action ('ZAKAT').
     """
     CREATE = 'CREATE'
     TRACK = 'TRACK'
@@ -130,9 +130,9 @@ class MathOperation(enum.Enum):
     Enumeration representing mathematical operations.
 
     Members:
-        - ADDITION: Represents the addition operation ('ADDITION').
-        - EQUAL: Represents the equality operation ('EQUAL').
-        - SUBTRACTION: Represents the subtraction operation ('SUBTRACTION').
+    - ADDITION: Represents the addition operation ('ADDITION').
+    - EQUAL: Represents the equality operation ('EQUAL').
+    - SUBTRACTION: Represents the subtraction operation ('SUBTRACTION').
     """
     ADDITION = 'ADDITION'
     EQUAL = 'EQUAL'

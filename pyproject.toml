@@ -1,6 +1,8 @@
 [project]
 name = 'zakat'
-version = '0.3.1'
+dynamic = [
+  'version',
+]
 authors = [
   { name='Abdelaziz Elrashed Elshaikh Mohamed', email='aeemh.sdn@gmail.com' },
 ]
@@ -19,9 +21,12 @@ classifiers = [
   'Operating System :: OS Independent',
 ]
 dependencies=[
-  'camelx',
 ]
 
 [project.urls]
 Homepage = 'https://github.com/vzool/zakat'
+Documentation = 'https://vzool.github.io/zakat/'
 Issues = 'https://github.com/vzool/zakat/issues'
+
+[tool.setuptools.dynamic]
+version = {attr = "zakat.__version__"}
