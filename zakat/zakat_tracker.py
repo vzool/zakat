@@ -71,6 +71,7 @@ import enum
 import pathlib
 import tempfile
 import dataclasses
+import subprocess
 from typing import Optional
 from pprint import PrettyPrinter as pp
 
@@ -609,6 +610,40 @@ def print_stack(simple: bool = True, local: bool = False, skip_first: bool = Tru
                 print(f'    {name} = {value}')
 
 
+def get_git_status() -> tuple[str, int]:
+    """
+    Retrieves the git hash of the current commit, the number of unstaged file changes and Counts the number of commits since the last git tag.
+
+    Returns:
+    - tuple: (git_hash, unstaged_changes_count, commit_count_since_last_tag) or ('', 0, 0) if an error occurs.
+    """
+    try:
+        # Get the current git hash
+        git_hash = subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('utf-8').strip()
+
+        # Get the status of unstaged changes
+        status = subprocess.check_output(['git', 'status', '--porcelain']).decode('utf-8')
+
+        # Count the number of lines, which corresponds to the number of changed files.
+        unstaged_changes_count = len([line for line in status.splitlines() if not line.startswith('??')]) #exclude untracked files
+        
+        # Get the latest tag
+        latest_tag = subprocess.check_output(['git', 'describe', '--abbrev=0', '--tags']).decode('utf-8').strip()
+
+        # Count the commits since the latest tag
+        commit_count_since_last_tag = int(subprocess.check_output(['git', 'rev-list', '--count', f'{latest_tag}..HEAD']).decode('utf-8').strip())
+
+        return git_hash, unstaged_changes_count, commit_count_since_last_tag
+
+    except subprocess.CalledProcessError:
+        return '', 0, 0
+    except FileNotFoundError:
+        return '', 0, 0
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        return '', 0, 0
+
+
 class ZakatTracker:
     """
     A class for tracking and calculating Zakat.
@@ -693,7 +728,12 @@ class ZakatTracker:
         Returns:
         - str: The current version of the software.
         """
-        return '0.3.1'
+        version = '0.3.1'
+        git_hash, unstaged_count, commit_count_since_last_tag = get_git_status()
+        if git_hash and (unstaged_count > 0 or commit_count_since_last_tag > 0):
+            version += f".{commit_count_since_last_tag}dev{unstaged_count}+{git_hash}"
+            print(version)
+        return version
 
     @staticmethod
     def ZakatCut(x: float) -> float:
@@ -1221,7 +1261,7 @@ class ZakatTracker:
                                 if sub_positive_log_negative == -x.value:
                                     self._vault.account[x.account].count -= 1
                                     sub_positive_log_negative = 0
-                                box_ref = self._vault.account[x.account].log[x.ref].ref # !!!
+                                box_ref = self._vault.account[x.account].log[x.ref].ref
                                 if not box_ref is None:
                                     assert self.box_exists(x.account, box_ref)
                                     box_value = self._vault.account[x.account].log[x.ref].value
@@ -3780,7 +3820,8 @@ class ZakatTracker:
                     if debug:
                         print(f'[storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
                     self.load(hash_required=hashed and hash_required)
-                    print('[debug]', type(self._vault))
+                    if debug:
+                        print('[debug]', type(self._vault))
                     assert self._vault.account is not None
                 if hashed:
                     continue
@@ -4207,16 +4248,16 @@ class ZakatTracker:
                 lock = self.lock()
                 (created, found, bad) = self.import_csv(csv_path, debug)
                 bad_count = len(bad)
-                assert bad_count > 0
                 if debug:
                     print(f'csv-imported: ({created}, {found}, {bad_count}) = count({csv_count})')
                     print('bad', bad)
-                tmp_size = os.path.getsize(cache_path)
-                assert tmp_size > 0
-
                 # TODO: assert created + found + bad_count == csv_count
                 # TODO: assert created == csv_count
                 # TODO: assert bad_count == 0
+                assert bad_count > 0
+                tmp_size = os.path.getsize(cache_path)
+                assert tmp_size > 0
+
                 (created_2, found_2, bad_2) = self.import_csv(csv_path)
                 bad_2_count = len(bad_2)
                 if debug:
@@ -4346,6 +4387,7 @@ def test(path: str = None, debug: bool = False):
     no_path = path is None
     if no_path:
         path = tempfile.mkdtemp()
+        print(f"Random database path {path}")
     if os.path.exists(path):
         shutil.rmtree(path)
     assert ZakatTracker(':memory:')._memory_mode
