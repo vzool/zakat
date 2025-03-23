@@ -76,6 +76,7 @@ from typing import Optional
 from pprint import PrettyPrinter as pp
 
 
+@enum.unique
 class WeekDay(enum.Enum):
     """
     Enumeration representing the days of the week.
@@ -98,6 +99,7 @@ class WeekDay(enum.Enum):
     SUNDAY = 6
 
 
+@enum.unique
 class Action(enum.Enum):
     """
     Enumeration representing various actions that can be performed.
@@ -126,6 +128,7 @@ class Action(enum.Enum):
     ZAKAT = 'ZAKAT'
 
 
+@enum.unique
 class MathOperation(enum.Enum):
     """
     Enumeration representing mathematical operations.

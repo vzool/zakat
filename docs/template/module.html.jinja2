@@ -32,6 +32,10 @@ body.light-mode {
   color: #333;
 }
 
+body.light-mode .modulename {
+  background-color: #f9f9f9;
+}
+
 body.light-mode .pdoc {
     --text: #212529;
     --muted: #6c757d;
@@ -167,6 +171,10 @@ body.light-mode .select2-search--dropdown{
 body.dark-mode {
   background-color: #333;
   color: #f9f9f9;
+}
+
+body.dark-mode .modulename {
+  background-color: #333;
 }
 
 :root {
@@ -467,6 +475,21 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', eve
         {{ version_switcher() }}
         {{ theme_switcher() }}
     </h1>
+    <style>
+      .modulename {
+        position: fixed;
+        top: 0;
+        width: 100%;
+        z-index: 2147483646;
+      }
+      #navtoggle {
+        position: fixed;
+        z-index: 2147483647; /*the maximum value of a 32-bit signed integer*/
+      }
+      .module-info {
+        padding-top: 30px;
+      }
+    </style>
 {% enddefaultmacro %}
 
 {#
