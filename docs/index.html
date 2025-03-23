@@ -11,6 +11,9 @@
             padding: 8px 12px;
             font-size: 16px;
         }
+        select {
+            width: 150px;
+        }
     </style>
     <link rel="icon" type="image/png" href="https://raw.githubusercontent.com/vzool/zakat/main/images/favicon/favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/svg+xml" href="https://raw.githubusercontent.com/vzool/zakat/main/images/favicon/favicon.svg" />
@@ -18,33 +21,237 @@
     <link rel="apple-touch-icon" sizes="180x180" href="https://raw.githubusercontent.com/vzool/zakat/main/images/favicon/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="ZakaTracker" />
     <link rel="manifest" href="https://raw.githubusercontent.com/vzool/zakat/main/images/favicon/site.webmanifest" />
+    <script src="template/third-party/jquery/jquery-3.7.1.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous"></script>
+    <link href="template/third-party/select2/select2@4.1.0-rc.0.min.css" rel="stylesheet" integrity="sha512-aD9ophpFQ61nFZP6hXYu4Q/b/USW7rpLCQLX6Bi0WJHXNO7Js/fUENpBQf/+P4NtpzNX0jSgR5zVvPOJp+W2Kg==" crossorigin="anonymous"/>
+    <script src="template/third-party/select2/select2@4.1.0-rc.0.min.js" integrity="sha512-4MvcHwcbqXKUHB6Lx3Zb5CEAVoE9u84qN+ZSMM6s7z8IeJriExrV3ND5zRze9mxNlABJ6k864P/Vl8m0Sd3DtQ==" crossorigin="anonymous"></script>
 </head>
 <body>
     <center>
         <img width="256px" src="https://raw.githubusercontent.com/vzool/zakat/main/images/logo.svg"/>
         <h1>Select a Tag to View zakat Documentation</h1>
+        <!-- Theme Switcher -->
+<button id="themeButton"></button>
+<style>
+body {
+  transition: background-color 0.3s, color 0.3s;
+}
+
+body.light-mode {
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+body.light-mode .select2-container--default .select2-selection--single {
+    background-color: #fff; /* White background */
+    border: 1px solid #ccc; /* Light border */
+    color: #333; /* Dark text */
+}
+
+body.light-mode .select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: #333 transparent transparent transparent; /* Dark arrow */
+}
+
+body.light-mode .select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #333;
+}
+
+body.light-mode .select2-container--default .select2-results__options {
+    background-color: #fff;
+    color: #333;
+}
+
+body.light-mode .select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #e0e0e0; /* light highlight */
+    color: #333;
+}
+
+body.light-mode .select2-container--default .select2-search--dropdown .select2-search__field {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    color: #333;
+}
+
+body.light-mode .select2-dropdown {
+    background-color: #fff;
+    border: 1px solid #ccc;
+}
+
+body.light-mode .select2-search--dropdown{
+    border-bottom: 1px solid #ccc;
+}
+  
+/*###########*/
+/* dark-mode */
+/*###########*/
+body.dark-mode {
+    background-color: #333;
+    color: #f9f9f9;
+}
+
+body.dark-mode .select2-container--default .select2-selection--single {
+    background-color: #333; /* Dark background */
+    border: 1px solid #555; /* Darker border */
+    color: #eee; /* Light text */
+}
+
+body.dark-mode .select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: #eee transparent transparent transparent; /* Light arrow */
+}
+
+body.dark-mode .select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #eee;
+}
+
+body.dark-mode .select2-container--default .select2-results__options {
+    background-color: #333;
+    color: #eee;
+}
+
+body.dark-mode .select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #555; /* Darker highlight */
+    color: #eee;
+}
+
+body.dark-mode .select2-container--default .select2-search--dropdown .select2-search__field {
+    background-color: #444;
+    border: 1px solid #666;
+    color: #eee;
+}
+
+body.dark-mode .select2-dropdown {
+    background-color: #333;
+    border: 1px solid #555;
+}
+
+body.dark-mode .select2-search--dropdown{
+    border-bottom: 1px solid #555;
+}
+
+#themeButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 24px; /* Adjust as needed */
+}
+
+/* Example icons (you can replace with your preferred icons) */
+.light-mode #themeButton::before {
+  content: "☀️"; /* Sun icon for light mode */
+}
+
+.dark-mode #themeButton::before {
+  content: "🌙"; /* Moon icon for dark mode */
+}
+
+#themeButton::before {
+  content: "⚙️"; /*gear icon for auto mode */
+}
+</style>
+<script>
+function setCookie(name, value, days) {
+  let expires = "";
+  if (days) {
+    let date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    expires = "; expires=" + date.toUTCString();
+  }
+  document.cookie = name + "=" + (value || "") + expires + "; path=/";
+}
+
+function getCookie(name) {
+  let nameEQ = name + "=";
+  let ca = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+  }
+  return null;
+}
+
+function setTheme(mode) {
+  const body = document.body;
+  body.classList.remove('light-mode', 'dark-mode');
+
+  if (mode === 'light') {
+    body.classList.add('light-mode');
+    setCookie('theme', 'light', 30);
+  } else if (mode === 'dark') {
+    body.classList.add('dark-mode');
+    setCookie('theme', 'dark', 30);
+  } else if (mode === 'auto') {
+      const isDarkMode = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if(isDarkMode){
+          body.classList.add('dark-mode');
+      } else {
+        body.classList.add('light-mode');
+      }
+      setCookie('theme', 'auto', 30);
+  }
+}
+
+function toggleTheme() {
+  const currentTheme = getCookie('theme');
+
+  if (currentTheme === 'light') {
+    setTheme('dark');
+  } /*else if (currentTheme === 'dark') {
+    setTheme('auto');
+  }*/ else { /* auto or null */
+    setTheme('light');
+  }
+}
+
+/* Initial theme setup (from cookie or auto) */
+const savedTheme = getCookie('theme');
+if (savedTheme) {
+  setTheme(savedTheme);
+} else {
+    setTheme('auto'); /* defaults to auto on no saved theme */
+}
+
+/* Button event listener */
+document.getElementById('themeButton').addEventListener('click', toggleTheme);
+
+/* Listen for system theme changes for auto mode. */
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+  if (getCookie('theme') === 'auto') {
+    if (event.matches) {
+      document.body.classList.add('dark-mode');
+      document.body.classList.remove('light-mode');
+    } else {
+       document.body.classList.add('light-mode');
+       document.body.classList.remove('dark-mode');
+    }
+  }
+});
+</script>
+<!-- Theme Switcher -->
         <select id="tagSelect"></select>
         <button id="viewDocs">View Documentation</button>
     </center>
 
     <script>
-        fetch('tags.json')
-            .then(response => response.json())
-            .then(tags => {
-                window.select = document.getElementById('tagSelect');
-                tags.forEach((tag, index) => {
-                    const option = document.createElement('option');
-                    option.value = tag;
-                    option.textContent = tag;
-                    select.appendChild(option);
-                    if (index === 1 && tags.length > 1) {
-                        option.selected = true;
-                    }
-                });
-
-                document.getElementById('viewDocs').addEventListener('click', () => window.open(`api/${window.select.value}/index.html`, "_blank"));
-            })
-            .catch(error => console.error('Error fetching tags:', error));
+        $(document).ready(function() {
+            $('#tagSelect').select2();
+            fetch('tags.json')
+                .then(response => response.json())
+                .then(tags => {
+                    window.select = document.getElementById('tagSelect');
+                    tags.forEach((tag, index) => {
+                        const option = document.createElement('option');
+                        option.value = tag;
+                        option.textContent = tag;
+                        select.appendChild(option);
+                        if (index === 1 && tags.length > 1) {
+                            option.selected = true;
+                        }
+                    });
+    
+                    document.getElementById('viewDocs').addEventListener('click', () => window.open(`api/${window.select.value}/index.html`, "_blank"));
+                })
+                .catch(error => console.error('Error fetching tags:', error));
+        });
     </script>
 </body>
 </html>

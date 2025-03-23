@@ -122,6 +122,45 @@ body.light-mode .pdoc-code .vi { color: #19177C } /* Name.Variable.Instance */
 body.light-mode .pdoc-code .vm { color: #19177C } /* Name.Variable.Magic */
 body.light-mode .pdoc-code .il { color: #666666 } /* Literal.Number.Integer.Long */
 
+body.light-mode .select2-container--default .select2-selection--single {
+    background-color: #fff; /* White background */
+    border: 1px solid #ccc; /* Light border */
+    color: #333; /* Dark text */
+}
+
+body.light-mode .select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: #333 transparent transparent transparent; /* Dark arrow */
+}
+
+body.light-mode .select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #333;
+}
+
+body.light-mode .select2-container--default .select2-results__options {
+    background-color: #fff;
+    color: #333;
+}
+
+body.light-mode .select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #e0e0e0; /* light highlight */
+    color: #333;
+}
+
+body.light-mode .select2-container--default .select2-search--dropdown .select2-search__field {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+    color: #333;
+}
+
+body.light-mode .select2-dropdown {
+    background-color: #fff;
+    border: 1px solid #ccc;
+}
+
+body.light-mode .select2-search--dropdown{
+    border-bottom: 1px solid #ccc;
+}
+
 /*###########*/
 /* dark-mode */
 /*###########*/
@@ -232,6 +271,45 @@ body.dark-mode .pdoc-code .vg { color: #f8f8f2 } /* Name.Variable.Global */
 body.dark-mode .pdoc-code .vi { color: #f8f8f2 } /* Name.Variable.Instance */
 body.dark-mode .pdoc-code .vm { color: #f8f8f2 } /* Name.Variable.Magic */
 
+body.dark-mode .select2-container--default .select2-selection--single {
+    background-color: #333; /* Dark background */
+    border: 1px solid #555; /* Darker border */
+    color: #eee; /* Light text */
+}
+
+body.dark-mode .select2-container--default .select2-selection--single .select2-selection__arrow b {
+    border-color: #eee transparent transparent transparent; /* Light arrow */
+}
+
+body.dark-mode .select2-container--default .select2-selection--single .select2-selection__rendered {
+    color: #eee;
+}
+
+body.dark-mode .select2-container--default .select2-results__options {
+    background-color: #333;
+    color: #eee;
+}
+
+body.dark-mode .select2-container--default .select2-results__option--highlighted[aria-selected] {
+    background-color: #555; /* Darker highlight */
+    color: #eee;
+}
+
+body.dark-mode .select2-container--default .select2-search--dropdown .select2-search__field {
+    background-color: #444;
+    border: 1px solid #666;
+    color: #eee;
+}
+
+body.dark-mode .select2-dropdown {
+    background-color: #333;
+    border: 1px solid #555;
+}
+
+body.dark-mode .select2-search--dropdown{
+    border-bottom: 1px solid #555;
+}
+
 #themeButton {
   background: none;
   border: none;
@@ -337,26 +415,37 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', eve
 {% defaultmacro version_switcher() %}
 {% if footer_text %}
     <!-- Version Selector -->
+    <script src="./../../template/third-party/jquery/jquery-3.7.1.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous"></script>
+    <link href="./../../template/third-party/select2/select2@4.1.0-rc.0.min.css" rel="stylesheet" integrity="sha512-aD9ophpFQ61nFZP6hXYu4Q/b/USW7rpLCQLX6Bi0WJHXNO7Js/fUENpBQf/+P4NtpzNX0jSgR5zVvPOJp+W2Kg==" crossorigin="anonymous"/>
+    <script src="./../../template/third-party/select2/select2@4.1.0-rc.0.min.js" integrity="sha512-4MvcHwcbqXKUHB6Lx3Zb5CEAVoE9u84qN+ZSMM6s7z8IeJriExrV3ND5zRze9mxNlABJ6k864P/Vl8m0Sd3DtQ==" crossorigin="anonymous"></script>
     <select id="tagSelect"></select>
     <script>
-      fetch('./../../tags.json')
-        .then(response => response.json())
-        .then(tags => {
-          window.select = document.getElementById('tagSelect');
-          tags.forEach((tag, index) => {
-            const option = document.createElement('option');
-            option.value = tag;
-            option.textContent = tag == 'main' ? tag : `v${tag}`;
-            select.appendChild(option);
-            if (tag == `{{ footer_text }}`) {
-              option.selected = true;
-            }
-          });
-          window.select.addEventListener('change', () => {
-            window.location.href = `./../${window.select.value}/index.html`;
-          });
-      }).catch(error => console.error('Error fetching tags:', error));
+        $(document).ready(function() {
+            $('#tagSelect').select2();
+            fetch('./../../tags.json')
+                .then(response => response.json())
+                .then(tags => {
+                    window.select = document.getElementById('tagSelect');
+                    tags.forEach((tag, index) => {
+                        const option = document.createElement('option');
+                        option.value = tag;
+                        option.textContent = tag == 'main' ? tag : `v${tag}`;
+                        select.appendChild(option);
+                        if (tag == `{{ footer_text }}`) {
+                            option.selected = true;
+                        }
+                    });
+                    $('#tagSelect').change(() => {
+                        window.location.href = `./../${window.select.value}/index.html`;
+                    });
+                }).catch(error => console.error('Error fetching tags:', error));
+        });
     </script>
+    <style>
+    #tagSelect {
+        width: 180px;
+    }
+    </style>
     <!-- Version Selector -->
 {% endif %}
 {% enddefaultmacro %}
