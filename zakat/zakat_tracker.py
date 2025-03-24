@@ -177,7 +177,7 @@ class Timestamp(int):
     pass
 
 
-def value(x):
+def factory_value(x) -> callable:
     """
     Creates a factory function that always returns the given value.
 
@@ -188,7 +188,7 @@ def value(x):
     - x: The value to be returned by the factory.
 
     Returns:
-    - A function that, when called, returns the value x.
+    - callable: A function that, when called, returns the value x.
     """
     def factory():
         return x
@@ -253,10 +253,10 @@ class Account:
     balance: int
     created: Timestamp
     box: dict[Timestamp, Box] = dataclasses.field(default_factory=dict)
-    count: int = dataclasses.field(default_factory=value(0))
+    count: int = dataclasses.field(default_factory=factory_value(0))
     log: dict[Timestamp, Log] = dataclasses.field(default_factory=dict)
-    hide: bool = dataclasses.field(default_factory=value(False))
-    zakatable: bool = dataclasses.field(default_factory=value(True))
+    hide: bool = dataclasses.field(default_factory=factory_value(False))
+    zakatable: bool = dataclasses.field(default_factory=factory_value(True))
 
 
 @dataclasses.dataclass

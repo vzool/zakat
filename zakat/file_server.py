@@ -21,8 +21,8 @@ Classes:
 
 Functions:
 - find_available_port() -> int: Finds and returns an available TCP port.
-- start_file_server(database_path: str, database_callback: callable = None,
-                      csv_callback: callable = None, debug: bool = False) -> tuple:
+- start_file_server(database_path: str, database_callback: Optional[callable] = None,
+                      csv_callback: Optional[callable] = None, debug: bool = False) -> tuple:
         Starts a WSGI server for file uploads and downloads.
 - main(): Example usage and testing of the file server.
 """
@@ -33,8 +33,9 @@ import uuid
 import shutil
 import json
 import enum
-from wsgiref.simple_server import make_server
 import io
+from wsgiref.simple_server import make_server
+from typing import Optional
 
 
 @enum.unique
@@ -89,30 +90,32 @@ def find_available_port() -> int:
     port. The assigned port is then extracted and returned.
 
     Returns:
-        int: The available TCP port number.
+    - int: The available TCP port number.
 
     Raises:
-        OSError: If an error occurs during the port binding process, such
+    - OSError: If an error occurs during the port binding process, such
             as all ports being in use.
 
     Example:
-        port = find_available_port()
-        print(f"Available port: {port}")
+    ```python
+    port = find_available_port()
+    print(f"Available port: {port}")
+    ```
     """
     with socketserver.TCPServer(("localhost", 0), None) as s:
         return s.server_address[1]
 
 
-def start_file_server(database_path: str, database_callback: callable = None, csv_callback: callable = None,
+def start_file_server(database_path: str, database_callback: Optional[callable] = None, csv_callback: Optional[callable] = None,
                       debug: bool = False) -> tuple:
     """
     Starts a multi-purpose WSGI server to manage file interactions for a Zakat application.
 
     This server facilitates the following functionalities:
 
-    1. GET /{file_uuid}/get: Download the database file specified by `database_path`.
-    2. GET /{file_uuid}/upload: Display an HTML form for uploading files.
-    3. POST /{file_uuid}/upload: Handle file uploads, distinguishing between:
+    1. GET `/{file_uuid}/get`: Download the database file specified by `database_path`.
+    2. GET `/{file_uuid}/upload`: Display an HTML form for uploading files.
+    3. POST `/{file_uuid}/upload`: Handle file uploads, distinguishing between:
         - Database File (.db): Replaces the existing database with the uploaded one.
         - CSV File (.csv): Imports data from the CSV into the existing database.
 
