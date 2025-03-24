@@ -224,7 +224,42 @@ For example, if the `--favicon` option does not do what you want, you can specif
 {% enddefaultmacro %}
 
 
+{% defaultmacro internal_links_click_enhancer() %}
+<!-- Internal Links Click Enhancer -->
+<script>
+function scrollToElementWithOffset(elementId, offset) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    const elementPosition = element.getBoundingClientRect().top + window.scrollY;
+    window.scrollTo({
+      top: elementPosition - offset,
+      behavior: 'smooth'
+    });
+  }
+}
+
+document.addEventListener('click', function(event) {
+  const target = event.target;
+  
+  /* Check if the clicked element is an anchor tag and has a hashtag href */
+  if (target.tagName === 'A' && target.getAttribute('href') && target.getAttribute('href').startsWith('#')) {
+    event.preventDefault(); /* Prevent default navigation */
+    
+    const hashtag = target.getAttribute('href').substring(1); /* Extract the hashtag (remove '#') */
+    console.log('Hashtag clicked:', hashtag);
+
+    if(hashtag){
+      scrollToElementWithOffset(hashtag, 81);
+    }
+  }
+});
+</script>
+<!-- Internal Links Click Enhancer -->
+{% enddefaultmacro %}
+
+
 {% defaultmacro theme_switcher() %}
+{{ internal_links_click_enhancer() }}
 {{ scroll_to_top_button() }}
 <!-- Theme Switcher -->
 <button id="themeButton"></button>

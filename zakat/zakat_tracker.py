@@ -484,10 +484,12 @@ class JSONEncoder(json.JSONEncoder):
     - `decimal.Decimal` instances as floats.
 
     Example:
-        >>> json.dumps(Action.CREATE, cls=JSONEncoder)
-        ''CREATE''
-        >>> json.dumps(decimal.Decimal('10.5'), cls=JSONEncoder)
-        '10.5'
+    ```bash
+    >>> json.dumps(Action.CREATE, cls=JSONEncoder)
+    ''CREATE''
+    >>> json.dumps(decimal.Decimal('10.5'), cls=JSONEncoder)
+    '10.5'
+    ```
     """
     def default(self, o):
         """
@@ -518,10 +520,12 @@ class JSONDecoder(json.JSONDecoder):
     - Floats back to `decimal.Decimal` instances.
 
     Example:
-        >>> json.loads('{"action": "CREATE"}', cls=JSONDecoder)
-        {'action': <Action.CREATE: 1>}
-        >>> json.loads('{"value": 10.5}', cls=JSONDecoder)
-        {'value': Decimal('10.5')}
+    ```bash
+    >>> json.loads('{"action": "CREATE"}', cls=JSONDecoder)
+    {'action': <Action.CREATE: 1>}
+    >>> json.loads('{"value": 10.5}', cls=JSONDecoder)
+    {'value': Decimal('10.5')}
+    ```
     """
     def object_hook(self, obj):
         """
@@ -562,24 +566,26 @@ def print_stack(simple: bool = True, local: bool = False, skip_first: bool = Tru
     Example:
         To print a simple stack trace:
 
-        >>> print_stack()
-        File: <filename>, Line: <line number>, Function: <function_name>
-        ...
+    ```bash
+    >>> print_stack()
+    File: <filename>, Line: <line number>, Function: <function_name>
+    ...
 
-        To print a detailed stack trace with local variables:
+    To print a detailed stack trace with local variables:
 
-        >>> print_stack(simple=False, locals=True)
-        ----------------------------------------
-        Filename: <filename>
-        Line Number: <line number>
-        Function Name: <function_name>
-        ...
-          Arguments:
-            arg1 = value1
-            arg2 = value2
-          Local Variables:
-            local_var = local_value
-        ...
+    >>> print_stack(simple=False, locals=True)
+    ----------------------------------------
+    Filename: <filename>
+    Line Number: <line number>
+    Function Name: <function_name>
+    ...
+        Arguments:
+        arg1 = value1
+        arg2 = value2
+        Local Variables:
+        local_var = local_value
+    ...
+    ```
     """
     for frame_info in inspect.stack():
         if skip_first:
@@ -896,12 +902,14 @@ class ZakatTracker:
         - TypeError: If the input `x` is not a valid numeric type.
 
         Examples:
+        ```bash
         >>> ZakatTracker.scale(3.14159)
         314
         >>> ZakatTracker.scale(1234, decimal_places=3)
         1234000
         >>> ZakatTracker.scale(decimal.Decimal('0.005'), decimal_places=4)
         50
+        ```
         """
         if not isinstance(x, (float, int, decimal.Decimal)):
             raise TypeError(f'Input "{x}" must be a float, int, or decimal.Decimal.')
@@ -1427,12 +1435,14 @@ class ZakatTracker:
                 - The RAM usage in human-readable format (str).
 
         Example:
+        ```bash
         >>> x = ZakatTracker()
         >>> stats = x.stats()
         >>> print(stats['database'])
         (256000, '250.0 KB')
         >>> print(stats['ram'])
         (12345, '12.1 KB')
+        ```
         """
         ram_size = 0.0 if ignore_ram else self.get_dict_size(self.vault())
         file_size = os.path.getsize(self.path())
@@ -1969,6 +1979,7 @@ class ZakatTracker:
         - dict: A dictionary containing the daily logs.
 
         Example:
+        ```bash
         >>> tracker = ZakatTracker()
         >>> tracker.subtract(51, 'desc', 'account1')
         >>> ref = tracker.track(100, 'desc', 'account2')
@@ -2030,6 +2041,7 @@ class ZakatTracker:
                 },
             },
         }
+        ```
         """
         logs = {}
         for account in self.accounts():
@@ -2198,6 +2210,7 @@ class ZakatTracker:
         None
 
         Example:
+        ```bash
         >>> tracker = ZakatTracker()
         >>> ref = tracker.track(51, 'desc', 'account1')
         >>> tracker.hide('account1')  # Set the hide status of 'account1' to True
@@ -2208,6 +2221,7 @@ class ZakatTracker:
         True
         >>> tracker.hide('account1', False)
         False
+        ```
         """
         if self.account_exists(account):
             if status is None:
@@ -2231,6 +2245,7 @@ class ZakatTracker:
         None
 
         Example:
+        ```bash
         >>> tracker = ZakatTracker()
         >>> ref = tracker.track(51, 'desc', 'account1')
         >>> tracker.zakatable('account1')  # Set the zakatable status of 'account1' to True
@@ -2241,6 +2256,7 @@ class ZakatTracker:
         True
         >>> tracker.zakatable('account1', False)
         False
+        ```
         """
         if self.account_exists(account):
             if status is None:
@@ -2869,9 +2885,11 @@ class ZakatTracker:
         - str: The full path to the import CSV cache file.
 
         Example:
-            >>> obj = ZakatTracker('/data/reports')
-            >>> obj.import_csv_cache_path()
-            '/data/reports.import_csv.json'
+        ```bash
+        >>> obj = ZakatTracker('/data/reports')
+        >>> obj.import_csv_cache_path()
+        '/data/reports.import_csv.json'
+        ```
         """
         path = str(self.path())
         ext = self.ext()
