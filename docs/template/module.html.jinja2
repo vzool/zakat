@@ -235,25 +235,41 @@ function scrollToElementWithOffset(elementId, offset) {
       top: elementPosition - offset,
       behavior: 'smooth'
     });
+    window.moved = new Date();
   }
 }
 
-document.addEventListener('click', function(event) {
-  const target = event.target;
-  
-  /* Check if the clicked element is an anchor tag and has a hashtag href */
-  if (target.tagName === 'A' && target.getAttribute('href') && target.getAttribute('href').startsWith('#')) {
-    event.preventDefault(); /* Prevent default navigation */
-    
-    const hashtag = target.getAttribute('href').substring(1); /* Extract the hashtag (remove '#') */
-    console.log('Hashtag clicked:', hashtag);
-
-    if(hashtag){
-      history.pushState(null, null, '#' + hashtag);
-      scrollToElementWithOffset(hashtag, 81);
-    }
+function sync_page_section_to_match_url(){
+  var parts = location.href.split('#');
+  if(parts.length < 2) return;
+  var hashtag = parts[parts.length - 1];
+  console.log('sync_page_section_to_match_url()', hashtag);
+  if(hashtag){
+    scrollToElementWithOffset(hashtag, 81);
   }
-});
+}
+
+window.onload = function(){
+  document.addEventListener('click', function(event) {
+    const target = event.target;
+    
+    /* Check if the clicked element is an anchor tag and has a hashtag href */
+    if (target.tagName === 'A' && target.getAttribute('href') && target.getAttribute('href').startsWith('#')) {
+      event.preventDefault(); /* Prevent default navigation */
+      
+      const hashtag = target.getAttribute('href').substring(1); /* Extract the hashtag (remove '#') */
+      console.log('Hashtag clicked:', hashtag);
+  
+      if(hashtag){
+        history.pushState(null, null, '#' + hashtag);
+        scrollToElementWithOffset(hashtag, 81);
+      }
+    }
+  });
+  if(!window.moved){
+    sync_page_section_to_match_url();
+  }
+};
 </script>
 <!-- Internal Links Click Enhancer -->
 {% enddefaultmacro %}
