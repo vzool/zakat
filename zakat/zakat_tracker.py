@@ -40,7 +40,7 @@ from zakat_tracker import ZakatTracker
 
 tracker = ZakatTracker()
 tracker.track(10000, 'Initial deposit')
-tracker.sub(500, 'Expense')
+tracker.subtract(500, 'Expense')
 report = tracker.check(2.5)  # Assuming silver price is 2.5 per gram
 tracker.zakat(report)
 ```
@@ -1283,7 +1283,7 @@ class ZakatTracker:
                                     self._vault.account[x.account].count -= 1
                                 del self._vault.account[x.account].log[x.ref]
 
-                case Action.SUB:
+                case Action.SUBTRACT:
                     if x.account is not None:
                         if self.account_exists(x.account):
                             if x.ref in self._vault.account[x.account].box:
@@ -1970,7 +1970,7 @@ class ZakatTracker:
 
         Example:
         >>> tracker = ZakatTracker()
-        >>> tracker.sub(51, 'desc', 'account1')
+        >>> tracker.subtract(51, 'desc', 'account1')
         >>> ref = tracker.track(100, 'desc', 'account2')
         >>> tracker.add_file('account2', ref, 'file_0')
         >>> tracker.add_file('account2', ref, 'file_1')
@@ -2304,7 +2304,7 @@ class ZakatTracker:
             rest = self._vault.account[account].box[j].rest
             if rest >= target:
                 self._vault.account[account].box[j].rest -= target
-                self._step(Action.SUB, account, ref=j, value=target)
+                self._step(Action.SUBTRACT, account, ref=j, value=target)
                 ages.append(SubtractAge(box_ref=j, total=target))
                 target = 0
                 break
@@ -2312,7 +2312,7 @@ class ZakatTracker:
                 chunk = rest
                 target -= chunk
                 self._vault.account[account].box[j].rest = 0
-                self._step(Action.SUB, account, ref=j, value=chunk)
+                self._step(Action.SUBTRACT, account, ref=j, value=chunk)
                 ages.append(SubtractAge(box_ref=j, total=chunk))
         if target > 0:
             self.track(
