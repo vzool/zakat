@@ -19,7 +19,191 @@ For example, if the `--favicon` option does not do what you want, you can specif
 {% endblock %}
 
 
+{% defaultmacro scroll_to_top_button() %}
+    <!-- Scroll To Top Button -->
+    <!-- REF https://www.codewithfaraz.com/content/132/scroll-to-top-button-with-progress-indicator-using-html-css-and-javascript -->
+    <style>
+    .progress-wrap {
+        position: fixed;
+        right: 30px;
+        bottom: 20px;
+        height: 46px;
+        width: 46px;
+        cursor: pointer;
+        display: block;
+        border-radius: 50px;
+        box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.2);
+        z-index: 10000;
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(15px);
+        -webkit-transition: all 200ms linear;
+        transition: all 200ms linear;
+    }
+    
+    .progress-wrap.active-progress {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+    
+    .progress-wrap::after {
+        position: absolute;
+        content: '∆';
+        text-align: center;
+        line-height: 46px;
+        font-size: 18px;
+        color: #1f2029;
+        left: 0;
+        top: 0;
+        height: 46px;
+        width: 46px;
+        cursor: pointer;
+        display: block;
+        z-index: 1;
+        -webkit-transition: all 200ms linear;
+        transition: all 200ms linear;
+    }
+    
+    .progress-wrap span {
+        position: absolute;
+        bottom: 0;
+        right: 10px;
+        text-align: center;
+        font-size: 0.81em;
+        width: 50%;
+    }
+    .lightScrollIcon::after {
+        color: #ecedf3 !important;
+    }
+    
+    .progress-wrap:hover::after {
+        opacity: 0;
+    }
+    
+    .progress-wrap::before {
+        position: absolute;
+        content: '∆';
+        text-align: center;
+        line-height: 46px;
+        font-size: 18px;
+        opacity: 0;
+        background-image: -webkit-linear-gradient(208deg, #da2c4d, #f8ab37);
+        background-image: -moz-linear-gradient(208deg, #da2c4d, #f8ab37);
+        background-image: -o-linear-gradient(208deg, #da2c4d, #f8ab37);
+        background-image: linear-gradient(298deg, #da2c4d, #f8ab37);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        left: 0;
+        top: 0;
+        height: 46px;
+        width: 46px;
+        cursor: pointer;
+        display: block;
+        z-index: 2;
+        -webkit-transition: all 200ms linear;
+        transition: all 200ms linear;
+    }
+    
+    .progress-wrap:hover::before {
+        opacity: 1;
+    }
+    
+    .progress-wrap svg path {
+        fill: none;
+    }
+    
+    .progress-wrap svg.progress-circle path {
+        stroke: #1f2029;
+        stroke-width: 4;
+        box-sizing: border-box;
+        -webkit-transition: all 200ms linear;
+        transition: all 200ms linear;
+    }
+    </style>
+    <div class="progress-wrap">
+        <span id="progress">xxx</span>
+        <svg class="progress-circle svg-content" width="100%" height="100%" viewBox="-1 -1 102 102">
+              <path d="M50,1 a49,49 0 0,1 0,98 a49,49 0 0,1 0,-98" />
+        </svg>
+    </div>
+    <script>
+    (function() {
+      "use strict";
+    
+      document.addEventListener("DOMContentLoaded", function() {
+        "use strict";
+    
+        var progressNumber = document.querySelector('#progress');
+        var progressPath = document.querySelector('.progress-wrap path');
+        var pathLength = progressPath.getTotalLength();
+        progressPath.style.transition = progressPath.style.WebkitTransition = 'none';
+        progressPath.style.strokeDasharray = pathLength + ' ' + pathLength;
+        progressPath.style.strokeDashoffset = pathLength;
+        progressPath.getBoundingClientRect();
+        progressPath.style.transition = progressPath.style.WebkitTransition = 'stroke-dashoffset 10ms linear';
+    
+        var updateProgress = function() {
+          var scroll = window.scrollY || window.pageYOffset;
+          var height = document.documentElement.scrollHeight - window.innerHeight;
+          var progress = pathLength - (scroll * pathLength / height);
+          progressPath.style.strokeDashoffset = progress;
+          var progressPercentage = (scroll / height) * 100;
+          progressNumber.innerHTML = Math.round(progressPercentage);
+        };
+    
+        updateProgress();
+        window.addEventListener('scroll', updateProgress);
+    
+        var offset = 50;
+        var duration = 550;
+    
+        window.addEventListener('scroll', function() {
+          if (window.scrollY > offset) {
+            document.querySelector('.progress-wrap').classList.add('active-progress');
+          } else {
+            document.querySelector('.progress-wrap').classList.remove('active-progress');
+          }
+        });
+    
+        document.querySelector('.progress-wrap').addEventListener('click', function(event) {
+          event.preventDefault();
+          animateScroll(0, duration);
+          return false;
+        });
+    
+        // Function to animate the scroll (replaces jQuery's .animate())
+        function animateScroll(targetPosition, duration) {
+          var startPosition = window.scrollY || window.pageYOffset;
+          var distance = targetPosition - startPosition;
+          var startTime = null;
+    
+          function animation(currentTime) {
+            if (startTime === null) startTime = currentTime;
+            var timeElapsed = currentTime - startTime;
+            var run = ease(timeElapsed, startPosition, distance, duration);
+            window.scrollTo(0, run);
+            if (timeElapsed < duration) requestAnimationFrame(animation);
+          }
+    
+          function ease(t, b, c, d) {
+            t /= d / 2;
+            if (t < 1) return c / 2 * t * t + b;
+            t--;
+            return -c / 2 * (t * (t - 2) - 1) + b;
+          }
+    
+          requestAnimationFrame(animation);
+        }
+      });
+    })();
+    </script>
+    <!-- Scroll To Top Button -->
+{% enddefaultmacro %}
+
+
 {% defaultmacro theme_switcher() %}
+{{ scroll_to_top_button() }}
 <!-- Theme Switcher -->
 <button id="themeButton"></button>
 <style>
@@ -420,6 +604,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', eve
 <!-- Theme Switcher -->
 {% enddefaultmacro%}
 
+
 {% defaultmacro version_switcher() %}
 {% if footer_text %}
     <!-- Version Selector -->
@@ -457,6 +642,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', eve
     <!-- Version Selector -->
 {% endif %}
 {% enddefaultmacro %}
+
 
 {% defaultmacro module_name() %}
     <h1 class="modulename">
