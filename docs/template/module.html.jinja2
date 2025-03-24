@@ -249,6 +249,7 @@ document.addEventListener('click', function(event) {
     console.log('Hashtag clicked:', hashtag);
 
     if(hashtag){
+      history.pushState(null, null, '#' + hashtag);
       scrollToElementWithOffset(hashtag, 81);
     }
   }
