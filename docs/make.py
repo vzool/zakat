@@ -79,6 +79,8 @@ def generate_docs(tag, output_dir):
             '-o',
             f'./{output_path}',
             "./zakat",
+            "./zakat/zakat_tracker",
+            "./zakat/file_server",
         ], check=True)
         print(f"Documentation generated for tag {tag} in {output_path}")
     except subprocess.CalledProcessError as e:

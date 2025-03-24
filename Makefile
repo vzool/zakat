@@ -62,7 +62,9 @@ pdoc:
 		 --logo "https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg"\
 		 -t "./docs/template"\
 		 -o "./docs"\
-		 "zakat"
+		 "./zakat"\
+		 "./zakat/zakat_tracker"\
+		 "./zakat/file_server"
 
 .PHONY: pdoc-live
 # create pdoc documentaions on the fly by web server
@@ -70,7 +72,9 @@ pdoc-live:
 	pdoc --footer-text "zakat v$$(git describe --tags --abbrev=0 || echo 'unknown')-$$(git rev-parse --short $$(git describe --tags --abbrev=0) || echo 'g0000000')"\
 		 --logo "https://raw.githubusercontent.com/vzool/zakat/main/images/logo.jpg"\
 		 -t "./docs/template"\
-		 "./zakat"
+		 "./zakat"\
+		 "./zakat/zakat_tracker"\
+		 "./zakat/file_server"
 
 # show help
 help:

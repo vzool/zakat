@@ -1,31 +1,83 @@
+"""
+This module provides a file server for managing database and CSV uploads and downloads
+in a Zakat application.
+
+It defines enumerations for file types and actions, and provides functions to:
+
+- Find an available TCP port on the local machine.
+- Start a multi-purpose WSGI server for file interactions.
+
+The server supports:
+
+- Downloading a database file.
+- Uploading a new database file to replace the existing one.
+- Uploading a CSV file to import data into the existing database.
+
+The module also includes a main function for example usage and testing.
+
+Classes:
+- FileType (enum.Enum): Enumeration for file types (Database, CSV).
+- Action (enum.Enum): Enumeration for various actions (CREATE, TRACK, etc.).
+
+Functions:
+- find_available_port() -> int: Finds and returns an available TCP port.
+- start_file_server(database_path: str, database_callback: callable = None,
+                      csv_callback: callable = None, debug: bool = False) -> tuple:
+        Starts a WSGI server for file uploads and downloads.
+- main(): Example usage and testing of the file server.
+"""
 import socketserver
 import threading
 import os
 import uuid
 import shutil
 import json
-from enum import Enum, auto
+import enum
 from wsgiref.simple_server import make_server
 import io
 
 
-class FileType(Enum):
+@enum.unique
+class FileType(enum.Enum):
+    """
+    Enumeration representing file types.
+
+    Members:
+    - Database: Represents a database file ('db').
+    - CSV: Represents a CSV file ('csv').
+    """
     Database = 'db'
     CSV = 'csv'
 
 
 # SAFE Circular Imports (Duplicated class again)
-class Action(Enum):
-    CREATE = auto()
-    TRACK = auto()
-    LOG = auto()
-    SUB = auto()
-    ADD_FILE = auto()
-    REMOVE_FILE = auto()
-    BOX_TRANSFER = auto()
-    EXCHANGE = auto()
-    REPORT = auto()
-    ZAKAT = auto()
+@enum.unique
+class Action(enum.Enum):
+    """
+    Enumeration representing various actions that can be performed.
+
+    Members:
+    - CREATE: Represents the creation action ('CREATE').
+    - TRACK: Represents the tracking action ('TRACK').
+    - LOG: Represents the logging action ('LOG').
+    - SUBTRACT: Represents the subtract action ('SUBTRACT').
+    - ADD_FILE: Represents the action of adding a file ('ADD_FILE').
+    - REMOVE_FILE: Represents the action of removing a file ('REMOVE_FILE').
+    - BOX_TRANSFER: Represents the action of transferring a box ('BOX_TRANSFER').
+    - EXCHANGE: Represents the exchange action ('EXCHANGE').
+    - REPORT: Represents the reporting action ('REPORT').
+    - ZAKAT: Represents a Zakat related action ('ZAKAT').
+    """
+    CREATE = 'CREATE'
+    TRACK = 'TRACK'
+    LOG = 'LOG'
+    SUBTRACT = 'SUBTRACT'
+    ADD_FILE = 'ADD_FILE'
+    REMOVE_FILE = 'REMOVE_FILE'
+    BOX_TRANSFER = 'BOX_TRANSFER'
+    EXCHANGE = 'EXCHANGE'
+    REPORT = 'REPORT'
+    ZAKAT = 'ZAKAT'
 
 
 def find_available_port() -> int:
@@ -64,29 +116,31 @@ def start_file_server(database_path: str, database_callback: callable = None, cs
         - Database File (.db): Replaces the existing database with the uploaded one.
         - CSV File (.csv): Imports data from the CSV into the existing database.
 
-    Args:
-        database_path (str): The path to the camel database file.
-        database_callback (callable, optional): A function to call after a successful database upload.
+    Parameters:
+    - database_path (str): The path to the camel database file.
+    - database_callback (callable, optional): A function to call after a successful database upload.
                                                 It receives the uploaded database path as its argument.
-        csv_callback (callable, optional): A function to call after a successful CSV upload. It receives the uploaded CSV path,
+    - csv_callback (callable, optional): A function to call after a successful CSV upload. It receives the uploaded CSV path,
                                            the database path, and the debug flag as its arguments.
-        debug (bool, optional): If True, print debugging information. Defaults to False.
+    - debug (bool, optional): If True, print debugging information. Defaults to False.
 
     Returns:
-        Tuple[str, str, str, threading.Thread, Callable[[], None]]: A tuple containing:
-            - file_name (str): The name of the database file.
-            - download_url (str): The URL to download the database file.
-            - upload_url (str): The URL to access the file upload form.
-            - server_thread (threading.Thread): The thread running the server.
-            - shutdown_server (Callable[[], None]): A function to gracefully shut down the server.
+    - Tuple[str, str, str, threading.Thread, Callable[[], None]]: A tuple containing:
+        - file_name (str): The name of the database file.
+        - download_url (str): The URL to download the database file.
+        - upload_url (str): The URL to access the file upload form.
+        - server_thread (threading.Thread): The thread running the server.
+        - shutdown_server (Callable[[], None]): A function to gracefully shut down the server.
 
     Example:
-        _, download_url, upload_url, server_thread, shutdown_server = start_file_server("zakat.db")
-        print(f"Download database: {download_url}")
-        print(f"Upload files: {upload_url}")
-        server_thread.start()
-        # ... later ...
-        shutdown_server()
+    ```python
+    _, download_url, upload_url, server_thread, shutdown_server = start_file_server("zakat.db")
+    print(f"Download database: {download_url}")
+    print(f"Upload files: {upload_url}")
+    server_thread.start()
+    # ... later ...
+    shutdown_server()
+    ```
     """
     file_uuid = uuid.uuid4()
     file_name = os.path.basename(database_path)

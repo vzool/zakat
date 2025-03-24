@@ -108,7 +108,7 @@ class Action(enum.Enum):
     - CREATE: Represents the creation action ('CREATE').
     - TRACK: Represents the tracking action ('TRACK').
     - LOG: Represents the logging action ('LOG').
-    - SUB: Represents the subtract action ('SUB').
+    - SUBTRACT: Represents the subtract action ('SUBTRACT').
     - ADD_FILE: Represents the action of adding a file ('ADD_FILE').
     - REMOVE_FILE: Represents the action of removing a file ('REMOVE_FILE').
     - BOX_TRANSFER: Represents the action of transferring a box ('BOX_TRANSFER').
@@ -119,7 +119,7 @@ class Action(enum.Enum):
     CREATE = 'CREATE'
     TRACK = 'TRACK'
     LOG = 'LOG'
-    SUB = 'SUB'
+    SUBTRACT = 'SUBTRACT'
     ADD_FILE = 'ADD_FILE'
     REMOVE_FILE = 'REMOVE_FILE'
     BOX_TRANSFER = 'BOX_TRANSFER'
