@@ -683,9 +683,9 @@ class ZakatTracker:
 
     Data Structure:
     
-    The ZakatTracker class utilizes a nested dictionary structure called '_vault' to store and manage data.
+    The ZakatTracker class utilizes a nested dataclasses structure called '__vault' to store and manage data.
 
-        _vault (dict):
+        __vault (dict):
             - account (dict):
                 - {account_name} (dict):
                     - balance (int): The current balance of the account.
@@ -810,10 +810,10 @@ class ZakatTracker:
         """
         return 'json'
 
-    _base_path = ""
-    _vault_path = ""
-    _memory_mode = False
-    _vault: Vault
+    __base_path = ""
+    __vault_path = ""
+    __memory_mode = False
+    __vault: Vault
 
     def __init__(self, db_path: str = './zakat_db/', history_mode: bool = True):
         """
@@ -827,10 +827,19 @@ class ZakatTracker:
         None
         """
         self.reset()
-        self._memory_mode = db_path == ':memory:'
-        self._history(history_mode)
-        if not self._memory_mode:
+        self.__memory_mode = db_path == ':memory:'
+        self.__history(history_mode)
+        if not self.__memory_mode:
             self.path(f'{db_path}/db.{self.ext()}')
+
+    def memory_mode(self) -> bool:
+        """
+        Check if the ZakatTracker is operating in memory mode.
+
+        Returns:
+        - bool: True if the database is in memory, False otherwise.
+        """
+        return self.__memory_mode
 
     def path(self, path: Optional[str] = None) -> str:
         """
@@ -847,14 +856,14 @@ class ZakatTracker:
         - str: The current or new path to the database file.
         """
         if path is None:
-            return self._vault_path
-        self._vault_path = pathlib.Path(path).resolve()
+            return self.__vault_path
+        self.__vault_path = pathlib.Path(path).resolve()
         base_path = pathlib.Path(path).resolve()
         if base_path.is_file() or base_path.suffix:
             base_path = base_path.parent
         base_path.mkdir(parents=True, exist_ok=True)
-        self._base_path = base_path
-        return str(self._vault_path)
+        self.__base_path = base_path
+        return str(self.__vault_path)
 
     def base_path(self, *args) -> str:
         """
@@ -867,7 +876,7 @@ class ZakatTracker:
         - str: The generated base path. If no arguments are provided, the existing base path is returned.
         """
         if not args:
-            return str(self._base_path)
+            return str(self.__base_path)
         filtered_args = []
         ignored_filename = None
         for arg in args:
@@ -875,7 +884,7 @@ class ZakatTracker:
                 ignored_filename = arg
             else:
                 filtered_args.append(arg)
-        base_path = pathlib.Path(self._base_path)
+        base_path = pathlib.Path(self.__base_path)
         full_path = base_path.joinpath(*filtered_args)
         full_path.mkdir(parents=True, exist_ok=True)
         if ignored_filename is not None:
@@ -945,10 +954,10 @@ class ZakatTracker:
         Returns:
         None
         """
-        self._vault = Vault()
+        self.__vault = Vault()
 
-    _last_time_ns = None
-    _time_diff_ns = None
+    __last_time_ns = None
+    __time_diff_ns = None
 
     @staticmethod
     def minimum_time_diff_ns() -> tuple[int, int]:
@@ -1011,16 +1020,16 @@ class ZakatTracker:
         - Timestamp: The unique timestamp in nanoseconds since the epoch (January 1, 1AD).
         """
         new_time = ZakatTracker._time(now)
-        if ZakatTracker._last_time_ns is None:
-            ZakatTracker._last_time_ns = new_time
+        if ZakatTracker.__last_time_ns is None:
+            ZakatTracker.__last_time_ns = new_time
             return new_time
-        while new_time == ZakatTracker._last_time_ns:
-            if ZakatTracker._time_diff_ns is None:
+        while new_time == ZakatTracker.__last_time_ns:
+            if ZakatTracker.__time_diff_ns is None:
                 diff, _ = ZakatTracker.minimum_time_diff_ns()
-                ZakatTracker._time_diff_ns = math.ceil(diff)
-            time.sleep(ZakatTracker._time_diff_ns / 1_000_000_000)
+                ZakatTracker.__time_diff_ns = math.ceil(diff)
+            time.sleep(ZakatTracker.__time_diff_ns / 1_000_000_000)
             new_time = ZakatTracker._time()
-        ZakatTracker._last_time_ns = new_time
+        ZakatTracker.__last_time_ns = new_time
         return new_time
 
     @staticmethod
@@ -1051,19 +1060,19 @@ class ZakatTracker:
         - int: The number of locks cleaned up.
         """
         count = 0
-        if lock in self._vault.history:
-            if len(self._vault.history[lock]) <= 0:
+        if lock in self.__vault.history:
+            if len(self.__vault.history[lock]) <= 0:
                 count += 1
-                del self._vault.history[lock]
+                del self.__vault.history[lock]
             return count
         self.free(self.lock()) # !!!
-        for key in self._vault.history:
-            if len(self._vault.history[key]) <= 0:
+        for key in self.__vault.history:
+            if len(self.__vault.history[key]) <= 0:
                 count += 1
-                del self._vault.history[key]
+                del self.__vault.history[key]
         return count
 
-    def _history(self, status: Optional[bool] = None) -> bool:
+    def __history(self, status: Optional[bool] = None) -> bool:
         """
         Enable or disable history tracking.
 
@@ -1074,10 +1083,10 @@ class ZakatTracker:
         None
         """
         if status is not None:
-            self._history_mode = status
-        return self._history_mode
+            self.__history_mode = status
+        return self.__history_mode
 
-    def _step(self, action: Optional[Action] = None,
+    def __step(self, action: Optional[Action] = None,
                     account: Optional[AccountName] = None,
                     ref: Optional[Timestamp] = None,
                     file: Optional[int] = None,
@@ -1104,13 +1113,13 @@ class ZakatTracker:
         Returns:
         - Optional[Timestamp]: The lock time of the recorded action. If no lock was performed, it returns 0.
         """
-        if not self._history():
+        if not self.__history():
             return None
         no_lock = self.nolock()
-        lock = self._vault.lock
+        lock = self.__vault.lock
         if no_lock:
-            lock = self._vault.lock = self.time()
-            self._vault.history[lock] = []
+            lock = self.__vault.lock = self.time()
+            self.__vault.history[lock] = []
         if action is None:
             if lock_once:
                 assert no_lock, 'forbidden: lock called twice!!!'
@@ -1120,7 +1129,7 @@ class ZakatTracker:
         assert lock is not None
         assert lock > 0
         assert account is None or action != Action.REPORT
-        self._vault.history[lock].append(History(
+        self.__vault.history[lock].append(History(
             action=action,
             account=account,
             ref=ref,
@@ -1141,9 +1150,9 @@ class ZakatTracker:
         Returns:
         - bool: True if the vault lock is not set, False otherwise.
         """
-        return self._vault.lock is None
+        return self.__vault.lock is None
 
-    def _lock(self) -> Optional[Timestamp]:
+    def __lock(self) -> Optional[Timestamp]:
         """
         Acquires a lock, potentially repeatedly, by calling the internal `_step` method.
 
@@ -1154,7 +1163,7 @@ class ZakatTracker:
         Returns:
         - Optional[Timestamp]: The status code or result returned by the `_step` method, indicating theoutcome of the lock acquisition attempt.
         """
-        return self._step(lock_once=False)
+        return self.__step(lock_once=False)
 
     def lock(self) -> Optional[Timestamp]:
         """
@@ -1166,7 +1175,7 @@ class ZakatTracker:
         Returns:
         - Optional[Timestamp]: The lock ID. This ID can be used to release the lock later.
         """
-        return self._step()
+        return self.__step()
 
     def steps(self) -> dict:
         """
@@ -1181,7 +1190,7 @@ class ZakatTracker:
         Returns:
         - dict: A copy of the history of steps taken in the ZakatTracker.
         """
-        return self._vault.history.copy()
+        return self.__vault.history.copy()
 
     def free(self, lock: Timestamp, auto_save: bool = True) -> bool:
         """
@@ -1194,10 +1203,10 @@ class ZakatTracker:
         Returns:
         - bool: True if the lock is successfully released and (optionally) saved, False otherwise.
         """
-        if lock == self._vault.lock:
+        if lock == self.__vault.lock:
             self.clean_history(lock)
-            self._vault.lock = None
-            if auto_save and not self._memory_mode:
+            self.__vault.lock = None
+            if auto_save and not self.memory_mode():
                 return self.save(self.path())
             return True
         return False
@@ -1217,20 +1226,20 @@ class ZakatTracker:
         Returns:
         - bool: True if the operation was successful, False otherwise.
         """
-        if not self.nolock() or len(self._vault.history) == 0:
+        if not self.nolock() or len(self.__vault.history) == 0:
             return False
-        if len(self._vault.history) <= 0:
+        if len(self.__vault.history) <= 0:
             return False
-        ref = sorted(self._vault.history.keys())[-1]
+        ref = sorted(self.__vault.history.keys())[-1]
         if debug:
             print('recall', ref)
-        memory = self._vault.history[ref]
+        memory = self.__vault.history[ref]
         if debug:
             print(type(memory), 'memory', memory)
         if lock is not None:
-            assert self._vault.lock == lock, "Invalid current lock"
+            assert self.__vault.lock == lock, "Invalid current lock"
             assert ref == lock, "Invalid last lock"
-            assert self._history(), "History mode should be enabled, found off!!!"
+            assert self.__history(), "History mode should be enabled, found off!!!"
         limit = len(memory) + 1
         sub_positive_log_negative = 0
         for i in range(-1, -limit, -1):
@@ -1242,14 +1251,14 @@ class ZakatTracker:
                     if x.account is not None:
                         if self.account_exists(x.account):
                             if debug:
-                                print('account', self._vault.account[x.account])
-                            assert len(self._vault.account[x.account].box) == 0
-                            assert len(self._vault.account[x.account].log) == 0
-                            assert self._vault.account[x.account].balance == 0
-                            assert self._vault.account[x.account].count == 0
+                                print('account', self.__vault.account[x.account])
+                            assert len(self.__vault.account[x.account].box) == 0
+                            assert len(self.__vault.account[x.account].log) == 0
+                            assert self.__vault.account[x.account].balance == 0
+                            assert self.__vault.account[x.account].count == 0
                             if dry:
                                 continue
-                            del self._vault.account[x.account]
+                            del self.__vault.account[x.account]
 
                 case Action.TRACK:
                     if x.account is not None:
@@ -1258,122 +1267,122 @@ class ZakatTracker:
                                 continue
                             assert x.value is not None
                             assert x.ref is not None
-                            self._vault.account[x.account].balance -= x.value
-                            self._vault.account[x.account].count -= 1
-                            del self._vault.account[x.account].box[x.ref]
+                            self.__vault.account[x.account].balance -= x.value
+                            self.__vault.account[x.account].count -= 1
+                            del self.__vault.account[x.account].box[x.ref]
 
                 case Action.LOG:
                     if x.account is not None:
                         if self.account_exists(x.account):
-                            if x.ref in self._vault.account[x.account].log:
+                            if x.ref in self.__vault.account[x.account].log:
                                 if dry:
                                     continue
                                 assert x.value is not None
                                 if sub_positive_log_negative == -x.value:
-                                    self._vault.account[x.account].count -= 1
+                                    self.__vault.account[x.account].count -= 1
                                     sub_positive_log_negative = 0
-                                box_ref = self._vault.account[x.account].log[x.ref].ref
+                                box_ref = self.__vault.account[x.account].log[x.ref].ref
                                 if not box_ref is None:
                                     assert self.box_exists(x.account, box_ref)
-                                    box_value = self._vault.account[x.account].log[x.ref].value
+                                    box_value = self.__vault.account[x.account].log[x.ref].value
                                     assert box_value < 0
 
                                     try:
-                                        self._vault.account[x.account].box[box_ref].rest += -box_value
+                                        self.__vault.account[x.account].box[box_ref].rest += -box_value
                                     except TypeError:
-                                        self._vault.account[x.account].box[box_ref].rest += decimal.Decimal(-box_value)
+                                        self.__vault.account[x.account].box[box_ref].rest += decimal.Decimal(-box_value)
 
                                     try:
-                                        self._vault.account[x.account].balance += -box_value
+                                        self.__vault.account[x.account].balance += -box_value
                                     except TypeError:
-                                        self._vault.account[x.account].balance += decimal.Decimal(-box_value)
+                                        self.__vault.account[x.account].balance += decimal.Decimal(-box_value)
 
-                                    self._vault.account[x.account].count -= 1
-                                del self._vault.account[x.account].log[x.ref]
+                                    self.__vault.account[x.account].count -= 1
+                                del self.__vault.account[x.account].log[x.ref]
 
                 case Action.SUBTRACT:
                     if x.account is not None:
                         if self.account_exists(x.account):
-                            if x.ref in self._vault.account[x.account].box:
+                            if x.ref in self.__vault.account[x.account].box:
                                 if dry:
                                     continue
                                 assert x.value is not None
-                                self._vault.account[x.account].box[x.ref].rest += x.value
-                                self._vault.account[x.account].balance += x.value
+                                self.__vault.account[x.account].box[x.ref].rest += x.value
+                                self.__vault.account[x.account].balance += x.value
                                 sub_positive_log_negative = x.value
 
                 case Action.ADD_FILE:
                     if x.account is not None:
                         if self.account_exists(x.account):
-                            if x.ref in self._vault.account[x.account].log:
-                                if x.file in self._vault.account[x.account].log[x.ref].file:
+                            if x.ref in self.__vault.account[x.account].log:
+                                if x.file in self.__vault.account[x.account].log[x.ref].file:
                                     if dry:
                                         continue
-                                    del self._vault.account[x.account].log[x.ref].file[x.file]
+                                    del self.__vault.account[x.account].log[x.ref].file[x.file]
 
                 case Action.REMOVE_FILE:
                     if x.account is not None:
                         if self.account_exists(x.account):
-                            if x.ref in self._vault.account[x.account].log:
+                            if x.ref in self.__vault.account[x.account].log:
                                 if dry:
                                     continue
                                 assert x.file is not None
                                 assert x.value is not None
-                                self._vault.account[x.account].log[x.ref].file[x.file] = x.value
+                                self.__vault.account[x.account].log[x.ref].file[x.file] = x.value
 
                 case Action.BOX_TRANSFER:
                     if x.account is not None:
                         if self.account_exists(x.account):
-                            if x.ref in self._vault.account[x.account].box:
+                            if x.ref in self.__vault.account[x.account].box:
                                 if dry:
                                     continue
                                 assert x.value is not None
-                                self._vault.account[x.account].box[x.ref].rest -= x.value
+                                self.__vault.account[x.account].box[x.ref].rest -= x.value
 
                 case Action.EXCHANGE:
                     if x.account is not None:
-                        if x.account in self._vault.exchange:
-                            if x.ref in self._vault.exchange[x.account]:
+                        if x.account in self.__vault.exchange:
+                            if x.ref in self.__vault.exchange[x.account]:
                                 if dry:
                                     continue
-                                del self._vault.exchange[x.account][x.ref]
+                                del self.__vault.exchange[x.account][x.ref]
 
                 case Action.REPORT:
-                    if x.ref in self._vault.report:
+                    if x.ref in self.__vault.report:
                         if dry:
                             continue
-                        del self._vault.report[x.ref]
+                        del self.__vault.report[x.ref]
 
                 case Action.ZAKAT:
                     if x.account is not None:
                         if self.account_exists(x.account):
-                            if x.ref in self._vault.account[x.account].box:
+                            if x.ref in self.__vault.account[x.account].box:
                                 assert x.key is not None
-                                if hasattr(self._vault.account[x.account].box[x.ref], x.key):
+                                if hasattr(self.__vault.account[x.account].box[x.ref], x.key):
                                     if dry:
                                         continue
                                     match x.math:
                                         case MathOperation.ADDITION:
                                             setattr(
-                                                self._vault.account[x.account].box[x.ref],
+                                                self.__vault.account[x.account].box[x.ref],
                                                 x.key,
-                                                getattr(self._vault.account[x.account].box[x.ref], x.key) - x.value,
+                                                getattr(self.__vault.account[x.account].box[x.ref], x.key) - x.value,
                                             )
                                         case MathOperation.EQUAL:
                                             setattr(
-                                                self._vault.account[x.account].box[x.ref],
+                                                self.__vault.account[x.account].box[x.ref],
                                                 x.key,
                                                 x.value,
                                             )
                                         case MathOperation.SUBTRACTION:
                                             setattr(
-                                                self._vault.account[x.account].box[x.ref],
+                                                self.__vault.account[x.account].box[x.ref],
                                                 x.key,
-                                                getattr(self._vault.account[x.account].box[x.ref], x.key) + x.value,
+                                                getattr(self.__vault.account[x.account].box[x.ref], x.key) + x.value,
                                             )
 
         if not dry:
-            del self._vault.history[ref]
+            del self.__vault.history[ref]
         return True
 
     def vault(self) -> dict:
@@ -1390,7 +1399,7 @@ class ZakatTracker:
         Returns:
         - dict: A copy of the internal vault dictionary.
         """
-        return self._vault.copy()
+        return self.__vault.copy()
 
     @staticmethod
     def stats_init() -> dict[str, tuple[int, str]]:
@@ -1506,7 +1515,7 @@ class ZakatTracker:
         Returns:
         - bool: True if the account exists, False otherwise.
         """
-        return account in self._vault.account
+        return account in self.__vault.account
 
     def box_size(self, account: AccountName) -> int:
         """
@@ -1519,7 +1528,7 @@ class ZakatTracker:
         - int: The size of the box for the given account. If the account does not exist, -1 is returned.
         """
         if self.account_exists(account):
-            return len(self._vault.account[account].box)
+            return len(self.__vault.account[account].box)
         return -1
 
     def log_size(self, account: AccountName) -> int:
@@ -1533,7 +1542,7 @@ class ZakatTracker:
         - int: The size of the log for the given account. If the account does not exist, -1 is returned.
         """
         if self.account_exists(account):
-            return len(self._vault.account[account].log)
+            return len(self.__vault.account[account].log)
         return -1
 
     @staticmethod
@@ -1667,8 +1676,8 @@ class ZakatTracker:
         Returns:
         - bool: True if the reference exists for the given account and reference type, False otherwise.
         """
-        if account in self._vault.account:
-            return ref in getattr(self._vault.account[account], ref_type)
+        if account in self.__vault.account:
+            return ref in getattr(self.__vault.account[account], ref_type)
         return False
 
     def box_exists(self, account: AccountName, ref: Timestamp) -> bool:
@@ -1714,15 +1723,15 @@ class ZakatTracker:
         if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         no_lock = self.nolock()
-        lock = self._lock()
+        lock = self.__lock()
         if not self.account_exists(account):
             if debug:
                 print(f'account {account} created')
-            self._vault.account[account] = Account(
+            self.__vault.account[account] = Account(
                 balance=0,
                 created=created_time_ns,
             )
-            self._step(Action.CREATE, account)
+            self.__step(Action.CREATE, account)
         if unscaled_value == 0:
             if no_lock:
                 assert lock is not None
@@ -1730,21 +1739,21 @@ class ZakatTracker:
             return NO_TIME()
         value = self.scale(unscaled_value)
         if logging:
-            self._log(value=value, desc=desc, account=account, created_time_ns=created_time_ns, ref=None, debug=debug)
+            self.__log(value=value, desc=desc, account=account, created_time_ns=created_time_ns, ref=None, debug=debug)
         if debug:
             print('create-box', created_time_ns)
         if self.box_exists(account, created_time_ns):
             raise ValueError(f'The box transaction happened again in the same nanosecond time({created_time_ns}).')
         if debug:
             print('created-box', created_time_ns)
-        self._vault.account[account].box[created_time_ns] = Box(
+        self.__vault.account[account].box[created_time_ns] = Box(
             capital=value,
             count=0,
             last=0,
             rest=value,
             total=0,
         )
-        self._step(Action.TRACK, account, ref=created_time_ns, value=value)
+        self.__step(Action.TRACK, account, ref=created_time_ns, value=value)
         if no_lock:
             assert lock is not None
             self.free(lock)
@@ -1763,7 +1772,7 @@ class ZakatTracker:
         """
         return self.ref_exists(account, 'log', ref)
 
-    def _log(self, value: int, desc: str = '', account: AccountName = '1', created_time_ns: Optional[Timestamp] = None,
+    def __log(self, value: int, desc: str = '', account: AccountName = '1', created_time_ns: Optional[Timestamp] = None,
              ref: Optional[Timestamp] = None,
              debug: bool = False) -> int:
         """
@@ -1793,23 +1802,23 @@ class ZakatTracker:
         if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         try:
-            self._vault.account[account].balance += value
+            self.__vault.account[account].balance += value
         except TypeError:
-            self._vault.account[account].balance += decimal.Decimal(value)
-        self._vault.account[account].count += 1
+            self.__vault.account[account].balance += decimal.Decimal(value)
+        self.__vault.account[account].count += 1
         if debug:
             print('create-log', created_time_ns)
         if self.log_exists(account, created_time_ns):
             raise ValueError(f'The log transaction happened again in the same nanosecond time({created_time_ns}).')
         if debug:
             print('created-log', created_time_ns)
-        self._vault.account[account].log[created_time_ns] = Log(
+        self.__vault.account[account].log[created_time_ns] = Log(
             value=value,
             desc=desc,
             ref=ref,
             file={},            
         )
-        self._step(Action.LOG, account, ref=created_time_ns, value=value)
+        self.__step(Action.LOG, account, ref=created_time_ns, value=value)
         return created_time_ns
 
     def exchange(self, account: AccountName, created_time_ns: Optional[Timestamp] = None,
@@ -1840,14 +1849,14 @@ class ZakatTracker:
         if rate is not None:
             if rate <= 0:
                 return Exchange()
-            if account not in self._vault.exchange:
-                self._vault.exchange[account] = {}
-            if len(self._vault.exchange[account]) == 0 and rate <= 1:
+            if account not in self.__vault.exchange:
+                self.__vault.exchange[account] = {}
+            if len(self.__vault.exchange[account]) == 0 and rate <= 1:
                 return Exchange(time=created_time_ns, rate=1)
             no_lock = self.nolock()
-            lock = self._lock()
-            self._vault.exchange[account][created_time_ns] = Exchange(rate=rate, description=description)
-            self._step(Action.EXCHANGE, account, ref=created_time_ns, value=rate)
+            lock = self.__lock()
+            self.__vault.exchange[account][created_time_ns] = Exchange(rate=rate, description=description)
+            self.__step(Action.EXCHANGE, account, ref=created_time_ns, value=rate)
             if no_lock:
                 assert lock is not None
                 self.free(lock)
@@ -1855,8 +1864,8 @@ class ZakatTracker:
                 print('exchange-created-1',
                       f'account: {account}, created: {created_time_ns}, rate:{rate}, description:{description}')
 
-        if account in self._vault.exchange:
-            valid_rates = [(ts, r) for ts, r in self._vault.exchange[account].items() if ts <= created_time_ns]
+        if account in self.__vault.exchange:
+            valid_rates = [(ts, r) for ts, r in self.__vault.exchange[account].items() if ts <= created_time_ns]
             if valid_rates:
                 latest_rate = max(valid_rates, key=lambda x: x[0])
                 if debug:
@@ -1897,7 +1906,7 @@ class ZakatTracker:
         The keys are account names or numbers, and the values are dictionaries containing the exchange rates.
         Each exchange rate dictionary has timestamps as keys and exchange rate details as values.
         """
-        return self._vault.exchange.copy()
+        return self.__vault.exchange.copy()
 
     def accounts(self) -> dict:
         """
@@ -1910,8 +1919,8 @@ class ZakatTracker:
         - dict: A dictionary where keys are account numbers and values are their respective balances.
         """
         result = {}
-        for i in self._vault.account:
-            result[i] = self._vault.account[i].balance
+        for i in self.__vault.account:
+            result[i] = self.__vault.account[i].balance
         return result
 
     def boxes(self, account: AccountName) -> dict:
@@ -1926,7 +1935,7 @@ class ZakatTracker:
         If the account does not exist, an empty dictionary is returned.
         """
         if self.account_exists(account):
-            return self._vault.account[account].box
+            return self.__vault.account[account].box
         return {}
 
     def logs(self, account: AccountName) -> dict[Timestamp, Log]:
@@ -1941,7 +1950,7 @@ class ZakatTracker:
         If the account does not exist, an empty dictionary is returned.
         """
         if self.account_exists(account):
-            return self._vault.account[account].log
+            return self.__vault.account[account].log
         return {}
 
     @staticmethod
@@ -2137,12 +2146,12 @@ class ZakatTracker:
         - Timestamp: The reference of the added file. If the account or transaction log entry does not exist, returns 0.
         """
         if self.account_exists(account):
-            if ref in self._vault.account[account].log:
+            if ref in self.__vault.account[account].log:
                 no_lock = self.nolock()
-                lock = self._lock()
+                lock = self.__lock()
                 file_ref = self.time()
-                self._vault.account[account].log[ref].file[file_ref] = path
-                self._step(Action.ADD_FILE, account, ref=ref, file=file_ref)
+                self.__vault.account[account].log[ref].file[file_ref] = path
+                self.__step(Action.ADD_FILE, account, ref=ref, file=file_ref)
                 if no_lock:
                     assert lock is not None
                     self.free(lock)
@@ -2162,13 +2171,13 @@ class ZakatTracker:
         - bool: True if the file reference is successfully removed, False otherwise.
         """
         if self.account_exists(account):
-            if ref in self._vault.account[account].log:
-                if file_ref in self._vault.account[account].log[ref].file:
+            if ref in self.__vault.account[account].log:
+                if file_ref in self.__vault.account[account].log[ref].file:
                     no_lock = self.nolock()
-                    lock = self._lock()
-                    x = self._vault.account[account].log[ref].file[file_ref]
-                    del self._vault.account[account].log[ref].file[file_ref]
-                    self._step(Action.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
+                    lock = self.__lock()
+                    x = self.__vault.account[account].log[ref].file[file_ref]
+                    del self.__vault.account[account].log[ref].file[file_ref]
+                    self.__step(Action.REMOVE_FILE, account, ref=ref, file=file_ref, value=x)
                     if no_lock:
                         assert lock is not None
                         self.free(lock)
@@ -2191,9 +2200,9 @@ class ZakatTracker:
         - If cached is False, the function calculates the balance from the box by summing up the 'rest' values of all box items.
         """
         if cached:
-            return self._vault.account[account].balance
+            return self.__vault.account[account].balance
         x = 0
-        return [x := x + y.rest for y in self._vault.account[account].box.values()][-1]
+        return [x := x + y.rest for y in self.__vault.account[account].box.values()][-1]
 
     def hide(self, account: AccountName, status: Optional[bool] = None) -> bool:
         """
@@ -2225,8 +2234,8 @@ class ZakatTracker:
         """
         if self.account_exists(account):
             if status is None:
-                return self._vault.account[account].hide
-            self._vault.account[account].hide = status
+                return self.__vault.account[account].hide
+            self.__vault.account[account].hide = status
             return status
         return False
 
@@ -2260,8 +2269,8 @@ class ZakatTracker:
         """
         if self.account_exists(account):
             if status is None:
-                return self._vault.account[account].zakatable
-            self._vault.account[account].zakatable = status
+                return self.__vault.account[account].zakatable
+            self.__vault.account[account].zakatable = status
             return status
         return False
 
@@ -2301,11 +2310,11 @@ class ZakatTracker:
         if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         no_lock = self.nolock()
-        lock = self._lock()
+        lock = self.__lock()
         self.track(0, '', account)
         value = self.scale(unscaled_value)
-        self._log(value=-value, desc=desc, account=account, created_time_ns=created_time_ns, ref=None, debug=debug)
-        ids = sorted(self._vault.account[account].box.keys())
+        self.__log(value=-value, desc=desc, account=account, created_time_ns=created_time_ns, ref=None, debug=debug)
+        ids = sorted(self.__vault.account[account].box.keys())
         limit = len(ids) + 1
         target = value
         if debug:
@@ -2317,18 +2326,18 @@ class ZakatTracker:
             j = ids[i]
             if debug:
                 print('i', i, 'j', j)
-            rest = self._vault.account[account].box[j].rest
+            rest = self.__vault.account[account].box[j].rest
             if rest >= target:
-                self._vault.account[account].box[j].rest -= target
-                self._step(Action.SUBTRACT, account, ref=j, value=target)
+                self.__vault.account[account].box[j].rest -= target
+                self.__step(Action.SUBTRACT, account, ref=j, value=target)
                 ages.append(SubtractAge(box_ref=j, total=target))
                 target = 0
                 break
             elif target > rest > 0:
                 chunk = rest
                 target -= chunk
-                self._vault.account[account].box[j].rest = 0
-                self._step(Action.SUBTRACT, account, ref=j, value=chunk)
+                self.__vault.account[account].box[j].rest = 0
+                self.__step(Action.SUBTRACT, account, ref=j, value=chunk)
                 ages.append(SubtractAge(box_ref=j, total=chunk))
         if target > 0:
             self.track(
@@ -2381,7 +2390,7 @@ class ZakatTracker:
         if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         no_lock = self.nolock()
-        lock = self._lock()
+        lock = self.__lock()
         subtract_report = self.subtract(unscaled_amount, desc, from_account, created_time_ns, debug=debug)
         source_exchange = self.exchange(from_account, created_time_ns)
         target_exchange = self.exchange(to_account, created_time_ns)
@@ -2401,18 +2410,18 @@ class ZakatTracker:
             if self.box_exists(to_account, age):
                 if debug:
                     print('box_exists', age)
-                capital = self._vault.account[to_account].box[age].capital
-                rest = self._vault.account[to_account].box[age].rest
+                capital = self.__vault.account[to_account].box[age].capital
+                rest = self.__vault.account[to_account].box[age].rest
                 if debug:
                     print(
                         f'Transfer(loop) {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).')
                 selected_age = age
                 if rest + target_amount > capital:
-                    self._vault.account[to_account].box[age].capital += target_amount
+                    self.__vault.account[to_account].box[age].capital += target_amount
                     selected_age = ZakatTracker.time()
-                self._vault.account[to_account].box[age].rest += target_amount
-                self._step(Action.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
-                y = self._log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account,
+                self.__vault.account[to_account].box[age].rest += target_amount
+                self.__step(Action.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
+                y = self.__log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account,
                               created_time_ns=None, ref=None, debug=debug)
                 times.append(TransferTime(box_ref=age, log_ref=y))
                 continue
@@ -2472,13 +2481,13 @@ class ZakatTracker:
         valid = False
         if debug:
             print('exchanges', self.exchanges())
-        for x in self._vault.account:
+        for x in self.__vault.account:
             if not self.zakatable(x):
                 continue
-            _box = self._vault.account[x].box
-            _log = self._vault.account[x].log
+            _box = self.__vault.account[x].box
+            _log = self.__vault.account[x].log
             limit = len(_box) + 1
-            ids = sorted(self._vault.account[x].box.keys())
+            ids = sorted(self.__vault.account[x].box.keys())
             for i in range(-1, -limit, -1):
                 j = ids[i]
                 rest = float(_box[j].rest)
@@ -2645,18 +2654,17 @@ class ZakatTracker:
             print('######### zakat #######')
             print('parts_exist', parts_exist)
         no_lock = self.nolock()
-        lock = self._lock()
+        lock = self.__lock()
         report_time = self.time()
-        self._vault.report[report_time] = report
-        self._step(Action.REPORT, ref=report_time)
+        self.__vault.report[report_time] = report
+        self.__step(Action.REPORT, ref=report_time)
         created_time_ns = self.time()
         for x in report.plan:
             target_exchange = self.exchange(x)
             if debug:
                 print(report.plan[x])
                 print('-------------')
-                print(self._vault.account[x].box)
-            #ids = sorted(self._vault.account[x].box.keys())
+                print(self.__vault.account[x].box)
             if debug:
                 print('plan[x]', report.plan[x])
             for plan in report.plan[x]:
@@ -2664,25 +2672,25 @@ class ZakatTracker:
                 if debug:
                     print('j', j)
                 assert j
-                self._step(Action.ZAKAT, account=x, ref=j, value=self._vault.account[x].box[j].last,
+                self.__step(Action.ZAKAT, account=x, ref=j, value=self.__vault.account[x].box[j].last,
                            key='last',
                            math_operation=MathOperation.EQUAL)
-                self._vault.account[x].box[j].last = created_time_ns
+                self.__vault.account[x].box[j].last = created_time_ns
                 amount = ZakatTracker.exchange_calc(float(plan.total), 1, float(target_exchange.rate))
-                self._vault.account[x].box[j].total += amount
-                self._step(Action.ZAKAT, account=x, ref=j, value=amount, key='total',
+                self.__vault.account[x].box[j].total += amount
+                self.__step(Action.ZAKAT, account=x, ref=j, value=amount, key='total',
                            math_operation=MathOperation.ADDITION)
-                self._vault.account[x].box[j].count += plan.count
-                self._step(Action.ZAKAT, account=x, ref=j, value=plan.count, key='count',
+                self.__vault.account[x].box[j].count += plan.count
+                self.__step(Action.ZAKAT, account=x, ref=j, value=plan.count, key='count',
                            math_operation=MathOperation.ADDITION)
                 if not parts_exist:
                     try:
-                        self._vault.account[x].box[j].rest -= amount
+                        self.__vault.account[x].box[j].rest -= amount
                     except TypeError:
-                        self._vault.account[x].box[j].rest -= decimal.Decimal(amount)
-                    # self._step(Action.ZAKAT, account=x, ref=j, value=amount, key='rest',
+                        self.__vault.account[x].box[j].rest -= decimal.Decimal(amount)
+                    # self.__step(Action.ZAKAT, account=x, ref=j, value=amount, key='rest',
                     #            math_operation=MathOperation.SUBTRACTION)
-                    self._log(-float(amount), desc='zakat-زكاة', account=x, created_time_ns=None, ref=j, debug=debug)
+                    self.__log(-float(amount), desc='zakat-زكاة', account=x, created_time_ns=None, ref=j, debug=debug)
         if parts_exist:
             for account, part in parts.account.items():
                 if part.part == 0:
@@ -2716,7 +2724,7 @@ class ZakatTracker:
         No specific exceptions are raised by this method.
         """
         with open(path, 'w', encoding='utf-8') as file:
-            json.dump(self._vault, file, indent=4, cls=JSONEncoder)
+            json.dump(self.__vault, file, indent=4, cls=JSONEncoder)
             return True
 
     @staticmethod
@@ -2743,7 +2751,7 @@ class ZakatTracker:
         """
         Saves the ZakatTracker's current state to a json file.
 
-        This method serializes the internal data (`_vault`).
+        This method serializes the internal data (`__vault`).
 
         Parameters:
         - path (str, optional): File path for saving. Defaults to a predefined location.
@@ -2758,7 +2766,7 @@ class ZakatTracker:
         temp = f'{path}.tmp'
         try:
             with open(temp, 'w', encoding='utf-8') as stream:
-                data = json.dumps(self._vault, cls=JSONEncoder)
+                data = json.dumps(self.__vault, cls=JSONEncoder)
                 stream.write(data)
                 if hash_required:
                     hashed = self.hash_data(data.encode())
@@ -2861,7 +2869,7 @@ class ZakatTracker:
                         if debug:
                             print('[debug-load]', new_hash)
                         assert hashed == new_hash, "Hash verification failed. File may be corrupted."
-                    self._vault = self.load_vault_from_json(data) # Vault(**json.loads(data, cls=JSONDecoder))
+                    self.__vault = self.load_vault_from_json(data)
                 return True
             else:
                 print(f'File not found: {path}')
@@ -2980,7 +2988,7 @@ class ZakatTracker:
             return created, found, bad
 
         no_lock = self.nolock()
-        lock = self._lock()
+        lock = self.__lock()
         for date, rows in sorted(data.items()):
             try:
                 len_rows = len(rows)
@@ -3462,7 +3470,7 @@ class ZakatTracker:
         # test lock
 
         assert self.nolock()
-        assert self._history() is True
+        assert self.__history() is True
         lock = self.lock()
         assert lock > 0
         failed = False
@@ -3513,14 +3521,14 @@ class ZakatTracker:
                     if debug:
                         print('_sub', z, ZakatTracker.time())
                 assert ref != 0
-                assert len(self._vault.account[x].log[ref].file) == 0
+                assert len(self.__vault.account[x].log[ref].file) == 0
                 for i in range(3):
                     file_ref = self.add_file(x, ref, 'file_' + str(i))
                     time.sleep(0.0000001)
                     assert file_ref != 0
                     if debug:
                         print('ref', ref, 'file', file_ref)
-                    assert len(self._vault.account[x].log[ref].file) == i + 1
+                    assert len(self.__vault.account[x].log[ref].file) == i + 1
                 file_ref = self.add_file(x, ref, 'file_' + str(3))
                 assert self.remove_file(x, ref, file_ref)
                 daily_logs = self.daily_logs(debug=debug)
@@ -3537,7 +3545,7 @@ class ZakatTracker:
                 if debug:
                     print('debug-1', z, y[3])
                 assert z == y[3]
-                o = self._vault.account[x].log
+                o = self.__vault.account[x].log
                 z = 0
                 for i in o:
                     z += o[i].value
@@ -3576,14 +3584,14 @@ class ZakatTracker:
                 except:
                     failed = True
                 assert failed
-            count = len(self._vault.history)
+            count = len(self.__vault.history)
             if debug:
                 print('history-count', count)
             assert count == 10
             # try mode
             for _ in range(count):
                 assert self.recall(True, debug=debug)
-            count = len(self._vault.history)
+            count = len(self.__vault.history)
             if debug:
                 print('history-count', count)
             assert count == 10
@@ -3602,7 +3610,7 @@ class ZakatTracker:
                     assert self.balance(account) == row[2]
                     assert self.recall(False, debug=debug)
             assert self.recall(False, debug=debug) is False
-            count = len(self._vault.history)
+            count = len(self.__vault.history)
             if debug:
                 print('history-count', count)
             assert count == 0
@@ -3616,7 +3624,7 @@ class ZakatTracker:
             self._test_core(True, debug)
             self._test_core(False, debug)
 
-            assert self._history()
+            assert self.__history()
 
             # Not allowed for duplicate transactions in the same account and time
 
@@ -3720,15 +3728,15 @@ class ZakatTracker:
                 assert future_fresh_balance == total
 
                 # TODO: check boxes times for `ages` should equal box times in `future`
-                for ref in self._vault.account['ages'].box:
-                    ages_capital = self._vault.account['ages'].box[ref].capital
-                    ages_rest = self._vault.account['ages'].box[ref].rest
+                for ref in self.__vault.account['ages'].box:
+                    ages_capital = self.__vault.account['ages'].box[ref].capital
+                    ages_rest = self.__vault.account['ages'].box[ref].rest
                     future_capital = 0
-                    if ref in self._vault.account['future'].box:
-                        future_capital = self._vault.account['future'].box[ref].capital
+                    if ref in self.__vault.account['future'].box:
+                        future_capital = self.__vault.account['future'].box[ref].capital
                     future_rest = 0
-                    if ref in self._vault.account['future'].box:
-                        future_rest = self._vault.account['future'].box[ref].rest
+                    if ref in self.__vault.account['future'].box:
+                        future_rest = self.__vault.account['future'].box[ref].rest
                     if ages_capital != 0 and future_capital != 0 and future_rest != 0:
                         if debug:
                             print('================================================================')
@@ -3741,13 +3749,13 @@ class ZakatTracker:
                         elif ages_rest > 0:
                             assert ages_capital == ages_rest + future_capital
                 self.reset()
-                assert len(self._vault.history) == 0
+                assert len(self.__vault.history) == 0
 
-            assert self._history()
-            assert self._history(False) is False
-            assert self._history() is False
-            assert self._history(True)
-            assert self._history()
+            assert self.__history()
+            assert self.__history(False) is False
+            assert self.__history() is False
+            assert self.__history(True)
+            assert self.__history()
             if debug:
                 print('####################################################################')
 
@@ -3786,7 +3794,7 @@ class ZakatTracker:
                 assert xx == z[4]
 
                 s = 0
-                log = self._vault.account[x].log
+                log = self.__vault.account[x].log
                 for i in log:
                     s += log[i].value
                 if debug:
@@ -3803,7 +3811,7 @@ class ZakatTracker:
                 assert yy == z[9]
 
                 s = 0
-                log = self._vault.account[y].log
+                log = self.__vault.account[y].log
                 for i in log:
                     s += log[i].value
                 assert s == z[10]
@@ -3817,7 +3825,7 @@ class ZakatTracker:
                 pp().pprint(self.check(2.17))
 
             assert self.nolock()
-            history_count = len(self._vault.history)
+            history_count = len(self.__vault.history)
             if debug:
                 print('history-count', history_count)
             transaction_count = len(transaction)
@@ -3825,7 +3833,7 @@ class ZakatTracker:
             assert not self.free(ZakatTracker.time())
             assert self.free(self.lock())
             assert self.nolock()
-            assert len(self._vault.history) == transaction_count
+            assert len(self.__vault.history) == transaction_count
 
             # storage
 
@@ -3842,8 +3850,8 @@ class ZakatTracker:
                         print(f'[storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
                     self.load(hash_required=hashed and hash_required)
                     if debug:
-                        print('[debug]', type(self._vault))
-                    assert self._vault.account is not None
+                        print('[debug]', type(self.__vault))
+                    assert self.__vault.account is not None
                 if hashed:
                     continue
                 failed = False
@@ -3859,15 +3867,15 @@ class ZakatTracker:
             # recall
 
             assert self.nolock()
-            assert len(self._vault.history) == 3
+            assert len(self.__vault.history) == 3
             assert self.recall(False, debug=debug) is True
-            assert len(self._vault.history) == 2
+            assert len(self.__vault.history) == 2
             assert self.recall(False, debug=debug) is True
-            assert len(self._vault.history) == 1
+            assert len(self.__vault.history) == 1
             assert self.recall(False, debug=debug) is True
-            assert len(self._vault.history) == 0
+            assert len(self.__vault.history) == 0
             assert self.recall(False, debug=debug) is False
-            assert len(self._vault.history) == 0
+            assert len(self.__vault.history) == 0
 
             # exchange
 
@@ -3913,10 +3921,10 @@ class ZakatTracker:
                 assert rate == 1
                 assert description is None
 
-            assert len(self._vault.exchange) == 1
+            assert len(self.__vault.exchange) == 1
             assert len(self.exchanges()) == 1
-            self._vault.exchange.clear()
-            assert len(self._vault.exchange) == 0
+            self.__vault.exchange.clear()
+            assert len(self.__vault.exchange) == 0
             assert len(self.exchanges()) == 0
             self.reset()
 
@@ -4167,7 +4175,7 @@ class ZakatTracker:
                     assert self.snapshot()
 
                     # assert self.nolock()
-                    # history_size = len(self._vault.history)
+                    # history_size = len(self.__vault.history)
                     # print('history_size', history_size)
                     # assert history_size == 2
                     lock = self.lock()
@@ -4206,7 +4214,7 @@ class ZakatTracker:
                     report = self.check(2.17, None, debug)
                     assert report.valid is False
 
-            history_size = len(self._vault.history)
+            history_size = len(self.__vault.history)
             if debug:
                 print('history_size', history_size)
             assert history_size == 3
@@ -4216,7 +4224,7 @@ class ZakatTracker:
             assert self.nolock()
 
             for i in range(3, 0, -1):
-                history_size = len(self._vault.history)
+                history_size = len(self.__vault.history)
                 if debug:
                     print('history_size', history_size)
                 assert history_size == i
@@ -4225,17 +4233,17 @@ class ZakatTracker:
             assert self.nolock()
             assert self.recall(False, debug=debug) is False
 
-            history_size = len(self._vault.history)
+            history_size = len(self.__vault.history)
             if debug:
                 print('history_size', history_size)
             assert history_size == 0
 
-            account_size = len(self._vault.account)
+            account_size = len(self.__vault.account)
             if debug:
                 print('account_size', account_size)
             assert account_size == 0
 
-            report_size = len(self._vault.report)
+            report_size = len(self.__vault.report)
             if debug:
                 print('report_size', report_size)
             assert report_size == 0
@@ -4373,7 +4381,7 @@ class ZakatTracker:
             assert self.save(f'1000-transactions-test.{self.ext()}')
             return True
         except Exception as e:
-            # pp().pprint(self._vault)
+            # pp().pprint(self.__vault)
             assert self.export_json('test-snapshot.json')
             assert self.save(f'test-snapshot.{self.ext()}')
             raise e
@@ -4399,11 +4407,11 @@ def test(path: str = None, debug: bool = False):
     Raises:
     - AssertionError: If the ZakatTracker's test suite fails.
 
-    Example:
-        test()  # Runs tests using a temporary database.
-        test(debug=True)  # Runs the test suite in debug mode with a temporary directory.
-        test(path="/path/to/my/db")  # Runs tests using a specified database path.
-        test(path="/path/to/my/db", debug=False) # runs test suite with specified path.
+    Examples:
+    - `test()` Runs tests using a temporary database.
+    - `test(debug=True)` Runs the test suite in debug mode with a temporary directory.
+    - `test(path="/path/to/my/db")` Runs tests using a specified database path.
+    - `test(path="/path/to/my/db", debug=False)` Runs test suite with specified path.
     """
     no_path = path is None
     if no_path:
@@ -4411,13 +4419,13 @@ def test(path: str = None, debug: bool = False):
         print(f"Random database path {path}")
     if os.path.exists(path):
         shutil.rmtree(path)
-    assert ZakatTracker(':memory:')._memory_mode
+    assert ZakatTracker(':memory:').memory_mode()
     ledger = ZakatTracker(
         db_path=path,
         history_mode=True,
     )
     start = time.time_ns()
-    assert not ledger._memory_mode
+    assert not ledger.memory_mode()
     assert ledger.test(debug=debug)
     if no_path and os.path.exists(path):
         shutil.rmtree(path)

@@ -48,6 +48,14 @@ pytest:
 test:
 	make clean && python3 zakat/zakat_tracker.py
 
+.PHONY: install
+# install package
+install:
+	rm -rf dist/
+	python3 -m build
+	pip uninstall zakat -y
+	pip install dist/zakat-*.whl
+
 .PHONY: deploy
 # deploy package
 deploy:

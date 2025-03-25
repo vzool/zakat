@@ -5,8 +5,11 @@
 <div align="center" style="text-align: center;">
 
 # ☪️ Zakat: A Python Library for Islamic Financial Management
+
 ** **We must pay Zakat if the remaining of every transaction reaches the Haul and Nisab limits** **
+
 ###### [PROJECT UNDER ACTIVE R&D]
+
 <p>
     <a href="https://opensource.org/licenses/MIT">
         <img src="https://img.shields.io/badge/license-MIT%20License-red.svg"/>
