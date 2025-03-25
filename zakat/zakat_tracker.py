@@ -293,8 +293,68 @@ class History:
     ref: Optional[Timestamp]
     file: Optional[Timestamp]
     key: Optional[str]
-    value: Optional[int]
+    value: Optional[any] # !!!
     math: Optional[MathOperation]
+
+
+@dataclasses.dataclass
+class BoxPlan:
+    """
+    Represents a plan for a box.
+
+    Attributes:
+    - box: The Box object.
+    - log: The Log object.
+    - exchange: The Exchange object.
+    - below_nisab: A boolean indicating whether the value is below nisab.
+    - total: The total value.
+    - count: The count.
+    - ref: The timestamp reference.
+    """
+    box: Box
+    log: Log
+    exchange: Exchange
+    below_nisab: bool
+    total: float
+    count: int
+    ref: Timestamp
+
+
+class ZakatPlan(dict[AccountName, list[BoxPlan]]):
+    """A dictionary mapping account names to lists of BoxPlan objects."""
+    pass
+
+
+@dataclasses.dataclass
+class ZakatReportStatistics:
+    """
+    Represents statistics for a zakat report.
+
+    Attributes:
+    - overall_wealth: The overall wealth.
+    - zakatable_transactions_count: The count of zakatable transactions.
+    - zakatable_transactions_balance: The balance of zakatable transactions.
+    - zakat_cut_balances: The zakat cut balances.
+    """
+    overall_wealth: int = 0
+    zakatable_transactions_count: int = 0
+    zakatable_transactions_balance: int = 0
+    zakat_cut_balances: int = 0
+
+
+@dataclasses.dataclass
+class ZakatReport:
+    """
+    Represents a zakat report.
+
+    Attributes:
+    - valid: A boolean indicating whether the Zakat is available.
+    - statistics: The ZakatReportStatistics object.
+    - plan: The ZakatPlan object.
+    """
+    valid: bool
+    statistics: ZakatReportStatistics
+    plan: ZakatPlan
 
 
 @dataclasses.dataclass
@@ -313,7 +373,7 @@ class Vault:
     exchange: dict[AccountName, dict[Timestamp, Exchange]] = dataclasses.field(default_factory=dict)
     history: dict[Timestamp, list[History]] = dataclasses.field(default_factory=dict)
     lock: Optional[Timestamp] = None
-    report: dict[Timestamp, tuple] = dataclasses.field(default_factory=dict)
+    report: dict[Timestamp, ZakatReport] = dataclasses.field(default_factory=dict)
 
 
 @dataclasses.dataclass
@@ -413,66 +473,6 @@ class TransferRecord:
 class TransferReport(list[TransferRecord]):
     """A list of TransferRecord objects."""
     pass
-
-
-@dataclasses.dataclass
-class BoxPlan:
-    """
-    Represents a plan for a box.
-
-    Attributes:
-    - box: The Box object.
-    - log: The Log object.
-    - exchange: The Exchange object.
-    - below_nisab: A boolean indicating whether the value is below nisab.
-    - total: The total value.
-    - count: The count.
-    - ref: The timestamp reference.
-    """
-    box: Box
-    log: Log
-    exchange: Exchange
-    below_nisab: bool
-    total: float
-    count: int
-    ref: Timestamp
-
-
-class ZakatPlan(dict[AccountName, list[BoxPlan]]):
-    """A dictionary mapping account names to lists of BoxPlan objects."""
-    pass
-
-
-@dataclasses.dataclass
-class ZakatReportStatistics:
-    """
-    Represents statistics for a zakat report.
-
-    Attributes:
-    - overall_wealth: The overall wealth.
-    - zakatable_transactions_count: The count of zakatable transactions.
-    - zakatable_transactions_balance: The balance of zakatable transactions.
-    - zakat_cut_balances: The zakat cut balances.
-    """
-    overall_wealth: int = 0
-    zakatable_transactions_count: int = 0
-    zakatable_transactions_balance: int = 0
-    zakat_cut_balances: int = 0
-
-
-@dataclasses.dataclass
-class ZakatReport:
-    """
-    Represents a zakat report.
-
-    Attributes:
-    - valid: A boolean indicating whether the Zakat is available.
-    - statistics: The ZakatReportStatistics object.
-    - plan: The ZakatPlan object.
-    """
-    valid: bool
-    statistics: ZakatReportStatistics
-    plan: ZakatPlan
 
 
 class JSONEncoder(json.JSONEncoder):
@@ -619,7 +619,7 @@ def print_stack(simple: bool = True, local: bool = False, skip_first: bool = Tru
                 print(f'    {name} = {value}')
 
 
-def get_git_status() -> tuple[str, int]:
+def get_git_status() -> tuple[str, int, int]:
     """
     Retrieves the git hash of the current commit, the number of unstaged file changes and Counts the number of commits since the last git tag.
 
@@ -1065,7 +1065,6 @@ class ZakatTracker:
                 count += 1
                 del self.__vault.history[lock]
             return count
-        self.free(self.lock()) # !!!
         for key in self.__vault.history:
             if len(self.__vault.history[key]) <= 0:
                 count += 1
@@ -1089,8 +1088,8 @@ class ZakatTracker:
     def __step(self, action: Optional[Action] = None,
                     account: Optional[AccountName] = None,
                     ref: Optional[Timestamp] = None,
-                    file: Optional[int] = None,
-                    value: Optional[float] = None,
+                    file: Optional[Timestamp] = None,
+                    value: Optional[any] = None, # !!!
                     key: Optional[str] = None,
                     math_operation: Optional[MathOperation] = None,
                     lock_once: bool = True,
@@ -1103,8 +1102,8 @@ class ZakatTracker:
         - action (Action, optional): The type of action performed.
         - account (AccountName, optional): The account number on which the action was performed.
         - ref (Optional, optional): The reference number of the action.
-        - file (int, optional): The file reference number of the action.
-        - value (int, optional): The value associated with the action.
+        - file (Timestamp, optional): The file reference number of the action.
+        - value (any, optional): The value associated with the action.
         - key (str, optional): The key associated with the action.
         - math_operation (MathOperation, optional): The mathematical operation performed during the action.
         - lock_once (bool, optional): Indicates whether a lock should be acquired only once. Defaults to True.
@@ -1399,7 +1398,7 @@ class ZakatTracker:
         Returns:
         - dict: A copy of the internal vault dictionary.
         """
-        return self.__vault.copy()
+        return dataclasses.asdict(self.__vault)
 
     @staticmethod
     def stats_init() -> dict[str, tuple[int, str]]:
@@ -1693,7 +1692,7 @@ class ZakatTracker:
         """
         return self.ref_exists(account, 'box', ref)
 
-    def track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: AccountName = '1',
+    def track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: AccountName = AccountName('1'),
               logging: bool = True,
               created_time_ns: Optional[Timestamp] = None,
               debug: bool = False) -> Timestamp:
@@ -1772,9 +1771,10 @@ class ZakatTracker:
         """
         return self.ref_exists(account, 'log', ref)
 
-    def __log(self, value: int, desc: str = '', account: AccountName = '1', created_time_ns: Optional[Timestamp] = None,
+    def __log(self, value: int, desc: str = '', account: AccountName = AccountName('1'),
+             created_time_ns: Optional[Timestamp] = None,
              ref: Optional[Timestamp] = None,
-             debug: bool = False) -> int:
+             debug: bool = False) -> Timestamp:
         """
         Log a transaction into the account's log by updates the account's balance, count, and log with the transaction details.
         It also creates a step in the history of the transaction.
@@ -1789,7 +1789,7 @@ class ZakatTracker:
         - debug (bool, optional): Whether to print debug information. Default is False.
 
         Returns:
-        - int: The timestamp of the logged transaction.
+        - Timestamp: The timestamp of the logged transaction.
 
         Raises:
         - ValueError: The created_time_ns should be greater than zero.
@@ -2184,7 +2184,7 @@ class ZakatTracker:
                     return True
         return False
 
-    def balance(self, account: AccountName = '1', cached: bool = True) -> int:
+    def balance(self, account: AccountName = AccountName('1'), cached: bool = True) -> int:
         """
         Calculate and return the balance of a specific account.
 
@@ -2274,7 +2274,7 @@ class ZakatTracker:
             return status
         return False
 
-    def subtract(self, unscaled_value: float | int | decimal.Decimal, desc: str = '', account: AccountName = '1',
+    def subtract(self, unscaled_value: float | int | decimal.Decimal, desc: str = '', account: AccountName = AccountName('1'),
             created_time_ns: Optional[Timestamp] = None,
             debug: bool = False) \
             -> SubtractReport:
@@ -2403,6 +2403,8 @@ class ZakatTracker:
             times = TransferTimes()
             age = subtract.box_ref
             value = subtract.total
+            assert source_exchange.rate is not None
+            assert target_exchange.rate is not None
             target_amount = int(self.exchange_calc(value, source_exchange.rate, target_exchange.rate))
             if debug:
                 print('target_amount', target_amount)
@@ -2494,6 +2496,7 @@ class ZakatTracker:
                 if rest <= 0:
                     continue
                 exchange = self.exchange(x, created_time_ns=self.time())
+                assert exchange.rate is not None
                 rest = ZakatTracker.exchange_calc(rest, float(exchange.rate), 1)
                 statistics.overall_wealth += rest
                 epoch = (created_time_ns - j) / cycle
@@ -2630,7 +2633,7 @@ class ZakatTracker:
         return 0
 
     def zakat(self, report: ZakatReport,
-        parts: PaymentParts = None, debug: bool = False) -> bool:
+        parts: Optional[PaymentParts] = None, debug: bool = False) -> bool:
         """
         Perform Zakat calculation based on the given report and optional parts.
 
@@ -2676,6 +2679,7 @@ class ZakatTracker:
                            key='last',
                            math_operation=MathOperation.EQUAL)
                 self.__vault.account[x].box[j].last = created_time_ns
+                assert target_exchange.rate is not None
                 amount = ZakatTracker.exchange_calc(float(plan.total), 1, float(target_exchange.rate))
                 self.__vault.account[x].box[j].total += amount
                 self.__step(Action.ZAKAT, account=x, ref=j, value=amount, key='total',
@@ -2698,6 +2702,7 @@ class ZakatTracker:
                 if debug:
                     print('zakat-part', account, part.rate)
                 target_exchange = self.exchange(account)
+                assert target_exchange.rate is not None
                 amount = ZakatTracker.exchange_calc(part.part, part.rate, target_exchange.rate)
                 self.subtract(
                     unscaled_value=self.unscale(int(amount)),
@@ -2836,9 +2841,31 @@ class ZakatTracker:
                     math=MathOperation(history_data.get("math")) if history_data.get("math") is not None else None
                 ))
 
-        # Load Lock and Report
+        # Load Lock
         vault.lock = Timestamp(data["lock"]) if data.get("lock") is not None else None
-        vault.report = {Timestamp(ts): tuple(data["report"][str(ts)]) for ts in data.get("report", {})}
+
+        # Load Report
+        for timestamp, report_data in data.get("report", {}).items():
+            zakat_plan = ZakatPlan()
+            for account_name, box_plans in report_data.get("plan", {}).items():
+                account_name = AccountName(account_name)
+                zakat_plan[account_name] = []
+                for box_plan_data in box_plans:
+                    zakat_plan[account_name].append(BoxPlan(
+                        box=Box(**box_plan_data["box"]),
+                        log=Log(**box_plan_data["log"]),
+                        exchange=Exchange(**box_plan_data["exchange"]),
+                        below_nisab=box_plan_data["below_nisab"],
+                        total=box_plan_data["total"],
+                        count=box_plan_data["count"],
+                        ref=Timestamp(box_plan_data["ref"])
+                    ))
+
+            vault.report[Timestamp(timestamp)] = ZakatReport(
+                valid=report_data["valid"],
+                statistics=ZakatReportStatistics(**report_data["statistics"]),
+                plan=zakat_plan
+            )
 
         return vault
 
@@ -3096,7 +3123,7 @@ class ZakatTracker:
         return f'{size:.{decimal_places}f} {unit}'
 
     @staticmethod
-    def get_dict_size(obj: dict, seen: set = None) -> float:
+    def get_dict_size(obj: dict, seen: Optional[set] = None) -> float:
         """
         Recursively calculates the approximate memory size of a dictionary and its contents in bytes.
 
@@ -3472,6 +3499,7 @@ class ZakatTracker:
         assert self.nolock()
         assert self.__history() is True
         lock = self.lock()
+        assert lock is not None
         assert lock > 0
         failed = False
         try:
@@ -3558,6 +3586,7 @@ class ZakatTracker:
                 assert self.box_size(x) == y[5]
                 assert self.log_size(x) == y[6]
                 assert not self.nolock()
+                assert lock is not None
                 self.free(lock)
                 assert self.nolock()
             assert self.boxes(x) != {}
@@ -3650,7 +3679,7 @@ class ZakatTracker:
 
             # Always preserve box age during transfer
 
-            series: list[tuple] = [
+            series: list[tuple[int, int]] = [
                 (30, 4),
                 (60, 3),
                 (90, 2),
@@ -3692,7 +3721,7 @@ class ZakatTracker:
                     self.track(
                         unscaled_value=x[0],
                         desc=f'test-{x} ages',
-                        account='ages',
+                        account=AccountName('ages'),
                         logging=True,
                         created_time_ns=selected_time * x[1],
                     )
