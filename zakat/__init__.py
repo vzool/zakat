@@ -10,7 +10,9 @@
 ... Never Trust, Always Verify ...                       |___/ 
 ```
 
-This file provides the ZakatLibrary classes, functions for tracking and calculating Zakat.
+This library provides the ZakatLibrary classes, functions for tracking and calculating Zakat.
+
+.. include:: ../README.md
 """
 # Importing necessary classes and functions from the main module
 from zakat.zakat_tracker import (
