@@ -672,7 +672,7 @@ class ZakatTracker:
     disabling history tracking, allowing users to choose their preferred level of detail.
 
     In addition, the `ZakatTracker` class includes various helper methods like
-    `time`, `time_to_datetime`, `lock`, `free`, `recall`, `export_json`,
+    `time`, `time_to_datetime`, `lock`, `free`, `recall`, `save`, `load`
     and more. These methods provide additional functionalities and flexibility
     for interacting with and managing the Zakat tracker.
 
@@ -2714,23 +2714,6 @@ class ZakatTracker:
             self.free(lock)
         return True
 
-    def export_json(self, path: str = 'data.json') -> bool:
-        """
-        Exports the current state of the ZakatTracker object to a JSON file.
-
-        Parameters:
-        - path (str, optional): The path where the JSON file will be saved. Default is 'data.json'.
-
-        Returns:
-        - bool: True if the export is successful, False otherwise.
-
-        Raises:
-        No specific exceptions are raised by this method.
-        """
-        with open(path, 'w', encoding='utf-8') as file:
-            json.dump(self.__vault, file, indent=4, cls=JSONEncoder)
-            return True
-
     @staticmethod
     def split_at_last_symbol(data: str, symbol: str) -> tuple[str, str]:
         """Splits a string at the last occurrence of a given symbol.
@@ -4125,7 +4108,6 @@ class ZakatTracker:
                 assert fresh_value == a_SAR_balance
                 i += 1
 
-            assert self.export_json('accounts-transfer-with-exchange-rates.json')
             assert self.save(f'accounts-transfer-with-exchange-rates.{self.ext()}')
 
             # check & zakat with exchange rates for many cycles
@@ -4233,7 +4215,6 @@ class ZakatTracker:
                     if debug:
                         print('[debug]', type(self.__vault))
                     assert self.__vault.account is not None
-                    #pp().pprint(self.__vault)
                     assert old_vault == self.__vault
                     assert old_vault_deep == self.__vault
                     assert old_vault_dict == dataclasses.asdict(self.__vault)
@@ -4427,14 +4408,11 @@ class ZakatTracker:
                 assert self.free(lock)
 
             assert self.save(path + f'.{self.ext()}')
-            assert self.export_json(path + '.json')
 
-            assert self.export_json('1000-transactions-test.json')
             assert self.save(f'1000-transactions-test.{self.ext()}')
             return True
         except Exception as e:
             # pp().pprint(self.__vault)
-            assert self.export_json('test-snapshot.json')
             assert self.save(f'test-snapshot.{self.ext()}')
             raise e
 
