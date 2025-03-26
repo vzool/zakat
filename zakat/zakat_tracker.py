@@ -1694,7 +1694,6 @@ class ZakatTracker:
         return self.ref_exists(account, 'box', ref)
 
     def track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: AccountName = AccountName('1'),
-              logging: bool = True,
               created_time_ns: Optional[Timestamp] = None,
               debug: bool = False) -> Timestamp:
         """
@@ -1704,7 +1703,6 @@ class ZakatTracker:
         - unscaled_value (float | int | decimal.Decimal, optional): The value of the transaction. Default is 0.
         - desc (str, optional): The description of the transaction. Default is an empty string.
         - account (AccountName, optional): The account for which the transaction is being tracked. Default is '1'.
-        - logging (bool, optional): Whether to log the transaction. Default is True.
         - created_time_ns (Timestamp, optional): The timestamp of the transaction in nanoseconds since epoch(1AD). If not provided, it will be generated. Default is None.
         - debug (bool, optional): Whether to print debug information. Default is False.
 
@@ -1715,6 +1713,39 @@ class ZakatTracker:
         - ValueError: The created_time_ns should be greater than zero.
         - ValueError: The log transaction happened again in the same nanosecond time.
         - ValueError: The box transaction happened again in the same nanosecond time.
+        """
+        return self.__track(
+            unscaled_value=unscaled_value,
+            desc=desc,
+            account=account,
+            logging=True,
+            created_time_ns=created_time_ns,
+            debug=debug,
+        )
+
+    def __track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: AccountName = AccountName('1'),
+              logging: bool = True,
+              created_time_ns: Optional[Timestamp] = None,
+              debug: bool = False) -> Timestamp:
+        """
+        Internal function to track a transaction.
+
+        This function handles the core logic for tracking a transaction, including account creation, logging, and box creation.
+
+        Parameters:
+        - unscaled_value (float | int | decimal.Decimal, optional): The monetary value of the transaction. Defaults to 0.
+        - desc (str, optional): A description of the transaction. Defaults to an empty string.
+        - account (AccountName, optional): The name of the account to track the transaction for. Defaults to '1'.
+        - logging (bool, optional): Enables transaction logging. Defaults to True.
+        - created_time_ns (Timestamp, optional): The timestamp of the transaction in nanoseconds since the epoch. If not provided, the current time is used. Defaults to None.
+        - debug (bool, optional): Enables debug printing. Defaults to False.
+
+        Returns:
+        - Timestamp: The timestamp of the transaction in nanoseconds since the epoch.
+
+        Raises:
+        - ValueError: If `created_time_ns` is not greater than zero.
+        - ValueError: If a box transaction already exists for the given `account` and `created_time_ns`.
         """
         if debug:
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
@@ -2310,7 +2341,7 @@ class ZakatTracker:
             raise ValueError('The created should be greater than zero.')
         no_lock = self.nolock()
         lock = self.__lock()
-        self.track(0, '', account)
+        self.__track(0, '', account)
         value = self.scale(unscaled_value)
         self.__log(value=-value, desc=desc, account=account, created_time_ns=created_time_ns, ref=None, debug=debug)
         ids = sorted(self.__vault.account[account].box.keys())
@@ -2339,7 +2370,7 @@ class ZakatTracker:
                 self.__step(Action.SUBTRACT, account, ref=j, value=chunk)
                 ages.append(SubtractAge(box_ref=j, total=chunk))
         if target > 0:
-            self.track(
+            self.__track(
                 unscaled_value=self.unscale(-target),
                 desc=desc,
                 account=account,
@@ -2429,7 +2460,7 @@ class ZakatTracker:
             if debug:
                 print(
                     f'Transfer(func) {value} from `{from_account}` to `{to_account}` (equivalent to {target_amount} `{to_account}`).')
-            box_ref = self.track(
+            box_ref = self.__track(
                 unscaled_value=self.unscale(int(target_amount)),
                 desc=desc,
                 account=to_account,
@@ -3010,7 +3041,7 @@ class ZakatTracker:
                     if rate > 0:
                         self.exchange(account=account, created_time_ns=date, rate=rate)
                     if value > 0:
-                        self.track(unscaled_value=value, desc=desc, account=account, logging=True, created_time_ns=date)
+                        self.track(unscaled_value=value, desc=desc, account=account, created_time_ns=date)
                     elif value < 0:
                         self.subtract(unscaled_value=-value, desc=desc, account=account, created_time_ns=date)
                     created += 1
@@ -3516,7 +3547,6 @@ class ZakatTracker:
                         unscaled_value=y[1],
                         desc='test-add',
                         account=x,
-                        logging=True,
                         created_time_ns=ZakatTracker.time(),
                         debug=debug,
                     )
@@ -3704,7 +3734,6 @@ class ZakatTracker:
                         unscaled_value=x[0],
                         desc=f'test-{x} ages',
                         account=AccountName('ages'),
-                        logging=True,
                         created_time_ns=selected_time * x[1],
                     )
 
@@ -4150,7 +4179,6 @@ class ZakatTracker:
                         unscaled_value=case[0],
                         desc='test-check',
                         account=case[1],
-                        logging=True,
                         created_time_ns=case[2],
                     )
                     assert self.snapshot()
