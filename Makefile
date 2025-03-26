@@ -49,12 +49,18 @@ test:
 	make clean && python3 zakat/zakat_tracker.py
 
 .PHONY: install
-# install package
+# install package (source code)
 install:
 	rm -rf dist/
 	python3 -m build
 	pip uninstall zakat -y
 	pip install dist/zakat-*.whl
+
+.PHONY: install-pip
+# install package (pip)
+install-pip:
+	pip uninstall zakat -y
+	pip install zakat
 
 .PHONY: deploy
 # deploy package
