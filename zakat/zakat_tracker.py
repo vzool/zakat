@@ -2294,17 +2294,15 @@ class ZakatTracker:
         - SubtractReport: A class containing the timestamp of the transaction and a list of tuples representing the age of each transaction.
 
         Raises:
+        - ValueError: The unscaled_value should be greater than zero.
         - ValueError: The created_time_ns should be greater than zero.
         - ValueError: The box transaction happened again in the same nanosecond time.
         - ValueError: The log transaction happened again in the same nanosecond time.
         """
         if debug:
             print('sub', f'debug={debug}')
-        if unscaled_value < 0:
-            return tuple()
-        if unscaled_value == 0:
-            ref = self.track(unscaled_value, '', account)
-            return ref, ref
+        if unscaled_value <= 0:
+            raise ValueError('The unscaled_value should be greater than zero.')
         if created_time_ns is None:
             created_time_ns = self.time()
         if created_time_ns <= 0:
