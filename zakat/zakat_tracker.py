@@ -72,6 +72,7 @@ import pathlib
 import tempfile
 import dataclasses
 import subprocess
+import copy
 from typing import Optional
 from pprint import PrettyPrinter as pp
 
@@ -143,6 +144,24 @@ class MathOperation(enum.Enum):
     SUBTRACTION = 'SUBTRACTION'
 
 
+def factory_value(x) -> callable:
+    """
+    Creates a factory function that always returns the given value.
+
+    This is useful for providing default values in dataclasses that
+    need to be callable (e.g., for default_factory).
+
+    Parameters:
+    - x: The value to be returned by the factory.
+
+    Returns:
+    - callable: A function that, when called, returns the value x.
+    """
+    def factory():
+        return x
+    return factory
+
+
 class Object:
     # Frozen implemention REF https://discuss.python.org/t/dataclasses-freezing-specific-fields-should-be-possible/59968/2
     def __post_init__(self):
@@ -167,37 +186,19 @@ class Object:
                 setattr(cls, field_name, property(local_getter, frozen(field_name)))
 
 
-class AccountName(str):
-    """Represents the name of an account."""
-    pass
-
-
 class Timestamp(int):
     """Represents a timestamp as an integer."""
     pass
 
 
-def factory_value(x) -> callable:
-    """
-    Creates a factory function that always returns the given value.
-
-    This is useful for providing default values in dataclasses that
-    need to be callable (e.g., for default_factory).
-
-    Parameters:
-    - x: The value to be returned by the factory.
-
-    Returns:
-    - callable: A function that, when called, returns the value x.
-    """
-    def factory():
-        return x
-    return factory
-
-
 def NO_TIME() -> Timestamp:
     """Returns a Timestamp representing no time (0)."""
     return Timestamp(0)
+
+
+class AccountName(str):
+    """Represents the name of an account."""
+    pass
 
 
 @dataclasses.dataclass
@@ -3862,35 +3863,6 @@ class ZakatTracker:
             assert self.nolock()
             assert len(self.__vault.history) == transaction_count
 
-            # storage
-
-            _path = self.path(f'./zakat_test_db/test.{self.ext()}')
-            if os.path.exists(_path):
-                os.remove(_path)
-            for hashed in [False, True]:
-                self.save(hash_required=hashed)
-                assert os.path.getsize(_path) > 0
-                self.reset()
-                assert self.recall(False, debug=debug) is False
-                for hash_required in [False, True]:
-                    if debug:
-                        print(f'[storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
-                    self.load(hash_required=hashed and hash_required)
-                    if debug:
-                        print('[debug]', type(self.__vault))
-                    assert self.__vault.account is not None
-                if hashed:
-                    continue
-                failed = False
-                try:
-                    hash_required = True
-                    if debug:
-                        print(f'x [storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
-                    self.load(hash_required=True)
-                except:
-                    failed = True
-                assert failed
-
             # recall
 
             assert self.nolock()
@@ -4240,6 +4212,59 @@ class ZakatTracker:
                     assert result == case[4]
                     report = self.check(2.17, None, debug)
                     assert report.valid is False
+
+            # storage
+
+            old_vault = dataclasses.replace(self.__vault)
+            old_vault_deep = copy.deepcopy(self.__vault)
+            old_vault_dict = dataclasses.asdict(self.__vault)
+            _path = self.path(f'./zakat_test_db/test.{self.ext()}')
+            if os.path.exists(_path):
+                os.remove(_path)
+            for hashed in [False, True]:
+                self.save(hash_required=hashed)
+                assert os.path.getsize(_path) > 0
+                self.reset()
+                assert self.recall(False, debug=debug) is False
+                for hash_required in [False, True]:
+                    if debug:
+                        print(f'[storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
+                    self.load(hash_required=hashed and hash_required)
+                    if debug:
+                        print('[debug]', type(self.__vault))
+                    assert self.__vault.account is not None
+                    #pp().pprint(self.__vault)
+                    assert old_vault == self.__vault
+                    assert old_vault_deep == self.__vault
+                    assert old_vault_dict == dataclasses.asdict(self.__vault)
+                    # corrupt the data
+                    log_ref = NO_TIME()
+                    tmp_file_ref = ZakatTracker.time()
+                    for k in self.__vault.account['cave'].log:
+                        log_ref = k
+                        self.__vault.account['cave'].log[k].file[tmp_file_ref] = 'HACKED'
+                        break
+                    assert old_vault != self.__vault
+                    assert old_vault_deep != self.__vault
+                    assert old_vault_dict != dataclasses.asdict(self.__vault)
+                    # fix the data
+                    del self.__vault.account['cave'].log[log_ref].file[tmp_file_ref]
+                    assert old_vault == self.__vault
+                    assert old_vault_deep == self.__vault
+                    assert old_vault_dict == dataclasses.asdict(self.__vault)
+                if hashed:
+                    continue
+                failed = False
+                try:
+                    hash_required = True
+                    if debug:
+                        print(f'x [storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
+                    self.load(hash_required=True)
+                except:
+                    failed = True
+                assert failed
+
+            # recall after zakat
 
             history_size = len(self.__vault.history)
             if debug:
