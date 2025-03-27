@@ -639,15 +639,64 @@ function setTheme(mode) {
   }
 }
 
+function darkmode(){
+  document.documentElement.style.setProperty('--pdoc-background', '#333333');
+  Array.from(document.getElementsByClassName('pdoc')).forEach(function(element){
+    element.style.setProperty('--text', '#f7f7f7');
+    element.style.setProperty('--muted', '#9d9d9d');
+    element.style.setProperty('--link', '#58a6ff');
+    element.style.setProperty('--link-hover', '#3989ff');
+    element.style.setProperty('--code', '#333');
+    element.style.setProperty('--active', '#555');
+    element.style.setProperty('--accent', '#343434');
+    element.style.setProperty('--accent2', '#555');
+    element.style.setProperty('--nav-hover', 'rgba(0, 0, 0, 0.1)');
+    element.style.setProperty('--name', '#77C1FF');
+    element.style.setProperty('--def', '#0cdd0c');
+    element.style.setProperty('--annotation', '#00c037');
+  });
+}
+
+function lightmode(){
+  document.documentElement.style.setProperty('--pdoc-background', '#fff');
+  Array.from(document.getElementsByClassName('pdoc')).forEach(function(element){
+    element.style.setProperty('--text', '#212529');
+    element.style.setProperty('--muted', '#6c757d');
+    element.style.setProperty('--link', '#3660a5');
+    element.style.setProperty('--link-hover', '#1659c5');
+    element.style.setProperty('--code', '#f8f8f8');
+    element.style.setProperty('--active', '#fff598');
+    element.style.setProperty('--accent', '#eee');
+    element.style.setProperty('--accent2', '#c1c1c1');
+    element.style.setProperty('--nav-hover', 'rgba(255, 255, 255, 0.5)');
+    element.style.setProperty('--name', '#0066BB');
+    element.style.setProperty('--def', '#008800');
+    element.style.setProperty('--annotation', '#007020');
+  });
+}
+
+function update(){
+  const currentTheme = getCookie('theme');
+  if (currentTheme === 'light') {
+    setTheme('light');
+    lightmode();
+  } else { 
+    setTheme('dark');
+    darkmode();
+  }
+}
+
 function toggleTheme() {
   const currentTheme = getCookie('theme');
 
   if (currentTheme === 'light') {
     setTheme('dark');
+    darkmode();
   } /*else if (currentTheme === 'dark') {
     setTheme('auto');
   }*/ else { /* auto or null */
     setTheme('light');
+    lightmode();
   }
 }
 
@@ -674,6 +723,7 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', eve
     }
   }
 });
+setInterval(update, 500);
 </script>
 <!-- Theme Switcher -->
 {% enddefaultmacro%}
