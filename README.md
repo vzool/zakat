@@ -52,11 +52,11 @@ python -c "import zakat, sys; sys.exit(zakat.test())"
 ###### Example
 
 ```python
-from zakat import ZakatTracker, Time
+from zakat import tracker, time
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
-ledger = ZakatTracker(':memory:') # or './zakat_db'
+ledger = tracker(':memory:') # or './zakat_db'
 
 # Add balance (track a transaction)
 ledger.track(10000, "Initial deposit") # default account is 1
@@ -65,14 +65,14 @@ ledger.track(
     10000, # amount
     "Initial deposit", # description
     account="pocket",
-    created_time_ns=Time.time(datetime.now()),
+    created_time_ns=time(datetime.now()),
 )
 # or old transaction
 box_ref = ledger.track(
     10000, # amount
     "Initial deposit", # description
     account="bunker",
-    created_time_ns=Time.time(datetime.now() - relativedelta(years=1)),
+    created_time_ns=time(datetime.now() - relativedelta(years=1)),
 )
 
 # Note: If any account does not exist it will be automatically created.
@@ -84,7 +84,7 @@ subtract_report = ledger.subtract(
     500, # amount
     "Internet monthly subscription", # description
     account="pocket",
-    created_time_ns=Time.time(datetime.now()),
+    created_time_ns=time(datetime.now()),
 )
 
 # Transfer balance
@@ -94,7 +94,7 @@ transfer_report = ledger.transfer(
     100,
     "pocket", # from account
     "safe", # to account
-    created_time_ns=Time.time(datetime.now()),
+    created_time_ns=time(datetime.now()),
 )
 # or
 ledger.exchange("bank (USD)", rate=3.75) # suppose current currency is SAR rate=1

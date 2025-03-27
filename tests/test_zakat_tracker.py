@@ -1,6 +1,6 @@
 import os
 import time
-from zakat import ZakatTracker
+from zakat import ZakatTracker, Time
 
 def test_zakat_tracker():
     start = time.time_ns()
@@ -10,5 +10,5 @@ def test_zakat_tracker():
     print("#########################")
     print("######## TEST DONE ########")
     print("#########################")
-    print(ZakatTracker.duration_from_nanoseconds(time.time_ns() - start))
+    print(Time.duration_from_nanoseconds(time.time_ns() - start))
     print("#########################")

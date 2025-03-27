@@ -53,10 +53,18 @@ from zakat.file_server import (
     FileType,
 )
 
+# Shortcuts
+time = Time.time
+time_to_datetime = Time.time_to_datetime
+tracker = ZakatTracker
+
 # Version information for the module
 __version__ = ZakatTracker.Version()
 __all__ = [
     "Time",
+    "time",
+    "time_to_datetime",
+    "tracker",
     "ZakatTracker",
     "AccountName",
     "Timestamp",

@@ -754,6 +754,71 @@ class Time:
         return datetime.datetime.combine(d, datetime.time()) + t
 
     @staticmethod
+    def duration_from_nanoseconds(ns: int,
+                                  show_zeros_in_spoken_time: bool = False,
+                                  spoken_time_separator=',',
+                                  millennia: str = 'Millennia',
+                                  century: str = 'Century',
+                                  years: str = 'Years',
+                                  days: str = 'Days',
+                                  hours: str = 'Hours',
+                                  minutes: str = 'Minutes',
+                                  seconds: str = 'Seconds',
+                                  milli_seconds: str = 'MilliSeconds',
+                                  micro_seconds: str = 'MicroSeconds',
+                                  nano_seconds: str = 'NanoSeconds',
+                                  ) -> tuple:
+        """
+        REF https://github.com/JayRizzo/Random_Scripts/blob/master/time_measure.py#L106
+        Convert NanoSeconds to Human Readable Time Format.
+        A NanoSeconds is a unit of time in the International System of Units (SI) equal
+        to one millionth (0.000001 or 10−6 or 1⁄1,000,000) of a second.
+        Its symbol is μs, sometimes simplified to us when Unicode is not available.
+        A microsecond is equal to 1000 nanoseconds or 1⁄1,000 of a millisecond.
+
+        INPUT : ms (AKA: MilliSeconds)
+        OUTPUT: tuple(string time_lapsed, string spoken_time) like format.
+        OUTPUT Variables: time_lapsed, spoken_time
+
+        Example  Input: duration_from_nanoseconds(ns)
+        **'Millennium:Century:Years:Days:Hours:Minutes:Seconds:MilliSeconds:MicroSeconds:NanoSeconds'**
+        Example Output: ('039:0001:047:325:05:02:03:456:789:012', ' 39 Millennia,    1 Century,  47 Years,  325 Days,  5 Hours,  2 Minutes,  3 Seconds,  456 MilliSeconds,  789 MicroSeconds,  12 NanoSeconds')
+        duration_from_nanoseconds(1234567890123456789012)
+        """
+        us, ns = divmod(ns, 1000)
+        ms, us = divmod(us, 1000)
+        s, ms = divmod(ms, 1000)
+        m, s = divmod(s, 60)
+        h, m = divmod(m, 60)
+        d, h = divmod(h, 24)
+        y, d = divmod(d, 365)
+        c, y = divmod(y, 100)
+        n, c = divmod(c, 10)
+        time_lapsed = f'{n:03.0f}:{c:04.0f}:{y:03.0f}:{d:03.0f}:{h:02.0f}:{m:02.0f}:{s:02.0f}::{ms:03.0f}::{us:03.0f}::{ns:03.0f}'
+        spoken_time_part = []
+        if n > 0 or show_zeros_in_spoken_time:
+            spoken_time_part.append(f'{n: 3d} {millennia}')
+        if c > 0 or show_zeros_in_spoken_time:
+            spoken_time_part.append(f'{c: 4d} {century}')
+        if y > 0 or show_zeros_in_spoken_time:
+            spoken_time_part.append(f'{y: 3d} {years}')
+        if d > 0 or show_zeros_in_spoken_time:
+            spoken_time_part.append(f'{d: 4d} {days}')
+        if h > 0 or show_zeros_in_spoken_time:
+            spoken_time_part.append(f'{h: 2d} {hours}')
+        if m > 0 or show_zeros_in_spoken_time:
+            spoken_time_part.append(f'{m: 2d} {minutes}')
+        if s > 0 or show_zeros_in_spoken_time:
+            spoken_time_part.append(f'{s: 2d} {seconds}')
+        if ms > 0 or show_zeros_in_spoken_time:
+            spoken_time_part.append(f'{ms: 3d} {milli_seconds}')
+        if us > 0 or show_zeros_in_spoken_time:
+            spoken_time_part.append(f'{us: 3d} {micro_seconds}')
+        if ns > 0 or show_zeros_in_spoken_time:
+            spoken_time_part.append(f'{ns: 3d} {nano_seconds}')
+        return time_lapsed, spoken_time_separator.join(spoken_time_part)
+
+    @staticmethod
     def test(debug: bool = False):
         """
         Performs unit tests to verify the correctness of the `Time` class methods.
@@ -3242,71 +3307,6 @@ class ZakatTracker:
         return size
 
     @staticmethod
-    def duration_from_nanoseconds(ns: int,
-                                  show_zeros_in_spoken_time: bool = False,
-                                  spoken_time_separator=',',
-                                  millennia: str = 'Millennia',
-                                  century: str = 'Century',
-                                  years: str = 'Years',
-                                  days: str = 'Days',
-                                  hours: str = 'Hours',
-                                  minutes: str = 'Minutes',
-                                  seconds: str = 'Seconds',
-                                  milli_seconds: str = 'MilliSeconds',
-                                  micro_seconds: str = 'MicroSeconds',
-                                  nano_seconds: str = 'NanoSeconds',
-                                  ) -> tuple:
-        """
-        REF https://github.com/JayRizzo/Random_Scripts/blob/master/time_measure.py#L106
-        Convert NanoSeconds to Human Readable Time Format.
-        A NanoSeconds is a unit of time in the International System of Units (SI) equal
-        to one millionth (0.000001 or 10−6 or 1⁄1,000,000) of a second.
-        Its symbol is μs, sometimes simplified to us when Unicode is not available.
-        A microsecond is equal to 1000 nanoseconds or 1⁄1,000 of a millisecond.
-
-        INPUT : ms (AKA: MilliSeconds)
-        OUTPUT: tuple(string time_lapsed, string spoken_time) like format.
-        OUTPUT Variables: time_lapsed, spoken_time
-
-        Example  Input: duration_from_nanoseconds(ns)
-        **'Millennium:Century:Years:Days:Hours:Minutes:Seconds:MilliSeconds:MicroSeconds:NanoSeconds'**
-        Example Output: ('039:0001:047:325:05:02:03:456:789:012', ' 39 Millennia,    1 Century,  47 Years,  325 Days,  5 Hours,  2 Minutes,  3 Seconds,  456 MilliSeconds,  789 MicroSeconds,  12 NanoSeconds')
-        duration_from_nanoseconds(1234567890123456789012)
-        """
-        us, ns = divmod(ns, 1000)
-        ms, us = divmod(us, 1000)
-        s, ms = divmod(ms, 1000)
-        m, s = divmod(s, 60)
-        h, m = divmod(m, 60)
-        d, h = divmod(h, 24)
-        y, d = divmod(d, 365)
-        c, y = divmod(y, 100)
-        n, c = divmod(c, 10)
-        time_lapsed = f'{n:03.0f}:{c:04.0f}:{y:03.0f}:{d:03.0f}:{h:02.0f}:{m:02.0f}:{s:02.0f}::{ms:03.0f}::{us:03.0f}::{ns:03.0f}'
-        spoken_time_part = []
-        if n > 0 or show_zeros_in_spoken_time:
-            spoken_time_part.append(f'{n: 3d} {millennia}')
-        if c > 0 or show_zeros_in_spoken_time:
-            spoken_time_part.append(f'{c: 4d} {century}')
-        if y > 0 or show_zeros_in_spoken_time:
-            spoken_time_part.append(f'{y: 3d} {years}')
-        if d > 0 or show_zeros_in_spoken_time:
-            spoken_time_part.append(f'{d: 4d} {days}')
-        if h > 0 or show_zeros_in_spoken_time:
-            spoken_time_part.append(f'{h: 2d} {hours}')
-        if m > 0 or show_zeros_in_spoken_time:
-            spoken_time_part.append(f'{m: 2d} {minutes}')
-        if s > 0 or show_zeros_in_spoken_time:
-            spoken_time_part.append(f'{s: 2d} {seconds}')
-        if ms > 0 or show_zeros_in_spoken_time:
-            spoken_time_part.append(f'{ms: 3d} {milli_seconds}')
-        if us > 0 or show_zeros_in_spoken_time:
-            spoken_time_part.append(f'{us: 3d} {micro_seconds}')
-        if ns > 0 or show_zeros_in_spoken_time:
-            spoken_time_part.append(f'{ns: 3d} {nano_seconds}')
-        return time_lapsed, spoken_time_separator.join(spoken_time_part)
-
-    @staticmethod
     def day_to_time(day: int, month: int = 6, year: int = 2024) -> int:  # افتراض أن الشهر هو يونيو والسنة 2024
         """
         Convert a specific day, month, and year into a timestamp.
@@ -4512,7 +4512,7 @@ def test(path: str = None, debug: bool = False):
         print('#########################')
         print('######## TEST DONE ########')
         print('#########################')
-        print(ZakatTracker.duration_from_nanoseconds(time.time_ns() - start))
+        print(Time.duration_from_nanoseconds(time.time_ns() - start))
         print('#########################')
 
 
