@@ -654,6 +654,153 @@ def get_git_status() -> tuple[str, int, int]:
         return '', 0, 0
 
 
+class Time:
+    """
+    Utility class for generating and manipulating nanosecond-precision timestamps.
+
+    This class provides static methods for converting between datetime objects and
+    nanosecond-precision timestamps, ensuring uniqueness and monotonicity.
+    """
+    __last_time_ns = None
+    __time_diff_ns = None
+
+    @staticmethod
+    def minimum_time_diff_ns() -> tuple[int, int]:
+        """
+        Calculates the minimum time difference between two consecutive calls to
+        `Time._time()` in nanoseconds.
+
+        This method is used internally to determine the minimum granularity of
+        time measurements within the system.
+
+        Returns:
+        - tuple[int, int]:
+            - The minimum time difference in nanoseconds.
+            - The number of iterations required to measure the difference.
+        """
+        i = 0
+        x = y = Time._time()
+        while x == y:
+            y = Time._time()
+            i += 1
+        return y - x, i
+
+    @staticmethod
+    def _time(now: Optional[datetime.datetime] = None) -> Timestamp:
+        """
+        Internal method to generate a nanosecond-precision timestamp from a datetime object.
+
+        Parameters:
+        - now (datetime.datetime, optional): The datetime object to generate the timestamp from.
+        If not provided, the current datetime is used.
+
+        Returns:
+        - int: The timestamp in nanoseconds since the epoch (January 1, 1AD).
+        """
+        if now is None:
+            now = datetime.datetime.now()
+        ns_in_day = (now - now.replace(
+            hour=0,
+            minute=0,
+            second=0,
+            microsecond=0,
+        )).total_seconds() * 10 ** 9
+        return Timestamp(now.toordinal() * 86_400_000_000_000 + ns_in_day)
+
+    @staticmethod
+    def time(now: Optional[datetime.datetime] = None) -> Timestamp:
+        """
+        Generates a unique, monotonically increasing timestamp based on the provided
+        datetime object or the current datetime.
+
+        This method ensures that timestamps are unique even if called in rapid succession
+        by introducing a small delay if necessary, based on the system's minimum
+        time resolution.
+
+        Parameters:
+        - now (datetime.datetime, optional): The datetime object to generate the timestamp from.
+        If not provided, the current datetime is used.
+
+        Returns:
+        - Timestamp: The unique timestamp in nanoseconds since the epoch (January 1, 1AD).
+        """
+        new_time = Time._time(now)
+        if Time.__last_time_ns is None:
+            Time.__last_time_ns = new_time
+            return new_time
+        while new_time == Time.__last_time_ns:
+            if Time.__time_diff_ns is None:
+                diff, _ = Time.minimum_time_diff_ns()
+                Time.__time_diff_ns = math.ceil(diff)
+            time.sleep(Time.__time_diff_ns / 1_000_000_000)
+            new_time = Time._time()
+        Time.__last_time_ns = new_time
+        return new_time
+
+    @staticmethod
+    def time_to_datetime(ordinal_ns: Timestamp) -> datetime.datetime:
+        """
+        Converts a nanosecond-precision timestamp (ordinal number of nanoseconds since 1AD)
+        back to a datetime object.
+
+        Parameters:
+        - ordinal_ns (Timestamp): The timestamp in nanoseconds since the epoch (January 1, 1AD).
+
+        Returns:
+        - datetime.datetime: The corresponding datetime object.
+        """
+        d = datetime.datetime.fromordinal(ordinal_ns // 86_400_000_000_000)
+        t = datetime.timedelta(seconds=(ordinal_ns % 86_400_000_000_000) // 10 ** 9)
+        return datetime.datetime.combine(d, datetime.time()) + t
+
+    @staticmethod
+    def test(debug: bool = False):
+        """
+        Performs unit tests to verify the correctness of the `Time` class methods.
+
+        This method checks the conversion between datetime objects and timestamps,
+        ensuring accuracy and consistency across various date ranges.
+
+        Parameters:
+        - debug (bool, optional): If True, prints the timestamp and converted datetime for each test case. Defaults to False.
+        """
+        test_cases = [
+            datetime.datetime(1, 1, 1),
+            datetime.datetime(1970, 1, 1),
+            datetime.datetime(1969, 12, 31),
+            datetime.datetime.now(),
+            datetime.datetime(9999, 12, 31, 23, 59, 59),
+        ]
+
+        for test_date in test_cases:
+            timestamp = Time.time(test_date)
+            converted = Time.time_to_datetime(timestamp)
+            if debug:
+                print(f'{timestamp} <=> {converted}')
+            assert timestamp > 0
+            assert test_date.year == converted.year
+            assert test_date.month == converted.month
+            assert test_date.day == converted.day
+            assert test_date.hour == converted.hour
+            assert test_date.minute == converted.minute
+            assert test_date.second in [converted.second - 1, converted.second, converted.second + 1]
+
+        # sanity check - convert date since 1AD to 9999AD
+
+        for year in range(1, 10_000):
+            ns = Time.time(datetime.datetime.strptime(f'{year:04d}-12-30 18:30:45', '%Y-%m-%d %H:%M:%S'))
+            date = Time.time_to_datetime(ns)
+            if debug:
+                print(date)
+            assert ns > 0
+            assert date.year == year
+            assert date.month == 12
+            assert date.day == 30
+            assert date.hour == 18
+            assert date.minute == 30
+            assert date.second in [44, 45]
+
+
 class ZakatTracker:
     """
     A class for tracking and calculating Zakat.
@@ -957,98 +1104,6 @@ class ZakatTracker:
         """
         self.__vault = Vault()
 
-    __last_time_ns = None
-    __time_diff_ns = None
-
-    @staticmethod
-    def minimum_time_diff_ns() -> tuple[int, int]:
-        """
-        Calculates the minimum time difference between two consecutive calls to
-        `ZakatTracker._time()` in nanoseconds.
-
-        This method is used internally to determine the minimum granularity of
-        time measurements within the system.
-
-        Returns:
-        - tuple[int, int]:
-            - The minimum time difference in nanoseconds.
-            - The number of iterations required to measure the difference.
-        """
-        i = 0
-        x = y = ZakatTracker._time()
-        while x == y:
-            y = ZakatTracker._time()
-            i += 1
-        return y - x, i
-
-    @staticmethod
-    def _time(now: Optional[datetime.datetime] = None) -> Timestamp:
-        """
-        Internal method to generate a nanosecond-precision timestamp from a datetime object.
-
-        Parameters:
-        - now (datetime.datetime, optional): The datetime object to generate the timestamp from.
-        If not provided, the current datetime is used.
-
-        Returns:
-        - int: The timestamp in nanoseconds since the epoch (January 1, 1AD).
-        """
-        if now is None:
-            now = datetime.datetime.now()
-        ns_in_day = (now - now.replace(
-        	hour=0,
-        	minute=0,
-        	second=0,
-        	microsecond=0,
-        )).total_seconds() * 10 ** 9
-        return Timestamp(now.toordinal() * 86_400_000_000_000 + ns_in_day)
-
-    @staticmethod
-    def time(now: Optional[datetime.datetime] = None) -> Timestamp:
-        """
-        Generates a unique, monotonically increasing timestamp based on the provided
-        datetime object or the current datetime.
-
-        This method ensures that timestamps are unique even if called in rapid succession
-        by introducing a small delay if necessary, based on the system's minimum
-        time resolution.
-
-        Parameters:
-        - now (datetime.datetime, optional): The datetime object to generate the timestamp from.
-        If not provided, the current datetime is used.
-
-        Returns:
-        - Timestamp: The unique timestamp in nanoseconds since the epoch (January 1, 1AD).
-        """
-        new_time = ZakatTracker._time(now)
-        if ZakatTracker.__last_time_ns is None:
-            ZakatTracker.__last_time_ns = new_time
-            return new_time
-        while new_time == ZakatTracker.__last_time_ns:
-            if ZakatTracker.__time_diff_ns is None:
-                diff, _ = ZakatTracker.minimum_time_diff_ns()
-                ZakatTracker.__time_diff_ns = math.ceil(diff)
-            time.sleep(ZakatTracker.__time_diff_ns / 1_000_000_000)
-            new_time = ZakatTracker._time()
-        ZakatTracker.__last_time_ns = new_time
-        return new_time
-
-    @staticmethod
-    def time_to_datetime(ordinal_ns: Timestamp) -> datetime.datetime:
-        """
-        Converts a nanosecond-precision timestamp (ordinal number of nanoseconds since 1AD)
-        back to a datetime object.
-
-        Parameters:
-        - ordinal_ns (Timestamp): The timestamp in nanoseconds since the epoch (January 1, 1AD).
-
-        Returns:
-        - datetime.datetime: The corresponding datetime object.
-        """
-        d = datetime.datetime.fromordinal(ordinal_ns // 86_400_000_000_000)
-        t = datetime.timedelta(seconds=(ordinal_ns % 86_400_000_000_000) // 10 ** 9)
-        return datetime.datetime.combine(d, datetime.time()) + t
-
     def clean_history(self, lock: Optional[Timestamp] = None) -> int:
         """
         Cleans up the empty history records of actions performed on the ZakatTracker instance.
@@ -1118,7 +1173,7 @@ class ZakatTracker:
         no_lock = self.nolock()
         lock = self.__vault.lock
         if no_lock:
-            lock = self.__vault.lock = self.time()
+            lock = self.__vault.lock = Time.time()
             self.__vault.history[lock] = []
         if action is None:
             if lock_once:
@@ -1750,7 +1805,7 @@ class ZakatTracker:
         if debug:
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
         if created_time_ns is None:
-            created_time_ns = self.time()
+            created_time_ns = Time.time()
         if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         no_lock = self.nolock()
@@ -1830,7 +1885,7 @@ class ZakatTracker:
         if debug:
             print('_log', f'debug={debug}')
         if created_time_ns is None:
-            created_time_ns = self.time()
+            created_time_ns = Time.time()
         if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         try:
@@ -1875,7 +1930,7 @@ class ZakatTracker:
         if debug:
             print('exchange', f'debug={debug}')
         if created_time_ns is None:
-            created_time_ns = self.time()
+            created_time_ns = Time.time()
         if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         if rate is not None:
@@ -2097,7 +2152,7 @@ class ZakatTracker:
             print('logs', logs)
         y = self.daily_logs_init()
         for i in sorted(logs, reverse=True):
-            dt = self.time_to_datetime(i)
+            dt = Time.time_to_datetime(i)
             daily = f'{dt.year}-{dt.month:02d}-{dt.day:02d}'
             weekly = dt - datetime.timedelta(days=weekday.value)
             monthly = f'{dt.year}-{dt.month:02d}'
@@ -2181,7 +2236,7 @@ class ZakatTracker:
             if ref in self.__vault.account[account].log:
                 no_lock = self.nolock()
                 lock = self.__lock()
-                file_ref = self.time()
+                file_ref = Time.time()
                 self.__vault.account[account].log[ref].file[file_ref] = path
                 self.__step(Action.ADD_FILE, account, ref=ref, file=file_ref)
                 if no_lock:
@@ -2336,7 +2391,7 @@ class ZakatTracker:
         if unscaled_value <= 0:
             raise ValueError('The unscaled_value should be greater than zero.')
         if created_time_ns is None:
-            created_time_ns = self.time()
+            created_time_ns = Time.time()
         if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         no_lock = self.nolock()
@@ -2416,7 +2471,7 @@ class ZakatTracker:
         if unscaled_amount <= 0:
             return []
         if created_time_ns is None:
-            created_time_ns = self.time()
+            created_time_ns = Time.time()
         if created_time_ns <= 0:
             raise ValueError('The created should be greater than zero.')
         no_lock = self.nolock()
@@ -2450,7 +2505,7 @@ class ZakatTracker:
                 selected_age = age
                 if rest + target_amount > capital:
                     self.__vault.account[to_account].box[age].capital += target_amount
-                    selected_age = ZakatTracker.time()
+                    selected_age = Time.time()
                 self.__vault.account[to_account].box[age].rest += target_amount
                 self.__step(Action.BOX_TRANSFER, to_account, ref=selected_age, value=target_amount)
                 y = self.__log(value=target_amount, desc=f'TRANSFER {from_account} -> {to_account}', account=to_account,
@@ -2491,7 +2546,7 @@ class ZakatTracker:
         - unscaled_nisab (float | int | decimal.Decimal, optional): The minimum amount of wealth required for Zakat.
                         If not provided, it will be calculated based on the silver_gram_price.
         - debug (bool, optional): Flag to enable debug mode.
-        - created_time_ns (Timestamp, optional): The current timestamp. If not provided, it will be calculated using ZakatTracker.time().
+        - created_time_ns (Timestamp, optional): The current timestamp. If not provided, it will be calculated using Time.time().
         - cycle (float, optional): The time cycle for Zakat. If not provided, it will be calculated using ZakatTracker.TimeCycle().
 
         Returns:
@@ -2501,7 +2556,7 @@ class ZakatTracker:
         if debug:
             print('check', f'debug={debug}')
         if created_time_ns is None:
-            created_time_ns = self.time()
+            created_time_ns = Time.time()
         if cycle is None:
             cycle = ZakatTracker.TimeCycle()
         if unscaled_nisab is None:
@@ -2525,7 +2580,7 @@ class ZakatTracker:
                 rest = float(_box[j].rest)
                 if rest <= 0:
                     continue
-                exchange = self.exchange(x, created_time_ns=self.time())
+                exchange = self.exchange(x, created_time_ns=Time.time())
                 assert exchange.rate is not None
                 rest = ZakatTracker.exchange_calc(rest, float(exchange.rate), 1)
                 statistics.overall_wealth += rest
@@ -2688,10 +2743,10 @@ class ZakatTracker:
             print('parts_exist', parts_exist)
         no_lock = self.nolock()
         lock = self.__lock()
-        report_time = self.time()
+        report_time = Time.time()
         self.__vault.report[report_time] = report
         self.__step(Action.REPORT, ref=report_time)
-        created_time_ns = self.time()
+        created_time_ns = Time.time()
         for x in report.plan:
             target_exchange = self.exchange(x)
             if debug:
@@ -3008,7 +3063,7 @@ class ZakatTracker:
                 date: int = 0
                 for time_format in date_formats:
                     try:
-                        date = self.time(datetime.datetime.strptime(row[3], time_format))
+                        date = Time.time(datetime.datetime.strptime(row[3], time_format))
                         break
                     except:
                         pass
@@ -3267,7 +3322,7 @@ class ZakatTracker:
         Note:
         - This method assumes the default month and year if not provided.
         """
-        return ZakatTracker.time(datetime.datetime(year, month, day))
+        return Time.time(datetime.datetime(year, month, day))
 
     @staticmethod
     def generate_random_date(start_date: datetime.datetime, end_date: datetime.datetime) -> datetime.datetime:
@@ -3364,33 +3419,14 @@ class ZakatTracker:
         if debug:
             random.seed(1234567890)
 
-        test_cases = [
-            datetime.datetime(1, 1, 1),
-            datetime.datetime(1970, 1, 1),
-            datetime.datetime(1969, 12, 31),
-            datetime.datetime.now(),
-            datetime.datetime(9999, 12, 31, 23, 59, 59),
-        ]
-        
-        for test_date in test_cases:
-            timestamp = ZakatTracker.time(test_date)
-            converted = ZakatTracker.time_to_datetime(timestamp)
-            if debug:
-                print(f'{timestamp} <=> {converted}')
-            assert timestamp > 0
-            assert test_date.year == converted.year
-            assert test_date.month == converted.month
-            assert test_date.day == converted.day
-            assert test_date.hour == converted.hour
-            assert test_date.minute == converted.minute
-            assert test_date.second in [converted.second - 1, converted.second, converted.second + 1]
+        Time.test(debug)
 
         # sanity check - random forward time
 
         xlist = []
         limit = 1000
         for _ in range(limit):
-            y = ZakatTracker.time()
+            y = Time.time()
             z = '-'
             if y not in xlist:
                 xlist.append(y)
@@ -3402,21 +3438,6 @@ class ZakatTracker:
         if debug:
             print('count', xx, ' - unique: ', (xx / limit) * 100, '%')
         assert limit == xx
-
-        # sanity check - convert date since 1AD to 9999AD
-
-        for year in range(1, 10_000):
-            ns = ZakatTracker.time(datetime.datetime.strptime(f'{year:04d}-12-30 18:30:45', '%Y-%m-%d %H:%M:%S'))
-            date = ZakatTracker.time_to_datetime(ns)
-            if debug:
-                print(date)
-            assert ns > 0
-            assert date.year == year
-            assert date.month == 12
-            assert date.day == 30
-            assert date.hour == 18
-            assert date.minute == 30
-            assert date.second in [44, 45]
 
         # test ZakatTracker.split_at_last_symbol
 
@@ -3547,7 +3568,7 @@ class ZakatTracker:
                         unscaled_value=y[1],
                         desc='test-add',
                         account=x,
-                        created_time_ns=ZakatTracker.time(),
+                        created_time_ns=Time.time(),
                         debug=debug,
                     )
                 else:
@@ -3555,11 +3576,11 @@ class ZakatTracker:
                         unscaled_value=y[1],
                         desc='test-sub',
                         account=x,
-                        created_time_ns=ZakatTracker.time(),
+                        created_time_ns=Time.time(),
                     )
                     ref = report.log_ref
                     if debug:
-                        print('_sub', z, ZakatTracker.time())
+                        print('_sub', z, Time.time())
                 assert ref != 0
                 assert len(self.__vault.account[x].log[ref].file) == 0
                 for i in range(3):
@@ -3618,7 +3639,7 @@ class ZakatTracker:
 
         if restore is True:
             # invalid restore point
-            for lock in [0, time.time_ns(), ZakatTracker.time()]:
+            for lock in [0, time.time_ns(), Time.time()]:
                 failed = False
                 try:
                     self.recall(True, lock)
@@ -3669,7 +3690,7 @@ class ZakatTracker:
 
             # Not allowed for duplicate transactions in the same account and time
 
-            created = ZakatTracker.time()
+            created = Time.time()
             self.track(100, 'test-1', 'same', True, created)
             failed = False
             try:
@@ -3723,7 +3744,7 @@ class ZakatTracker:
                 },
             }
 
-            selected_time = ZakatTracker.time() - ZakatTracker.TimeCycle()
+            selected_time = Time.time() - ZakatTracker.TimeCycle()
 
             for total in case:
                 if debug:
@@ -3870,7 +3891,7 @@ class ZakatTracker:
                 print('history-count', history_count)
             transaction_count = len(transaction)
             assert history_count == transaction_count
-            assert not self.free(ZakatTracker.time())
+            assert not self.free(Time.time())
             assert self.free(self.lock())
             assert self.nolock()
             assert len(self.__vault.history) == transaction_count
@@ -3949,9 +3970,9 @@ class ZakatTracker:
 
             for i in [x * 0.12 for x in range(-15, 21)]:
                 if i <= 0:
-                    assert self.exchange('test', ZakatTracker.time(), i, f'range({i})') == Exchange()
+                    assert self.exchange('test', Time.time(), i, f'range({i})') == Exchange()
                 else:
-                    assert self.exchange('test', ZakatTracker.time(), i, f'range({i})') is not Exchange()
+                    assert self.exchange('test', Time.time(), i, f'range({i})') is not Exchange()
 
             assert self.nolock()
 
@@ -4029,14 +4050,14 @@ class ZakatTracker:
                         assert fresh_value == balance
                     case 1:  # check-exchange
                         _, account, expected_rate = case
-                        t_exchange = self.exchange(account, created_time_ns=ZakatTracker.time(), debug=debug)
+                        t_exchange = self.exchange(account, created_time_ns=Time.time(), debug=debug)
                         if debug:
                             print('t-exchange', t_exchange)
                         assert t_exchange.rate == expected_rate
                     case 2:  # do-exchange
                         _, account, rate = case
                         self.exchange(account, rate=rate, debug=debug)
-                        b_exchange = self.exchange(account, created_time_ns=ZakatTracker.time(), debug=debug)
+                        b_exchange = self.exchange(account, created_time_ns=Time.time(), debug=debug)
                         if debug:
                             print('b-exchange', b_exchange)
                         assert b_exchange.rate == rate
@@ -4160,13 +4181,13 @@ class ZakatTracker:
                 if debug:
                     print('rate', rate, 'values', values)
                 for case in [
-                    (a, 'safe', ZakatTracker.time() - ZakatTracker.TimeCycle(), [
+                    (a, 'safe', Time.time() - ZakatTracker.TimeCycle(), [
                         {'safe': {0: {'below_nisab': x}}},
                     ], False, m),
-                    (b, 'safe', ZakatTracker.time() - ZakatTracker.TimeCycle(), [
+                    (b, 'safe', Time.time() - ZakatTracker.TimeCycle(), [
                         {'safe': {0: {'count': 1, 'total': y}}},
                     ], True, n),
-                    (c, 'cave', ZakatTracker.time() - (ZakatTracker.TimeCycle() * 3), [
+                    (c, 'cave', Time.time() - (ZakatTracker.TimeCycle() * 3), [
                         {'cave': {0: {'count': 3, 'total': z}}},
                     ], True, o),
                 ]:
@@ -4248,7 +4269,7 @@ class ZakatTracker:
                     assert old_vault_dict == dataclasses.asdict(self.__vault)
                     # corrupt the data
                     log_ref = NO_TIME()
-                    tmp_file_ref = ZakatTracker.time()
+                    tmp_file_ref = Time.time()
                     for k in self.__vault.account['cave'].log:
                         log_ref = k
                         self.__vault.account['cave'].log[k].file[tmp_file_ref] = 'HACKED'

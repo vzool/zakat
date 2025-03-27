@@ -55,7 +55,7 @@ python -c "import zakat, sys; sys.exit(zakat.test())"
 ###### مثال
 
 ```python
-from zakat import ZakatTracker
+from zakat import ZakatTracker, Time
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
@@ -68,14 +68,14 @@ ledger.track(
     10000, # المبلغ
     "ايداع مبدئي",
     account="الجيب",
-    created_time_ns=ZakatTracker.time(datetime.now()),
+    created_time_ns=Time.time(datetime.now()),
 )
 # أو معاملة بتاريخ قديم
 box_ref = ledger.track(
     10000, # المبلغ
     "Initial deposit", # الوصف
     account="المخبئ",
-    created_time_ns=ZakatTracker.time(datetime.now() - relativedelta(years=1)),
+    created_time_ns=Time.time(datetime.now() - relativedelta(years=1)),
 )
 
 # ملحوظة: إذا لم يكن هناك حساب موجود، فسيتم إنشاؤه تلقائيًا.
@@ -87,7 +87,7 @@ subtract_report = ledger.subtract(
     500, # المبلغ
     "اشتراك الانترنت الشهري",
     account="الجيب",
-    created_time_ns=ZakatTracker.time(datetime.now()),
+    created_time_ns=Time.time(datetime.now()),
 )
 
 # تحويل الأرصدة
@@ -97,7 +97,7 @@ transfer_report = ledger.transfer(
     100,
     "الجيب", # from account
     "الخزنة", # to account
-    created_time_ns=ZakatTracker.time(datetime.now()),
+    created_time_ns=Time.time(datetime.now()),
 )
 # أو
 ledger.exchange("البنك (USD)", rate=3.75) #افترض أن العملة الحالية هي سعر صرف ريال سعودي = 1
@@ -124,7 +124,7 @@ ledger.zakat(zakat_report, parts) # --> False
 
 ###### بنية بيانات قاعدة البيانات (vault):
 
-نظام ملفات تخزين البيانات الرئيسي على القرص هو تنسيق [`JSON5`](https://json5.org)، ولكنه يظهر هنا بتنسيق JSON للبيانات التي تم إنشاؤها بواسطة المثال أعلاه (ملاحظة: ستختلف الأوقات إذا قمت بإعادة تطبيقها بنفسك):
+نظام ملفات تخزين البيانات الرئيسي على القرص هو تنسيق [`JSON`](https://json.org)، ولكنه يظهر هنا بتنسيق JSON للبيانات التي تم إنشاؤها بواسطة المثال أعلاه (ملاحظة: ستختلف الأوقات إذا قمت بإعادة تطبيقها بنفسك):
 
 ```JSON
 {

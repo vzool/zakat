@@ -16,6 +16,7 @@ This library provides the ZakatLibrary classes, functions for tracking and calcu
 """
 # Importing necessary classes and functions from the main module
 from zakat.zakat_tracker import (
+    Time,
     ZakatTracker,
     AccountName,
     Timestamp,
@@ -55,6 +56,7 @@ from zakat.file_server import (
 # Version information for the module
 __version__ = ZakatTracker.Version()
 __all__ = [
+    "Time",
     "ZakatTracker",
     "AccountName",
     "Timestamp",
