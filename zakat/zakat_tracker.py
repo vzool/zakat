@@ -950,7 +950,6 @@ class ZakatTracker:
             - lock (int or None): The timestamp indicating the current lock status (None if not locked).
             - report (dict):
                 - {timestamp} (tuple): A tuple storing Zakat report details.
-
     """
 
     @staticmethod
@@ -2405,6 +2404,21 @@ class ZakatTracker:
             return status
         return False
 
+    def names(self, keyword: str = '') -> dict[AccountID, str]:
+        """
+        Retrieves a dictionary of account IDs and names, optionally filtered by a keyword.
+
+        Parameters:
+        - keyword: An optional string to filter account names. If provided, only accounts whose
+            names contain the keyword (case-insensitive) will be included in the result.
+            Defaults to an empty string, which returns all accounts.
+
+        Returns:
+        - A dictionary where keys are AccountIDs and values are account names. The dictionary
+            contains only accounts that match the provided keyword (if any).
+        """
+        return {account_id: account.name for  account_id, account in self.__vault.account.items() if keyword.lower() in account.name.lower()}
+
     def name(self, account: AccountID, new_name: Optional[str] = None) -> str:
         """
         Retrieves or sets the name of an account.
@@ -3594,7 +3608,9 @@ class ZakatTracker:
                 (0, 1000, 82000, 82000, 82000, 4, 4),
             ],
         }
+        expected_names = {}
         for x in table:
+            expected_names[x] = ''
             for y in table[x]:
                 lock = self.lock()
                 if y[0] == 0:
@@ -3666,8 +3682,16 @@ class ZakatTracker:
             assert self.hide(x)
 
             assert self.name(x) == ''
+            if debug:
+                print(expected_names, self.names())
+            assert self.names() == expected_names
             assert self.name(x, 'qwe') == 'qwe'
             assert self.name(x) == 'qwe'
+            expected_names[x] = 'qwe'
+            if debug:
+                print(self.names(keyword='qwe'))
+            assert self.names(keyword='qwe') == expected_names
+            assert self.names(keyword='asd') == {}
 
             assert self.zakatable(x)
             assert self.zakatable(x, False) is False
