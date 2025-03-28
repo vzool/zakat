@@ -2404,31 +2404,22 @@ class ZakatTracker:
             return status
         return False
 
-    def room(self, name: str, create: bool = True) -> tuple[Optional[AccountID], int]:
+    def create_account(self, name: str) -> AccountID:
         """
-        Retrieves or creates an AccountID associated with a given account name, and returns the AccountID along with the number of matching account names.
-
-        If `create` is False, it searches for existing AccountIDs matching the provided name.
-        If found, it returns the first AccountID and the count of matching AccountIDs. Otherwise, it returns None and 0.
-
-        If `create` is True (default), it creates a new AccountID, associates it with the given name,
-        and returns the newly created AccountID and 1.
-
+        Creates a new account with the given name and returns its unique ID.
+    
+        This method generates a unique AccountID based on the current time, tracks the account creation,
+        sets the account's name, and then verifies that the name was set correctly.
+    
         Parameters:
-        - name: The name of the account.
-        - create: A boolean indicating whether to create a new account if it doesn't exist. Defaults to True.
-
+        - name: The name of the new account.
+    
         Returns:
-        - Tuple[Optional[AccountID], int]: A tuple containing:
-            - An AccountID associated with the account name, or None if `create` is False and no matching account is found.
-            - The count of matching account names (1 if created, or the number of matches if found, 0 if not found)
+        - AccountID: The unique AccountID of the newly created account.
+    
+        Raises:
+        - AssertionError: If the provided name does not match the name set for the account.
         """
-        if not create:
-            names = self.names(keyword=name)
-            for account_id in names:
-                return account_id, len(names)
-            return None, 0
-        # create new account
         account_id = AccountID(Time.time())
         self.__track(0, '', account_id)
         new_name = self.name(
@@ -2436,7 +2427,7 @@ class ZakatTracker:
             new_name=name,
         )
         assert name == new_name
-        return account_id, 1
+        return account_id
 
     def names(self, keyword: str = '') -> dict[AccountID, str]:
         """
@@ -3782,43 +3773,21 @@ class ZakatTracker:
             self._test_core(True, debug)
             self._test_core(False, debug)
 
-            # Tests Room
-
-            # test_room_create_true
-            room_name = "test_room"
-            account_id, count = self.room(room_name)
+            # test_create_account
+            account_name = "test_account"
+            assert self.names(keyword=account_name) == {}
+            account_id = self.create_account(account_name)
             assert isinstance(account_id, AccountID)
-            assert count == 1
-            assert self.names(keyword=room_name) == {account_id: room_name}
+            assert int(account_id) > 0
+            assert account_id in self.__vault.account
+            assert self.__vault.account[account_id].name == account_name
+            assert self.names(keyword=account_name) == {account_id: account_name}
 
-            account_id2, count = self.room(room_name)
-            assert count == 1
-            names = self.names(keyword=room_name)
-            assert len(names) == 2
-            assert names == {account_id: room_name, account_id2: room_name}
-
-            # test_room_create_false_nonexistent
-            room_name = "nonexistent_room"
-            account_id, count = self.room(room_name, create=False)
-            assert account_id is None
-            assert count == 0
-
-            # test_room_multiple_rooms
-            room_name1 = "room1"
-            room_name2 = "room2"
-            account_id1, count1 = self.room(room_name1)
-            account_id2, count2 = self.room(room_name2)
-            assert account_id1 != account_id2
-            assert count1 == 1
-            assert count2 == 1
-            assert self.names(keyword=room_name1) == {account_id1: room_name1}
-            assert self.names(keyword=room_name2) == {account_id2: room_name2}
-
-            # test_room_name_assertion
-            room_name = "assert_room"
-            account_id, count = self.room(room_name)
-            assert self.name(account = account_id, new_name=room_name) == room_name
-            assert count == 1
+            account_id2 = self.create_account(account_name)
+            assert int(account_id2) > 0
+            assert account_id != account_id2
+            assert self.__vault.account[account_id2].name == account_name
+            assert self.names(keyword=account_name) == {account_id: account_name, account_id2: account_name}
 
             assert self.__history()
 
