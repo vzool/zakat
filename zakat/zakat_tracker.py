@@ -195,9 +195,19 @@ def NO_TIME() -> Timestamp:
     """Returns a Timestamp representing no time (0)."""
     return Timestamp(0)
 
+class AccountID(str):
+    """
+    Represents a unique identifier for an account.
 
-class AccountName(str):
-    """Represents the name of an account."""
+    This class encapsulates account IDs, which are strings. While any string is technically valid,
+    it is strongly recommended to use integer values represented as strings (e.g., "123").
+    This preference stems from the fact that JSON dictionary keys are always strings, ensuring
+    consistent data handling.
+
+    Account IDs are immutable after creation. To associate a human-readable name with an account,
+    use the `name` attribute of the corresponding account object. This allows for updating
+    account names without altering the immutable ID.
+    """
     pass
 
 
@@ -245,6 +255,7 @@ class Account:
     Attributes:
     - balance: The current balance of the account.
     - created: The timestamp when the account was created.
+    - name: The name of the account.
     - box: A dictionary mapping timestamps to Box objects.
     - count: A counter for logs, initialized to 0.
     - log: A dictionary mapping timestamps to Log objects.
@@ -253,6 +264,7 @@ class Account:
     """
     balance: int
     created: Timestamp
+    name: str = ''
     box: dict[Timestamp, Box] = dataclasses.field(default_factory=dict)
     count: int = dataclasses.field(default_factory=factory_value(0))
     log: dict[Timestamp, Log] = dataclasses.field(default_factory=dict)
@@ -282,7 +294,7 @@ class History:
 
     Attributes:
     - action: The action performed.
-    - account: The name of the account (optional).
+    - account: The ID of the account (optional).
     - ref: An optional timestamp reference.
     - file: An optional timestamp for a file.
     - key: An optional key.
@@ -290,7 +302,7 @@ class History:
     - math: An optional math operation.
     """
     action: Action
-    account: Optional[AccountName]
+    account: Optional[AccountID]
     ref: Optional[Timestamp]
     file: Optional[Timestamp]
     key: Optional[str]
@@ -321,8 +333,8 @@ class BoxPlan:
     ref: Timestamp
 
 
-class ZakatPlan(dict[AccountName, list[BoxPlan]]):
-    """A dictionary mapping account names to lists of BoxPlan objects."""
+class ZakatPlan(dict[AccountID, list[BoxPlan]]):
+    """A dictionary mapping account IDs to lists of BoxPlan objects."""
     pass
 
 
@@ -364,14 +376,14 @@ class Vault:
     Represents a vault containing accounts, exchanges, and history.
 
     Attributes:
-    - account: A dictionary mapping account names to Account objects.
-    - exchange: A dictionary mapping account names to dictionaries of timestamps and Exchange objects.
+    - account: A dictionary mapping account IDs to Account objects.
+    - exchange: A dictionary mapping account IDs to dictionaries of timestamps and Exchange objects.
     - history: A dictionary mapping timestamps to lists of History objects.
     - lock: An optional timestamp for a lock.
     - report: A dictionary mapping timestamps to tuples.
     """
-    account: dict[AccountName, Account] = dataclasses.field(default_factory=dict)
-    exchange: dict[AccountName, dict[Timestamp, Exchange]] = dataclasses.field(default_factory=dict)
+    account: dict[AccountID, Account] = dataclasses.field(default_factory=dict)
+    exchange: dict[AccountID, dict[Timestamp, Exchange]] = dataclasses.field(default_factory=dict)
     history: dict[Timestamp, list[History]] = dataclasses.field(default_factory=dict)
     lock: Optional[Timestamp] = None
     report: dict[Timestamp, ZakatReport] = dataclasses.field(default_factory=dict)
@@ -401,12 +413,12 @@ class PaymentParts:
     - exceed: A boolean indicating whether the payment exceeds a limit.
     - demand: The demand for payment.
     - total: The total payment.
-    - account: A dictionary mapping account names to AccountPaymentPart objects.
+    - account: A dictionary mapping account references to AccountPaymentPart objects.
     """
     exceed: bool
     demand: int
     total: float
-    account: dict[AccountName, AccountPaymentPart] = dataclasses.field(default_factory=dict)
+    account: dict[AccountID, AccountPaymentPart] = dataclasses.field(default_factory=dict)
 
 
 @dataclasses.dataclass
@@ -900,7 +912,7 @@ class ZakatTracker:
 
         __vault (dict):
             - account (dict):
-                - {account_name} (dict):
+                - {account_id} (dict):
                     - balance (int): The current balance of the account.
                     - box (dict): A dictionary storing transaction details.
                         - {timestamp} (dict):
@@ -919,7 +931,7 @@ class ZakatTracker:
                     - hide (bool): Indicates whether the account is hidden or not.
                     - zakatable (bool): Indicates whether the account is subject to Zakat.
             - exchange (dict):
-                - {account_name} (dict):
+                - {account_id} (dict):
                     - {timestamps} (dict):
                         - rate (float): Exchange rate when compared to local currency.
                         - description (str): The description of the exchange rate.
@@ -927,7 +939,7 @@ class ZakatTracker:
                 - {timestamp} (list): A list of dictionaries storing the history of actions performed.
                     - {action_dict} (dict):
                         - action (Action): The type of action (CREATE, TRACK, LOG, SUB, ADD_FILE, REMOVE_FILE, BOX_TRANSFER, EXCHANGE, REPORT, ZAKAT).
-                        - account (str): The account number associated with the action.
+                        - account (str): The account reference associated with the action.
                         - ref (int): The reference number of the transaction.
                         - file (int): The reference number of the file (if applicable).
                         - key (str): The key associated with the action (e.g., 'rest', 'total').
@@ -1207,7 +1219,7 @@ class ZakatTracker:
         return self.__history_mode
 
     def __step(self, action: Optional[Action] = None,
-                    account: Optional[AccountName] = None,
+                    account: Optional[AccountID] = None,
                     ref: Optional[Timestamp] = None,
                     file: Optional[Timestamp] = None,
                     value: Optional[any] = None, # !!!
@@ -1221,7 +1233,7 @@ class ZakatTracker:
 
         Parameters:
         - action (Action, optional): The type of action performed.
-        - account (AccountName, optional): The account number on which the action was performed.
+        - account (AccountID, optional): The account reference on which the action was performed.
         - ref (Optional, optional): The reference number of the action.
         - file (Timestamp, optional): The file reference number of the action.
         - value (any, optional): The value associated with the action.
@@ -1625,24 +1637,24 @@ class ZakatTracker:
             })
         return result
 
-    def account_exists(self, account: AccountName) -> bool:
+    def account_exists(self, account: AccountID) -> bool:
         """
         Check if the given account exists in the vault.
 
         Parameters:
-        - account (AccountName): The account number to check.
+        - account (AccountID): The account reference to check.
 
         Returns:
         - bool: True if the account exists, False otherwise.
         """
         return account in self.__vault.account
 
-    def box_size(self, account: AccountName) -> int:
+    def box_size(self, account: AccountID) -> int:
         """
         Calculate the size of the box for a specific account.
 
         Parameters:
-        - account (AccountName): The account number for which the box size needs to be calculated.
+        - account (AccountID): The account reference for which the box size needs to be calculated.
 
         Returns:
         - int: The size of the box for the given account. If the account does not exist, -1 is returned.
@@ -1651,12 +1663,12 @@ class ZakatTracker:
             return len(self.__vault.account[account].box)
         return -1
 
-    def log_size(self, account: AccountName) -> int:
+    def log_size(self, account: AccountID) -> int:
         """
         Get the size of the log for a specific account.
 
         Parameters:
-        - account (AccountName): The account number for which the log size needs to be calculated.
+        - account (AccountID): The account reference for which the log size needs to be calculated.
 
         Returns:
         - int: The size of the log for the given account. If the account does not exist, -1 is returned.
@@ -1784,12 +1796,12 @@ class ZakatTracker:
                 result[ref] = (hash_file, path, exists)
         return result
 
-    def ref_exists(self, account: AccountName, ref_type: str, ref: Timestamp) -> bool:
+    def ref_exists(self, account: AccountID, ref_type: str, ref: Timestamp) -> bool:
         """
         Check if a specific reference (transaction) exists in the vault for a given account and reference type.
 
         Parameters:
-        - account (AccountName): The account number for which to check the existence of the reference.
+        - account (AccountID): The account reference for which to check the existence of the reference.
         - ref_type (str): The type of reference (e.g., 'box', 'log', etc.).
         - ref (Timestamp): The reference (transaction) number to check for existence.
 
@@ -1800,12 +1812,12 @@ class ZakatTracker:
             return ref in getattr(self.__vault.account[account], ref_type)
         return False
 
-    def box_exists(self, account: AccountName, ref: Timestamp) -> bool:
+    def box_exists(self, account: AccountID, ref: Timestamp) -> bool:
         """
         Check if a specific box (transaction) exists in the vault for a given account and reference.
 
         Parameters:
-        - account (AccountName): The account number for which to check the existence of the box.
+        - account (AccountID): The account reference for which to check the existence of the box.
         - ref (Timestamp): The reference (transaction) number to check for existence.
 
         Returns:
@@ -1813,7 +1825,7 @@ class ZakatTracker:
         """
         return self.ref_exists(account, 'box', ref)
 
-    def track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: AccountName = AccountName('1'),
+    def track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: AccountID = AccountID('1'),
               created_time_ns: Optional[Timestamp] = None,
               debug: bool = False) -> Timestamp:
         """
@@ -1822,7 +1834,7 @@ class ZakatTracker:
         Parameters:
         - unscaled_value (float | int | decimal.Decimal, optional): The value of the transaction. Default is 0.
         - desc (str, optional): The description of the transaction. Default is an empty string.
-        - account (AccountName, optional): The account for which the transaction is being tracked. Default is '1'.
+        - account (AccountID, optional): The account reference for which the transaction is being tracked. Default is '1'.
         - created_time_ns (Timestamp, optional): The timestamp of the transaction in nanoseconds since epoch(1AD). If not provided, it will be generated. Default is None.
         - debug (bool, optional): Whether to print debug information. Default is False.
 
@@ -1843,7 +1855,7 @@ class ZakatTracker:
             debug=debug,
         )
 
-    def __track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: AccountName = AccountName('1'),
+    def __track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: AccountID = AccountID('1'),
               logging: bool = True,
               created_time_ns: Optional[Timestamp] = None,
               debug: bool = False) -> Timestamp:
@@ -1855,7 +1867,7 @@ class ZakatTracker:
         Parameters:
         - unscaled_value (float | int | decimal.Decimal, optional): The monetary value of the transaction. Defaults to 0.
         - desc (str, optional): A description of the transaction. Defaults to an empty string.
-        - account (AccountName, optional): The name of the account to track the transaction for. Defaults to '1'.
+        - account (AccountID, optional): The reference of the account to track the transaction for. Defaults to '1'.
         - logging (bool, optional): Enables transaction logging. Defaults to True.
         - created_time_ns (Timestamp, optional): The timestamp of the transaction in nanoseconds since the epoch. If not provided, the current time is used. Defaults to None.
         - debug (bool, optional): Enables debug printing. Defaults to False.
@@ -1910,12 +1922,12 @@ class ZakatTracker:
             self.free(lock)
         return created_time_ns
 
-    def log_exists(self, account: AccountName, ref: Timestamp) -> bool:
+    def log_exists(self, account: AccountID, ref: Timestamp) -> bool:
         """
         Checks if a specific transaction log entry exists for a given account.
 
         Parameters:
-        - account (AccountName): The account number associated with the transaction log.
+        - account (AccountID): The account reference associated with the transaction log.
         - ref (Timestamp): The reference to the transaction log entry.
 
         Returns:
@@ -1923,7 +1935,7 @@ class ZakatTracker:
         """
         return self.ref_exists(account, 'log', ref)
 
-    def __log(self, value: int, desc: str = '', account: AccountName = AccountName('1'),
+    def __log(self, value: int, desc: str = '', account: AccountID = AccountID('1'),
              created_time_ns: Optional[Timestamp] = None,
              ref: Optional[Timestamp] = None,
              debug: bool = False) -> Timestamp:
@@ -1934,7 +1946,7 @@ class ZakatTracker:
         Parameters:
         - value (int): The value of the transaction.
         - desc (str, optional): The description of the transaction.
-        - account (AccountName, optional): The account to log the transaction into. Default is '1'.
+        - account (AccountID, optional): The account reference to log the transaction into. Default is '1'.
         - created_time_ns (int, optional): The timestamp of the transaction in nanoseconds since epoch(1AD).
                                            If not provided, it will be generated.
         - ref (Timestamp, optional): The reference of the object.
@@ -1973,13 +1985,13 @@ class ZakatTracker:
         self.__step(Action.LOG, account, ref=created_time_ns, value=value)
         return created_time_ns
 
-    def exchange(self, account: AccountName, created_time_ns: Optional[Timestamp] = None,
+    def exchange(self, account: AccountID, created_time_ns: Optional[Timestamp] = None,
                  rate: Optional[float] = None, description: Optional[str] = None, debug: bool = False) -> Exchange:
         """
         This method is used to record or retrieve exchange rates for a specific account.
 
         Parameters:
-        - account (AccountName): The account number for which the exchange rate is being recorded or retrieved.
+        - account (AccountID): The account reference for which the exchange rate is being recorded or retrieved.
         - created_time_ns (Timestamp, optional): The timestamp of the exchange rate. If not provided, the current timestamp will be used.
         - rate (float, optional): The exchange rate to be recorded. If not provided, the method will retrieve the latest exchange rate.
         - description (str, optional): A description of the exchange rate.
@@ -2046,7 +2058,7 @@ class ZakatTracker:
         """
         return (x * x_rate) / y_rate
 
-    def exchanges(self) -> dict:
+    def exchanges(self) -> dict[AccountID, dict[Timestamp, Exchange]]:
         """
         Retrieve the recorded exchange rates for all accounts.
 
@@ -2054,48 +2066,48 @@ class ZakatTracker:
         None
 
         Returns:
-        - dict: A dictionary containing all recorded exchange rates.
-        The keys are account names or numbers, and the values are dictionaries containing the exchange rates.
+        - dict[AccountID, dict[Timestamp, Exchange]]: A dictionary containing all recorded exchange rates.
+        The keys are account references or numbers, and the values are dictionaries containing the exchange rates.
         Each exchange rate dictionary has timestamps as keys and exchange rate details as values.
         """
         return self.__vault.exchange.copy()
 
-    def accounts(self) -> dict:
+    def accounts(self) -> dict[AccountID, int]:
         """
-        Returns a dictionary containing account numbers as keys and their respective balances as values.
+        Returns a dictionary containing account references as keys and their respective balances as values.
 
         Parameters:
         None
 
         Returns:
-        - dict: A dictionary where keys are account numbers and values are their respective balances.
+        - dict[AccountID, int]: A dictionary where keys are account references and values are their respective balances.
         """
         result = {}
         for i in self.__vault.account:
             result[i] = self.__vault.account[i].balance
         return result
 
-    def boxes(self, account: AccountName) -> dict:
+    def boxes(self, account: AccountID) -> dict[Timestamp, Box]:
         """
         Retrieve the boxes (transactions) associated with a specific account.
 
         Parameters:
-        - account (AccountName): The account number for which to retrieve the boxes.
+        - account (AccountID): The account reference for which to retrieve the boxes.
 
         Returns:
-        - dict: A dictionary containing the boxes associated with the given account.
+        - dict[Timestamp, Box]: A dictionary containing the boxes associated with the given account.
         If the account does not exist, an empty dictionary is returned.
         """
         if self.account_exists(account):
             return self.__vault.account[account].box
         return {}
 
-    def logs(self, account: AccountName) -> dict[Timestamp, Log]:
+    def logs(self, account: AccountID) -> dict[Timestamp, Log]:
         """
         Retrieve the logs (transactions) associated with a specific account.
 
         Parameters:
-        - account (AccountName): The account number for which to retrieve the logs.
+        - account (AccountID): The account reference for which to retrieve the logs.
 
         Returns:
         - dict[Timestamp, Log]: A dictionary containing the logs associated with the given account.
@@ -2285,12 +2297,12 @@ class ZakatTracker:
             print('y', y)
         return y
 
-    def add_file(self, account: AccountName, ref: Timestamp, path: str) -> Timestamp:
+    def add_file(self, account: AccountID, ref: Timestamp, path: str) -> Timestamp:
         """
         Adds a file reference to a specific transaction log entry in the vault.
 
         Parameters:
-        - account (AccountName): The account number associated with the transaction log.
+        - account (AccountID): The account reference associated with the transaction log.
         - ref (Timestamp): The reference to the transaction log entry.
         - path (str): The path of the file to be added.
 
@@ -2310,12 +2322,12 @@ class ZakatTracker:
                 return file_ref
         return Timestamp(0)
 
-    def remove_file(self, account: AccountName, ref: Timestamp, file_ref: Timestamp) -> bool:
+    def remove_file(self, account: AccountID, ref: Timestamp, file_ref: Timestamp) -> bool:
         """
         Removes a file reference from a specific transaction log entry in the vault.
 
         Parameters:
-        - account (AccountName): The account number associated with the transaction log.
+        - account (AccountID): The account reference associated with the transaction log.
         - ref (Timestamp): The reference to the transaction log entry.
         - file_ref (Timestamp): The reference of the file to be removed.
 
@@ -2336,12 +2348,12 @@ class ZakatTracker:
                     return True
         return False
 
-    def balance(self, account: AccountName = AccountName('1'), cached: bool = True) -> int:
+    def balance(self, account: AccountID = AccountID('1'), cached: bool = True) -> int:
         """
         Calculate and return the balance of a specific account.
 
         Parameters:
-        - account (AccountName, optional): The account number. Default is '1'.
+        - account (AccountID, optional): The account reference. Default is '1'.
         - cached (bool, optional): If True, use the cached balance. If False, calculate the balance from the box. Default is True.
 
         Returns:
@@ -2356,12 +2368,12 @@ class ZakatTracker:
         x = 0
         return [x := x + y.rest for y in self.__vault.account[account].box.values()][-1]
 
-    def hide(self, account: AccountName, status: Optional[bool] = None) -> bool:
+    def hide(self, account: AccountID, status: Optional[bool] = None) -> bool:
         """
         Check or set the hide status of a specific account.
 
         Parameters:
-        - account (AccountName): The account number.
+        - account (AccountID): The account reference.
         - status (bool, optional): The new hide status. If not provided, the function will return the current status.
 
         Returns:
@@ -2391,12 +2403,32 @@ class ZakatTracker:
             return status
         return False
 
-    def zakatable(self, account: AccountName, status: Optional[bool] = None) -> bool:
+    def name(self, account: AccountID, new_name: Optional[str] = None) -> str:
+        """
+        Retrieves or sets the name of an account.
+
+        Parameters:
+        - account: The AccountID of the account.
+        _ new_name: The new name to set for the account. If None, the current name is retrieved.
+
+        Returns:
+        - The current name of the account if `new_name` is None, or the `new_name` if it is set.
+
+        Note: Returns an empty string if the account does not exist.
+        """
+        if self.account_exists(account):
+            if new_name is None:
+                return self.__vault.account[account].name
+            self.__vault.account[account].name = new_name
+            return new_name
+        return ''
+
+    def zakatable(self, account: AccountID, status: Optional[bool] = None) -> bool:
         """
         Check or set the zakatable status of a specific account.
 
         Parameters:
-        - account (AccountName): The account number.
+        - account (AccountID): The account reference.
         - status (bool, optional): The new zakatable status. If not provided, the function will return the current status.
 
         Returns:
@@ -2426,7 +2458,7 @@ class ZakatTracker:
             return status
         return False
 
-    def subtract(self, unscaled_value: float | int | decimal.Decimal, desc: str = '', account: AccountName = AccountName('1'),
+    def subtract(self, unscaled_value: float | int | decimal.Decimal, desc: str = '', account: AccountID = AccountID('1'),
             created_time_ns: Optional[Timestamp] = None,
             debug: bool = False) \
             -> SubtractReport:
@@ -2437,7 +2469,7 @@ class ZakatTracker:
         Parameters:
         - unscaled_value (float | int | decimal.Decimal): The amount to be subtracted.
         - desc (str, optional): A description for the transaction. Defaults to an empty string.
-        - account (AccountName, optional): The account from which the value will be subtracted. Defaults to '1'.
+        - account (AccountID, optional): The account reference from which the value will be subtracted. Defaults to '1'.
         - created_time_ns (Timestamp, optional): The timestamp of the transaction in nanoseconds since epoch(1AD).
                                            If not provided, the current timestamp will be used.
         - debug (bool, optional): A flag indicating whether to print debug information. Defaults to False.
@@ -2506,7 +2538,7 @@ class ZakatTracker:
             ages=ages,
         )
 
-    def transfer(self, unscaled_amount: float | int | decimal.Decimal, from_account: AccountName, to_account: AccountName, desc: str = '',
+    def transfer(self, unscaled_amount: float | int | decimal.Decimal, from_account: AccountID, to_account: AccountID, desc: str = '',
                  created_time_ns: Optional[Timestamp] = None,
                  debug: bool = False) -> TransferReport:
         """
@@ -2514,8 +2546,8 @@ class ZakatTracker:
 
         Parameters:
         - unscaled_amount (float | int | decimal.Decimal): The amount to be transferred.
-        - from_account (AccountName): The account from which the value will be transferred.
-        - to_account (AccountName): The account to which the value will be transferred.
+        - from_account (AccountID): The account reference from which the value will be transferred.
+        - to_account (AccountID): The account reference to which the value will be transferred.
         - desc (str, optional): A description for the transaction. Defaults to an empty string.
         - created_time_ns (Timestamp, optional): The timestamp of the transaction in nanoseconds since epoch(1AD). If not provided, the current timestamp will be used.
         - debug (bool, optional): A flag indicating whether to print debug information. Defaults to False.
@@ -2926,8 +2958,8 @@ class ZakatTracker:
         vault = Vault()
 
         # Load Accounts
-        for account_name, account_data in data.get("account", {}).items():
-            account_name = AccountName(account_name)
+        for account_reference, account_data in data.get("account", {}).items():
+            account_reference = AccountID(account_reference)
             box_data = account_data.get('box', {})
             box = {Timestamp(ts): Box(**box_data[str(ts)]) for ts in box_data}
 
@@ -2939,7 +2971,7 @@ class ZakatTracker:
                 file={Timestamp(ft): fv for ft, fv in log_data[str(ts)].get('file', {}).items()}
             ) for ts in log_data}
 
-            vault.account[account_name] = Account(
+            vault.account[account_reference] = Account(
                 balance=account_data["balance"],
                 created=Timestamp(account_data["created"]),
                 box=box,
@@ -2950,11 +2982,11 @@ class ZakatTracker:
             )
 
         # Load Exchanges
-        for account_name, exchange_data in data.get("exchange", {}).items():
-            account_name = AccountName(account_name)
-            vault.exchange[account_name] = {}
+        for account_reference, exchange_data in data.get("exchange", {}).items():
+            account_reference = AccountID(account_reference)
+            vault.exchange[account_reference] = {}
             for timestamp, exchange_details in exchange_data.items():
-                vault.exchange[account_name][Timestamp(timestamp)] = Exchange(
+                vault.exchange[account_reference][Timestamp(timestamp)] = Exchange(
                     rate=exchange_details.get("rate"),
                     description=exchange_details.get("description"),
                     time=Timestamp(exchange_details.get("time")) if exchange_details.get("time") is not None else None
@@ -2966,7 +2998,7 @@ class ZakatTracker:
             for history_data in history_list:
                 vault.history[Timestamp(timestamp)].append(History(
                     action=Action(history_data["action"]),
-                    account=AccountName(history_data["account"]) if history_data.get("account") is not None else None,
+                    account=AccountID(history_data["account"]) if history_data.get("account") is not None else None,
                     ref=Timestamp(history_data.get("ref")) if history_data.get("ref") is not None else None,
                     file=Timestamp(history_data.get("file")) if history_data.get("file") is not None else None,
                     key=history_data.get("key"),
@@ -2980,11 +3012,11 @@ class ZakatTracker:
         # Load Report
         for timestamp, report_data in data.get("report", {}).items():
             zakat_plan = ZakatPlan()
-            for account_name, box_plans in report_data.get("plan", {}).items():
-                account_name = AccountName(account_name)
-                zakat_plan[account_name] = []
+            for account_reference, box_plans in report_data.get("plan", {}).items():
+                account_reference = AccountID(account_reference)
+                zakat_plan[account_reference] = []
                 for box_plan_data in box_plans:
-                    zakat_plan[account_name].append(BoxPlan(
+                    zakat_plan[account_reference].append(BoxPlan(
                         box=Box(**box_plan_data["box"]),
                         log=Log(**box_plan_data["log"]),
                         exchange=Exchange(**box_plan_data["exchange"]),
@@ -3545,7 +3577,7 @@ class ZakatTracker:
         assert not self.free(lock)
 
         table = {
-            AccountName('1'): [
+            AccountID('1'): [
                 (0, 10, 1000, 1000, 1000, 1, 1),
                 (0, 20, 3000, 3000, 3000, 2, 2),
                 (0, 30, 6000, 6000, 6000, 3, 3),
@@ -3553,7 +3585,7 @@ class ZakatTracker:
                 (1, 50, -500, -500, -500, 4, 5),
                 (1, 100, -10500, -10500, -10500, 5, 6),
             ],
-            AccountName('wallet'): [
+            AccountID('wallet'): [
                 (1, 90, -9000, -9000, -9000, 1, 1),
                 (0, 100, 1000, 1000, 1000, 2, 2),
                 (1, 190, -18000, -18000, -18000, 3, 3),
@@ -3630,6 +3662,10 @@ class ZakatTracker:
             assert self.hide(x) is False
             assert self.hide(x, True)
             assert self.hide(x)
+
+            assert self.name(x) == ''
+            assert self.name(x, 'qwe') == 'qwe'
+            assert self.name(x) == 'qwe'
 
             assert self.zakatable(x)
             assert self.zakatable(x, False) is False
@@ -3754,7 +3790,7 @@ class ZakatTracker:
                     self.track(
                         unscaled_value=x[0],
                         desc=f'test-{x} ages',
-                        account=AccountName('ages'),
+                        account=AccountID('ages'),
                         created_time_ns=selected_time * x[1],
                     )
 
