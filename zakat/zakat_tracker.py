@@ -908,12 +908,14 @@ class ZakatTracker:
 
     Data Structure:
     
-    The ZakatTracker class utilizes a nested dataclasses structure called '__vault' to store and manage data.
+    The ZakatTracker class utilizes a nested dataclasses structure called '__vault' to store and manage data, here below is just a demonstration:
 
         __vault (dict):
             - account (dict):
                 - {account_id} (dict):
                     - balance (int): The current balance of the account.
+                    - name (str): The name of the account.
+                    - created (int): The creation time for the account.
                     - box (dict): A dictionary storing transaction details.
                         - {timestamp} (dict):
                             - capital (int): The initial amount of the transaction.
