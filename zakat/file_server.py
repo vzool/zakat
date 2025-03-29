@@ -59,6 +59,7 @@ class Action(enum.Enum):
 
     Members:
     - CREATE: Represents the creation action ('CREATE').
+    - NAME: Represents the renaming action ('NAME').
     - TRACK: Represents the tracking action ('TRACK').
     - LOG: Represents the logging action ('LOG').
     - SUBTRACT: Represents the subtract action ('SUBTRACT').
@@ -70,6 +71,7 @@ class Action(enum.Enum):
     - ZAKAT: Represents a Zakat related action ('ZAKAT').
     """
     CREATE = 'CREATE'
+    NAME = 'NAME'
     TRACK = 'TRACK'
     LOG = 'LOG'
     SUBTRACT = 'SUBTRACT'

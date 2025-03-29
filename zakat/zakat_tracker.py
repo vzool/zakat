@@ -107,6 +107,7 @@ class Action(enum.Enum):
 
     Members:
     - CREATE: Represents the creation action ('CREATE').
+    - NAME: Represents the renaming action ('NAME').
     - TRACK: Represents the tracking action ('TRACK').
     - LOG: Represents the logging action ('LOG').
     - SUBTRACT: Represents the subtract action ('SUBTRACT').
@@ -118,6 +119,7 @@ class Action(enum.Enum):
     - ZAKAT: Represents a Zakat related action ('ZAKAT').
     """
     CREATE = 'CREATE'
+    NAME = 'NAME'
     TRACK = 'TRACK'
     LOG = 'LOG'
     SUBTRACT = 'SUBTRACT'
@@ -1389,9 +1391,18 @@ class ZakatTracker:
                             assert len(self.__vault.account[x.account].log) == 0
                             assert self.__vault.account[x.account].balance == 0
                             assert self.__vault.account[x.account].count == 0
+                            assert self.__vault.account[x.account].name == ''
                             if dry:
                                 continue
                             del self.__vault.account[x.account]
+
+                case Action.NAME:
+                    if x.account is not None:
+                        if self.account_exists(x.account):
+                            if dry:
+                                continue
+                            assert x.value is not None
+                            self.__vault.account[x.account].name = x.value
 
                 case Action.TRACK:
                     if x.account is not None:
@@ -2407,19 +2418,28 @@ class ZakatTracker:
     def create_account(self, name: str) -> AccountID:
         """
         Creates a new account with the given name and returns its unique ID.
-    
-        This method generates a unique AccountID based on the current time, tracks the account creation,
-        sets the account's name, and then verifies that the name was set correctly.
+
+        This method:
+        1. Checks if an account with the same name (case-insensitive) already exists.
+        2. Generates a unique `AccountID` based on the current time.
+        3. Tracks the account creation internally.
+        4. Sets the account's name.
+        5. Verifies that the name was set correctly.
     
         Parameters:
         - name: The name of the new account.
     
         Returns:
-        - AccountID: The unique AccountID of the newly created account.
+        - AccountID: The unique `AccountID` of the newly created account.
     
         Raises:
+        - AssertionError: If an account with the same name already exists (case-insensitive).
         - AssertionError: If the provided name does not match the name set for the account.
         """
+        # check if account not exists
+        for old_name, _ in self.names(name).items():
+            assert old_name.lower() != name.lower(), f'account name({name}) already used'
+        # create new account
         account_id = AccountID(Time.time())
         self.__track(0, '', account_id)
         new_name = self.name(
@@ -2429,7 +2449,7 @@ class ZakatTracker:
         assert name == new_name
         return account_id
 
-    def names(self, keyword: str = '') -> dict[AccountID, str]:
+    def names(self, keyword: str = '') -> dict[str, AccountID]:
         """
         Retrieves a dictionary of account IDs and names, optionally filtered by a keyword.
 
@@ -2439,10 +2459,14 @@ class ZakatTracker:
             Defaults to an empty string, which returns all accounts.
 
         Returns:
-        - A dictionary where keys are AccountIDs and values are account names. The dictionary
+        - A dictionary where keys are account names and values are AccountIDs. The dictionary
             contains only accounts that match the provided keyword (if any).
         """
-        return {account_id: account.name for account_id, account in self.__vault.account.items() if keyword.lower() in account.name.lower()}
+        return {
+            account.name: account_id
+            for account_id, account in self.__vault.account.items()
+            if keyword.lower() in account.name.lower()
+        }
 
     def name(self, account: AccountID, new_name: Optional[str] = None) -> str:
         """
@@ -2450,7 +2474,7 @@ class ZakatTracker:
 
         Parameters:
         - account: The AccountID of the account.
-        _ new_name: The new name to set for the account. If None, the current name is retrieved.
+        - new_name: The new name to set for the account. If None, the current name is retrieved.
 
         Returns:
         - The current name of the account if `new_name` is None, or the `new_name` if it is set.
@@ -2460,7 +2484,14 @@ class ZakatTracker:
         if self.account_exists(account):
             if new_name is None:
                 return self.__vault.account[account].name
+            assert new_name != ''
+            no_lock = self.nolock()
+            lock = self.__lock()
+            self.__step(Action.NAME, account, value=self.__vault.account[account].name)
             self.__vault.account[account].name = new_name
+            if no_lock:
+                    assert lock is not None
+                    self.free(lock)
             return new_name
         return ''
 
@@ -3633,9 +3664,7 @@ class ZakatTracker:
                 (0, 1000, 82000, 82000, 82000, 4, 4),
             ],
         }
-        expected_names = {}
         for x in table:
-            expected_names[x] = ''
             for y in table[x]:
                 lock = self.lock()
                 if y[0] == 0:
@@ -3706,18 +3735,6 @@ class ZakatTracker:
             assert self.hide(x, True)
             assert self.hide(x)
 
-            assert self.name(x) == ''
-            if debug:
-                print(expected_names, self.names())
-            assert self.names() == expected_names
-            assert self.name(x, 'qwe') == 'qwe'
-            assert self.name(x) == 'qwe'
-            expected_names[x] = 'qwe'
-            if debug:
-                print(self.names(keyword='qwe'))
-            assert self.names(keyword='qwe') == expected_names
-            assert self.names(keyword='asd') == {}
-
             assert self.zakatable(x)
             assert self.zakatable(x, False) is False
             assert self.zakatable(x) is False
@@ -3729,7 +3746,7 @@ class ZakatTracker:
             for lock in [0, time.time_ns(), Time.time()]:
                 failed = False
                 try:
-                    self.recall(True, lock)
+                    self.recall(dry=True, lock=lock)
                 except:
                     failed = True
                 assert failed
@@ -3739,7 +3756,7 @@ class ZakatTracker:
             assert count == 10
             # try mode
             for _ in range(count):
-                assert self.recall(True, debug=debug)
+                assert self.recall(dry=True, debug=debug)
             count = len(self.__vault.history)
             if debug:
                 print('history-count', count)
@@ -3757,8 +3774,8 @@ class ZakatTracker:
                         print(row, self.balance(account), self.balance(account, False))
                     assert self.balance(account) == self.balance(account, False)
                     assert self.balance(account) == row[2]
-                    assert self.recall(False, debug=debug)
-            assert self.recall(False, debug=debug) is False
+                    assert self.recall(dry=False, debug=debug)
+            assert self.recall(dry=False, debug=debug) is False
             count = len(self.__vault.history)
             if debug:
                 print('history-count', count)
@@ -3773,6 +3790,22 @@ class ZakatTracker:
             self._test_core(True, debug)
             self._test_core(False, debug)
 
+            # test_names
+            self.reset()
+            x = "test_names"
+            assert self.name(x) == ''
+            assert self.names() == {}
+            assert self.name(x, 'qwe') == ''
+            account_id0 = self.create_account(x)
+            assert isinstance(account_id0, AccountID)
+            assert int(account_id0) > 0
+            assert self.name(account_id0) == x
+            assert self.name(account_id0, 'qwe') == 'qwe'
+            if debug:
+                print(self.names(keyword='qwe'))
+            assert self.names(keyword='asd') == {}
+            assert self.names(keyword='qwe') == {'qwe': account_id0}
+
             # test_create_account
             account_name = "test_account"
             assert self.names(keyword=account_name) == {}
@@ -3780,16 +3813,54 @@ class ZakatTracker:
             assert isinstance(account_id, AccountID)
             assert int(account_id) > 0
             assert account_id in self.__vault.account
-            assert self.__vault.account[account_id].name == account_name
-            assert self.names(keyword=account_name) == {account_id: account_name}
+            assert self.name(account_id) == account_name
+            assert self.names(keyword=account_name) == {account_name: account_id}
 
+            failed = False
+            try:
+                self.create_account(account_name)
+            except:
+                failed = True
+            assert failed
+
+            # rename account
+            assert self.name(account_id) == account_name
+            assert self.name(account_id, 'asd') == 'asd'
+            assert self.name(account_id) == 'asd'
+            # use old and not used name
             account_id2 = self.create_account(account_name)
             assert int(account_id2) > 0
             assert account_id != account_id2
-            assert self.__vault.account[account_id2].name == account_name
-            assert self.names(keyword=account_name) == {account_id: account_name, account_id2: account_name}
+            assert self.name(account_id2) == account_name
+            assert self.names(keyword=account_name) == {account_name: account_id2}
 
             assert self.__history()
+            count = len(self.__vault.history)
+            if debug:
+                print('history-count', count)
+            assert count == 8
+
+            assert self.recall(dry=False, debug=debug)
+            assert self.name(account_id2) == ''
+            assert self.account_exists(account_id2)
+            assert self.recall(dry=False, debug=debug)
+            assert not self.account_exists(account_id2)
+            assert self.recall(dry=False, debug=debug)
+            assert self.name(account_id) == account_name
+            assert self.recall(dry=False, debug=debug)
+            assert self.account_exists(account_id)
+            assert self.recall(dry=False, debug=debug)
+            assert not self.account_exists(account_id)
+            assert self.names(keyword='qwe') == {'qwe': account_id0}
+            assert self.recall(dry=False, debug=debug)
+            assert self.names(keyword='qwe') == {}
+            assert self.name(account_id0) == x
+            assert self.recall(dry=False, debug=debug)
+            assert self.name(account_id0) == ''
+            assert self.account_exists(account_id0)
+            assert self.recall(dry=False, debug=debug)
+            assert not self.account_exists(account_id0)
+            assert not self.recall(dry=False, debug=debug)
 
             # Not allowed for duplicate transactions in the same account and time
 
@@ -4003,13 +4074,13 @@ class ZakatTracker:
 
             assert self.nolock()
             assert len(self.__vault.history) == 3
-            assert self.recall(False, debug=debug) is True
+            assert self.recall(dry=False, debug=debug) is True
             assert len(self.__vault.history) == 2
-            assert self.recall(False, debug=debug) is True
+            assert self.recall(dry=False, debug=debug) is True
             assert len(self.__vault.history) == 1
-            assert self.recall(False, debug=debug) is True
+            assert self.recall(dry=False, debug=debug) is True
             assert len(self.__vault.history) == 0
-            assert self.recall(False, debug=debug) is False
+            assert self.recall(dry=False, debug=debug) is False
             assert len(self.__vault.history) == 0
 
             # exchange
@@ -4359,7 +4430,7 @@ class ZakatTracker:
                 self.save(hash_required=hashed)
                 assert os.path.getsize(_path) > 0
                 self.reset()
-                assert self.recall(False, debug=debug) is False
+                assert self.recall(dry=False, debug=debug) is False
                 for hash_required in [False, True]:
                     if debug:
                         print(f'[storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
@@ -4404,7 +4475,7 @@ class ZakatTracker:
                 print('history_size', history_size)
             assert history_size == 3
             assert not self.nolock()
-            assert self.recall(False, debug=debug) is False
+            assert self.recall(dry=False, debug=debug) is False
             self.free(lock)
             assert self.nolock()
 
@@ -4413,10 +4484,10 @@ class ZakatTracker:
                 if debug:
                     print('history_size', history_size)
                 assert history_size == i
-                assert self.recall(False, debug=debug) is True
+                assert self.recall(dry=False, debug=debug) is True
 
             assert self.nolock()
-            assert self.recall(False, debug=debug) is False
+            assert self.recall(dry=False, debug=debug) is False
 
             history_size = len(self.__vault.history)
             if debug:
