@@ -353,22 +353,33 @@ class AccountID(str):
 
 
 @dataclasses.dataclass
-class Box:
+class BoxZakat:
     """
-    Represents a box containing financial information.
+    Represents the accumulated zakat information for a financial box.
 
     Attributes:
-    - capital: The initial capital of the box.
-    - count: The number of zakat applied on the box.
-    - last: The timestamp of the last zakat on the box.
-    - rest: The remaining value in the box.
-    - total: The total value of zakat applied on the box.
+    - count (int): The number of times zakat has been applied to the box.
+    - last (int): The timestamp (e.g., Unix epoch) of the most recent zakat calculation.
+    - total (int): The cumulative total value of zakat applied to the box.
     """
-    capital: int #= dataclasses.field(metadata={"frozen": True})
     count: int
     last: int
-    rest: int
     total: int
+
+
+@dataclasses.dataclass
+class Box:
+    """
+    Represents a financial box with capital, remaining value, and zakat details.
+
+    Attributes:
+    - capital (int): The initial capital value of the box.
+    - rest (int): The current remaining value within the box.
+    - zakat (Optional[BoxZakat]): An optional `BoxZakat` object containing the accumulated zakat information for the box. Defaults to None if no zakat has been applied.
+    """
+    capital: int
+    rest: int
+    zakat: BoxZakat
 
 
 @dataclasses.dataclass
@@ -2065,10 +2076,8 @@ class ZakatTracker:
             print('created-box', created_time_ns)
         self.__vault.account[account].box[created_time_ns] = Box(
             capital=value,
-            count=0,
-            last=0,
             rest=value,
-            total=0,
+            zakat=BoxZakat(0, 0, 0),
         )
         self.__step(Action.TRACK, account, ref=created_time_ns, value=value)
         if no_lock:
@@ -2904,8 +2913,8 @@ class ZakatTracker:
                 epoch = (created_time_ns - j) / cycle
                 if debug:
                     print(f'Epoch: {epoch}', _box[j])
-                if _box[j].last > 0:
-                    epoch = (created_time_ns - _box[j].last) / cycle
+                if _box[j].zakat.last > 0:
+                    epoch = (created_time_ns - _box[j].zakat.last) / cycle
                 if debug:
                     print(f'Epoch: {epoch}')
                 epoch = math.floor(epoch)
@@ -3077,16 +3086,16 @@ class ZakatTracker:
                 if debug:
                     print('j', j)
                 assert j
-                self.__step(Action.ZAKAT, account=x, ref=j, value=self.__vault.account[x].box[j].last,
+                self.__step(Action.ZAKAT, account=x, ref=j, value=self.__vault.account[x].box[j].zakat.last,
                            key='last',
                            math_operation=MathOperation.EQUAL)
-                self.__vault.account[x].box[j].last = created_time_ns
+                self.__vault.account[x].box[j].zakat.last = created_time_ns
                 assert target_exchange.rate is not None
                 amount = ZakatTracker.exchange_calc(float(plan.total), 1, float(target_exchange.rate))
-                self.__vault.account[x].box[j].total += amount
+                self.__vault.account[x].box[j].zakat.total += amount
                 self.__step(Action.ZAKAT, account=x, ref=j, value=amount, key='total',
                            math_operation=MathOperation.ADDITION)
-                self.__vault.account[x].box[j].count += plan.count
+                self.__vault.account[x].box[j].zakat.count += plan.count
                 self.__step(Action.ZAKAT, account=x, ref=j, value=plan.count, key='count',
                            math_operation=MathOperation.ADDITION)
                 if not parts_exist:
@@ -3181,7 +3190,14 @@ class ZakatTracker:
         for account_reference, account_data in data.get("account", {}).items():
             account_reference = AccountID(account_reference)
             box_data = account_data.get('box', {})
-            box = {Timestamp(ts): Box(**box_data[str(ts)]) for ts in box_data}
+            box = {
+                Timestamp(ts): Box(
+                    capital=box_data[str(ts)]["capital"],
+                    rest=box_data[str(ts)]["rest"],
+                    zakat=BoxZakat(**box_data[str(ts)]["zakat"]),
+                )
+                for ts in box_data
+            }
 
             log_data = account_data.get('log', {})
             log = {Timestamp(ts): Log(
@@ -3237,7 +3253,11 @@ class ZakatTracker:
                 zakat_plan[account_reference] = []
                 for box_plan_data in box_plans:
                     zakat_plan[account_reference].append(BoxPlan(
-                        box=Box(**box_plan_data["box"]),
+                        box=Box(
+                            capital=box_plan_data["box"]["capital"],
+                            rest=box_plan_data["box"]["rest"],
+                            zakat=BoxZakat(**box_plan_data["box"]["zakat"]),
+                        ),
                         log=Log(**box_plan_data["log"]),
                         exchange=Exchange(**box_plan_data["exchange"]),
                         below_nisab=box_plan_data["below_nisab"],
