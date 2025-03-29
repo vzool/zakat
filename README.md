@@ -123,10 +123,10 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
   "account": {
     "1": {
       "balance": 950000,
-      "created": 63878879465074560000,
+      "created": 63878921581644775000,
       "name": "",
       "box": {
-        "63878879465074556928": {
+        "63878921581644775424": {
           "capital": 1000000,
           "count": 0,
           "last": 0,
@@ -136,13 +136,13 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       "count": 2,
       "log": {
-        "63878879465074556928": {
+        "63878921581644775424": {
           "value": 1000000,
           "desc": "Initial deposit",
           "ref": null,
           "file": {}
         },
-        "63878879465075572736": {
+        "63878921581645742080": {
           "value": -50000,
           "desc": "Plummer maintenance expense",
           "ref": null,
@@ -152,12 +152,12 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       "hide": false,
       "zakatable": true
     },
-    "63878879465074925568": {
+    "63878921581645135872": {
       "balance": 892500,
-      "created": 63878879465074970000,
+      "created": 63878921581645170000,
       "name": "pocket",
       "box": {
-        "63878879465075056640": {
+        "63878921581645275136": {
           "capital": 1000000,
           "count": 0,
           "last": 0,
@@ -167,31 +167,31 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       "count": 5,
       "log": {
-        "63878879465075056640": {
+        "63878921581645275136": {
           "value": 1000000,
           "desc": "Initial deposit",
           "ref": null,
           "file": {}
         },
-        "63878879465075728384": {
+        "63878921581645881344": {
           "value": -50000,
           "desc": "Internet monthly subscription",
           "ref": null,
           "file": {}
         },
-        "63878879465075982336": {
+        "63878921581645996032": {
           "value": -10000,
           "desc": "",
           "ref": null,
           "file": {}
         },
-        "63878879465076383744": {
+        "63878921581646331904": {
           "value": -10000,
           "desc": "",
           "ref": null,
           "file": {}
         },
-        "63878879465076637696": {
+        "63878921581646569472": {
           "value": -37500,
           "desc": "",
           "ref": null,
@@ -201,31 +201,31 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       "hide": false,
       "zakatable": true
     },
-    "63878879465075179520": {
+    "63878921581645381632": {
       "balance": 975000,
-      "created": 63878879465075200000,
+      "created": 63878921581645400000,
       "name": "bunker",
       "box": {
-        "63847343465075253248": {
+        "63847385581645479936": {
           "capital": 1000000,
           "count": 1,
-          "last": 63878879465077236000,
+          "last": 63878921581647140000,
           "rest": 975000,
           "total": 25000
         }
       },
       "count": 2,
       "log": {
-        "63847343465075253248": {
+        "63847385581645479936": {
           "value": 1000000,
           "desc": "Initial deposit",
           "ref": null,
           "file": {}
         },
-        "63878879465077301248": {
+        "63878921581647208448": {
           "value": -25000,
           "desc": "zakat-زكاة",
-          "ref": 63847343465075250000,
+          "ref": 63847385581645480000,
           "file": {}
         }
       },
@@ -234,10 +234,10 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
     },
     "bank": {
       "balance": 10000,
-      "created": 63878879465075060000,
+      "created": 63878921581645275000,
       "name": "",
       "box": {
-        "63878879465075056640": {
+        "63878921581645275136": {
           "capital": 10000,
           "count": 0,
           "last": 0,
@@ -247,7 +247,7 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       "count": 1,
       "log": {
-        "63878879465075056640": {
+        "63878921581645275136": {
           "value": 10000,
           "desc": "",
           "ref": null,
@@ -257,12 +257,12 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       "hide": false,
       "zakatable": true
     },
-    "63878879465076301824": {
+    "63878921581646225408": {
       "balance": 10000,
-      "created": 63878879465076330000,
+      "created": 63878921581646250000,
       "name": "safe",
       "box": {
-        "63878879465075056640": {
+        "63878921581645275136": {
           "capital": 10000,
           "count": 0,
           "last": 0,
@@ -272,7 +272,7 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       "count": 1,
       "log": {
-        "63878879465075056640": {
+        "63878921581645275136": {
           "value": 10000,
           "desc": "",
           "ref": null,
@@ -284,10 +284,10 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
     },
     "bank (USD)": {
       "balance": 10000,
-      "created": 63878879465075060000,
+      "created": 63878921581645275000,
       "name": "",
       "box": {
-        "63878879465075056640": {
+        "63878921581645275136": {
           "capital": 10000,
           "count": 0,
           "last": 0,
@@ -297,7 +297,7 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       "count": 1,
       "log": {
-        "63878879465075056640": {
+        "63878921581645275136": {
           "value": 10000,
           "desc": "",
           "ref": null,
@@ -310,15 +310,15 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
   },
   "exchange": {
     "bank (USD)": {
-      "63878879465076563968": {
+      "63878921581646503936": {
         "rate": 3.75,
         "description": null,
-        "time": 63878879465076560000
+        "time": 63878921581646500000
       }
     }
   },
   "history": {
-    "63878879465074647040": [
+    "63878921581644857344": [
       {
         "action": "CREATE",
         "account": "1",
@@ -331,7 +331,7 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       {
         "action": "LOG",
         "account": "1",
-        "ref": 63878879465074560000,
+        "ref": 63878921581644775000,
         "file": null,
         "key": null,
         "value": 1000000,
@@ -340,17 +340,17 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       {
         "action": "TRACK",
         "account": "1",
-        "ref": 63878879465074560000,
+        "ref": 63878921581644775000,
         "file": null,
         "key": null,
         "value": 1000000,
         "math": null
       }
     ],
-    "63878879465074991104": [
+    "63878921581645193216": [
       {
         "action": "CREATE",
-        "account": "63878879465074925568",
+        "account": "63878921581645135872",
         "ref": null,
         "file": null,
         "key": null,
@@ -358,11 +358,22 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
         "math": null
       }
     ],
-    "63878879465075081216": [
+    "63878921581645242368": [
+      {
+        "action": "NAME",
+        "account": "63878921581645135872",
+        "ref": null,
+        "file": null,
+        "key": null,
+        "value": "",
+        "math": null
+      }
+    ],
+    "63878921581645291520": [
       {
         "action": "LOG",
-        "account": "63878879465074925568",
-        "ref": 63878879465075060000,
+        "account": "63878921581645135872",
+        "ref": 63878921581645275000,
         "file": null,
         "key": null,
         "value": 1000000,
@@ -370,18 +381,18 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       {
         "action": "TRACK",
-        "account": "63878879465074925568",
-        "ref": 63878879465075060000,
+        "account": "63878921581645135872",
+        "ref": 63878921581645275000,
         "file": null,
         "key": null,
         "value": 1000000,
         "math": null
       }
     ],
-    "63878879465075212288": [
+    "63878921581645414400": [
       {
         "action": "CREATE",
-        "account": "63878879465075179520",
+        "account": "63878921581645381632",
         "ref": null,
         "file": null,
         "key": null,
@@ -389,11 +400,22 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
         "math": null
       }
     ],
-    "63878879465075466240": [
+    "63878921581645455360": [
+      {
+        "action": "NAME",
+        "account": "63878921581645381632",
+        "ref": null,
+        "file": null,
+        "key": null,
+        "value": "",
+        "math": null
+      }
+    ],
+    "63878921581645668352": [
       {
         "action": "LOG",
-        "account": "63878879465075179520",
-        "ref": 63847343465075250000,
+        "account": "63878921581645381632",
+        "ref": 63847385581645480000,
         "file": null,
         "key": null,
         "value": 1000000,
@@ -401,19 +423,19 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       {
         "action": "TRACK",
-        "account": "63878879465075179520",
-        "ref": 63847343465075250000,
+        "account": "63878921581645381632",
+        "ref": 63847385581645480000,
         "file": null,
         "key": null,
         "value": 1000000,
         "math": null
       }
     ],
-    "63878879465075597312": [
+    "63878921581645766656": [
       {
         "action": "LOG",
         "account": "1",
-        "ref": 63878879465075570000,
+        "ref": 63878921581645740000,
         "file": null,
         "key": null,
         "value": -50000,
@@ -422,18 +444,18 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       {
         "action": "SUBTRACT",
         "account": "1",
-        "ref": 63878879465074560000,
+        "ref": 63878921581644775000,
         "file": null,
         "key": null,
         "value": 50000,
         "math": null
       }
     ],
-    "63878879465075761152": [
+    "63878921581645905920": [
       {
         "action": "LOG",
-        "account": "63878879465074925568",
-        "ref": 63878879465075730000,
+        "account": "63878921581645135872",
+        "ref": 63878921581645880000,
         "file": null,
         "key": null,
         "value": -50000,
@@ -441,19 +463,19 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       {
         "action": "SUBTRACT",
-        "account": "63878879465074925568",
-        "ref": 63878879465075060000,
+        "account": "63878921581645135872",
+        "ref": 63878921581645275000,
         "file": null,
         "key": null,
         "value": 50000,
         "math": null
       }
     ],
-    "63878879465076023296": [
+    "63878921581646020608": [
       {
         "action": "LOG",
-        "account": "63878879465074925568",
-        "ref": 63878879465075980000,
+        "account": "63878921581645135872",
+        "ref": 63878921581646000000,
         "file": null,
         "key": null,
         "value": -10000,
@@ -461,8 +483,8 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       {
         "action": "SUBTRACT",
-        "account": "63878879465074925568",
-        "ref": 63878879465075060000,
+        "account": "63878921581645135872",
+        "ref": 63878921581645275000,
         "file": null,
         "key": null,
         "value": 10000,
@@ -480,7 +502,7 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       {
         "action": "LOG",
         "account": "bank",
-        "ref": 63878879465075060000,
+        "ref": 63878921581645275000,
         "file": null,
         "key": null,
         "value": 10000,
@@ -489,17 +511,17 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       {
         "action": "TRACK",
         "account": "bank",
-        "ref": 63878879465075060000,
+        "ref": 63878921581645275000,
         "file": null,
         "key": null,
         "value": 10000,
         "math": null
       }
     ],
-    "63878879465076350976": [
+    "63878921581646266368": [
       {
         "action": "CREATE",
-        "account": "63878879465076301824",
+        "account": "63878921581646225408",
         "ref": null,
         "file": null,
         "key": null,
@@ -507,11 +529,22 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
         "math": null
       }
     ],
-    "63878879465076408320": [
+    "63878921581646307328": [
+      {
+        "action": "NAME",
+        "account": "63878921581646225408",
+        "ref": null,
+        "file": null,
+        "key": null,
+        "value": "",
+        "math": null
+      }
+    ],
+    "63878921581646348288": [
       {
         "action": "LOG",
-        "account": "63878879465074925568",
-        "ref": 63878879465076380000,
+        "account": "63878921581645135872",
+        "ref": 63878921581646330000,
         "file": null,
         "key": null,
         "value": -10000,
@@ -519,8 +552,8 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       {
         "action": "SUBTRACT",
-        "account": "63878879465074925568",
-        "ref": 63878879465075060000,
+        "account": "63878921581645135872",
+        "ref": 63878921581645275000,
         "file": null,
         "key": null,
         "value": 10000,
@@ -528,8 +561,8 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       {
         "action": "LOG",
-        "account": "63878879465076301824",
-        "ref": 63878879465075060000,
+        "account": "63878921581646225408",
+        "ref": 63878921581645275000,
         "file": null,
         "key": null,
         "value": 10000,
@@ -537,30 +570,30 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       {
         "action": "TRACK",
-        "account": "63878879465076301824",
-        "ref": 63878879465075060000,
+        "account": "63878921581646225408",
+        "ref": 63878921581645275000,
         "file": null,
         "key": null,
         "value": 10000,
         "math": null
       }
     ],
-    "63878879465076588544": [
+    "63878921581646528512": [
       {
         "action": "EXCHANGE",
         "account": "bank (USD)",
-        "ref": 63878879465076560000,
+        "ref": 63878921581646500000,
         "file": null,
         "key": null,
         "value": 3.75,
         "math": null
       }
     ],
-    "63878879465076654080": [
+    "63878921581646585856": [
       {
         "action": "LOG",
-        "account": "63878879465074925568",
-        "ref": 63878879465076640000,
+        "account": "63878921581645135872",
+        "ref": 63878921581646570000,
         "file": null,
         "key": null,
         "value": -37500,
@@ -568,8 +601,8 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       {
         "action": "SUBTRACT",
-        "account": "63878879465074925568",
-        "ref": 63878879465075060000,
+        "account": "63878921581645135872",
+        "ref": 63878921581645275000,
         "file": null,
         "key": null,
         "value": 37500,
@@ -587,7 +620,7 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       {
         "action": "LOG",
         "account": "bank (USD)",
-        "ref": 63878879465075060000,
+        "ref": 63878921581645275000,
         "file": null,
         "key": null,
         "value": 10000,
@@ -596,18 +629,18 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       {
         "action": "TRACK",
         "account": "bank (USD)",
-        "ref": 63878879465075060000,
+        "ref": 63878921581645275000,
         "file": null,
         "key": null,
         "value": 10000,
         "math": null
       }
     ],
-    "63878879465077202944": [
+    "63878921581647101952": [
       {
         "action": "REPORT",
         "account": null,
-        "ref": 63878879465077210000,
+        "ref": 63878921581647120000,
         "file": null,
         "key": null,
         "value": null,
@@ -615,8 +648,8 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       {
         "action": "ZAKAT",
-        "account": "63878879465075179520",
-        "ref": 63847343465075250000,
+        "account": "63878921581645381632",
+        "ref": 63847385581645480000,
         "file": null,
         "key": "last",
         "value": 0,
@@ -624,8 +657,8 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       {
         "action": "ZAKAT",
-        "account": "63878879465075179520",
-        "ref": 63847343465075250000,
+        "account": "63878921581645381632",
+        "ref": 63847385581645480000,
         "file": null,
         "key": "total",
         "value": 25000,
@@ -633,8 +666,8 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       {
         "action": "ZAKAT",
-        "account": "63878879465075179520",
-        "ref": 63847343465075250000,
+        "account": "63878921581645381632",
+        "ref": 63847385581645480000,
         "file": null,
         "key": "count",
         "value": 1,
@@ -642,8 +675,8 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
       },
       {
         "action": "LOG",
-        "account": "63878879465075179520",
-        "ref": 63878879465077300000,
+        "account": "63878921581645381632",
+        "ref": 63878921581647210000,
         "file": null,
         "key": null,
         "value": -25000,
@@ -653,7 +686,7 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
   },
   "lock": null,
   "report": {
-    "63878879465077211136": {
+    "63878921581647118336": {
       "valid": true,
       "statistics": {
         "overall_wealth": 2900000,
@@ -662,12 +695,12 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
         "zakat_cut_balances": 25000
       },
       "plan": {
-        "63878879465075179520": [
+        "63878921581645381632": [
           {
             "box": {
               "capital": 1000000,
               "count": 1,
-              "last": 63878879465077236000,
+              "last": 63878921581647140000,
               "rest": 975000,
               "total": 25000
             },
@@ -680,12 +713,12 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
             "exchange": {
               "rate": 1,
               "description": null,
-              "time": 63878879465077010000
+              "time": 63878921581646920000
             },
             "below_nisab": false,
             "total": 25000,
             "count": 1,
-            "ref": 63847343465075250000
+            "ref": 63847385581645480000
           }
         ]
       }
