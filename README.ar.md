@@ -92,7 +92,8 @@ subtract_report = ledger.subtract(
 )
 
 # تحويل الأرصدة
-ledger.transfer(100, pocket_account_id, "البنك") # الوقت الافتراضي هو الآن
+bank_account_id = ledger.create_account("البنك")
+ledger.transfer(100, pocket_account_id, bank_account_id) #الوقت الافتراضي هو
 # أو
 transfer_report = ledger.transfer(
     100,
@@ -101,11 +102,12 @@ transfer_report = ledger.transfer(
     created_time_ns=Time.time(datetime.now()),
 )
 # أو
-ledger.exchange("البنك (USD)", rate=3.75) #افترض أن العملة الحالية هي سعر صرف ريال سعودي = 1
+bank_usd_account_id = ledger.create_account("البنك (USD)")
+ledger.exchange(bank_usd_account_id, rate=3.75) #افترض أن العملة الحالية هي سعر صرف ريال سعودي = 1
 ledger.transfer(
     375,
     pocket_account_id,
-    "البنك (USD)",
+    bank_usd_account_id,
 ) # هذه المرة تم النظر في أسعار الصرف
 
 # ملحوظة: يتم الاحتفاظ بعمر الأرصدة في جميع المعاملات أثناء النقل.
@@ -132,10 +134,10 @@ ledger.zakat(zakat_report, parts) # --> False
   "account": {
     "1": {
       "balance": 950000,
-      "created": 63878921595730590000,
+      "created": 63878935432229270000,
       "name": "",
       "box": {
-        "63878921595730591744": {
+        "63878935432229273600": {
           "capital": 1000000,
           "count": 0,
           "last": 0,
@@ -145,13 +147,13 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       "count": 2,
       "log": {
-        "63878921595730591744": {
+        "63878935432229273600": {
           "value": 1000000,
           "desc": "ايداع مبدئي",
           "ref": null,
           "file": {}
         },
-        "63878921595731673088": {
+        "63878935432230576128": {
           "value": -50000,
           "desc": "Plummer maintenance expense",
           "ref": null,
@@ -161,12 +163,12 @@ ledger.zakat(zakat_report, parts) # --> False
       "hide": false,
       "zakatable": true
     },
-    "63878921595731001344": {
+    "63878935432229683200": {
       "balance": 892500,
-      "created": 63878921595731040000,
+      "created": 63878935432229760000,
       "name": "الجيب",
       "box": {
-        "63878921595731156992": {
+        "63878935432229912576": {
           "capital": 1000000,
           "count": 0,
           "last": 0,
@@ -176,31 +178,31 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       "count": 5,
       "log": {
-        "63878921595731156992": {
+        "63878935432229912576": {
           "value": 1000000,
           "desc": "ايداع مبدئي",
           "ref": null,
           "file": {}
         },
-        "63878921595731935232": {
+        "63878935432230764544": {
           "value": -50000,
           "desc": "اشتراك الانترنت الشهري",
           "ref": null,
           "file": {}
         },
-        "63878921595732115456": {
+        "63878935432231108608": {
           "value": -10000,
           "desc": "",
           "ref": null,
           "file": {}
         },
-        "63878921595732492288": {
+        "63878935432231591936": {
           "value": -10000,
           "desc": "",
           "ref": null,
           "file": {}
         },
-        "63878921595732705280": {
+        "63878935432232108032": {
           "value": -37500,
           "desc": "",
           "ref": null,
@@ -210,43 +212,43 @@ ledger.zakat(zakat_report, parts) # --> False
       "hide": false,
       "zakatable": true
     },
-    "63878921595731279872": {
+    "63878935432230060032": {
       "balance": 975000,
-      "created": 63878921595731300000,
+      "created": 63878935432230110000,
       "name": "المخبئ",
       "box": {
-        "63847385595731386368": {
+        "63847399432230232064": {
           "capital": 1000000,
           "count": 1,
-          "last": 63878921595733220000,
+          "last": 63878935432232860000,
           "rest": 975000,
           "total": 25000
         }
       },
       "count": 2,
       "log": {
-        "63847385595731386368": {
+        "63847399432230232064": {
           "value": 1000000,
           "desc": "Initial deposit",
           "ref": null,
           "file": {}
         },
-        "63878921595733278720": {
+        "63878935432233091072": {
           "value": -25000,
           "desc": "zakat-زكاة",
-          "ref": 63847385595731390000,
+          "ref": 63847399432230230000,
           "file": {}
         }
       },
       "hide": false,
       "zakatable": true
     },
-    "البنك": {
+    "63878935432230936576": {
       "balance": 10000,
-      "created": 63878921595731160000,
-      "name": "",
+      "created": 63878935432230986000,
+      "name": "البنك",
       "box": {
-        "63878921595731156992": {
+        "63878935432229912576": {
           "capital": 10000,
           "count": 0,
           "last": 0,
@@ -256,7 +258,7 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       "count": 1,
       "log": {
-        "63878921595731156992": {
+        "63878935432229912576": {
           "value": 10000,
           "desc": "",
           "ref": null,
@@ -266,12 +268,12 @@ ledger.zakat(zakat_report, parts) # --> False
       "hide": false,
       "zakatable": true
     },
-    "63878921595732377600": {
+    "63878935432231419904": {
       "balance": 10000,
-      "created": 63878921595732400000,
+      "created": 63878935432231470000,
       "name": "الخزنة",
       "box": {
-        "63878921595731156992": {
+        "63878935432229912576": {
           "capital": 10000,
           "count": 0,
           "last": 0,
@@ -281,7 +283,7 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       "count": 1,
       "log": {
-        "63878921595731156992": {
+        "63878935432229912576": {
           "value": 10000,
           "desc": "",
           "ref": null,
@@ -291,12 +293,12 @@ ledger.zakat(zakat_report, parts) # --> False
       "hide": false,
       "zakatable": true
     },
-    "البنك (USD)": {
+    "63878935432231854080": {
       "balance": 10000,
-      "created": 63878921595731160000,
-      "name": "",
+      "created": 63878935432231895000,
+      "name": "البنك (USD)",
       "box": {
-        "63878921595731156992": {
+        "63878935432229912576": {
           "capital": 10000,
           "count": 0,
           "last": 0,
@@ -306,7 +308,7 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       "count": 1,
       "log": {
-        "63878921595731156992": {
+        "63878935432229912576": {
           "value": 10000,
           "desc": "",
           "ref": null,
@@ -318,16 +320,16 @@ ledger.zakat(zakat_report, parts) # --> False
     }
   },
   "exchange": {
-    "البنك (USD)": {
-      "63878921595732639744": {
+    "63878935432231854080": {
+      "63878935432232009728": {
         "rate": 3.75,
         "description": null,
-        "time": 63878921595732640000
+        "time": 63878935432232010000
       }
     }
   },
   "history": {
-    "63878921595730681856": [
+    "63878935432229371904": [
       {
         "action": "CREATE",
         "account": "1",
@@ -340,7 +342,7 @@ ledger.zakat(zakat_report, parts) # --> False
       {
         "action": "LOG",
         "account": "1",
-        "ref": 63878921595730590000,
+        "ref": 63878935432229270000,
         "file": null,
         "key": null,
         "value": 1000000,
@@ -349,17 +351,17 @@ ledger.zakat(zakat_report, parts) # --> False
       {
         "action": "TRACK",
         "account": "1",
-        "ref": 63878921595730590000,
+        "ref": 63878935432229270000,
         "file": null,
         "key": null,
         "value": 1000000,
         "math": null
       }
     ],
-    "63878921595731066880": [
+    "63878935432229789696": [
       {
         "action": "CREATE",
-        "account": "63878921595731001344",
+        "account": "63878935432229683200",
         "ref": null,
         "file": null,
         "key": null,
@@ -367,10 +369,10 @@ ledger.zakat(zakat_report, parts) # --> False
         "math": null
       }
     ],
-    "63878921595731124224": [
+    "63878935432229863424": [
       {
         "action": "NAME",
-        "account": "63878921595731001344",
+        "account": "63878935432229683200",
         "ref": null,
         "file": null,
         "key": null,
@@ -378,11 +380,11 @@ ledger.zakat(zakat_report, parts) # --> False
         "math": null
       }
     ],
-    "63878921595731181568": [
+    "63878935432229937152": [
       {
         "action": "LOG",
-        "account": "63878921595731001344",
-        "ref": 63878921595731160000,
+        "account": "63878935432229683200",
+        "ref": 63878935432229910000,
         "file": null,
         "key": null,
         "value": 1000000,
@@ -390,18 +392,18 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       {
         "action": "TRACK",
-        "account": "63878921595731001344",
-        "ref": 63878921595731160000,
+        "account": "63878935432229683200",
+        "ref": 63878935432229910000,
         "file": null,
         "key": null,
         "value": 1000000,
         "math": null
       }
     ],
-    "63878921595731320832": [
+    "63878935432230133760": [
       {
         "action": "CREATE",
-        "account": "63878921595731279872",
+        "account": "63878935432230060032",
         "ref": null,
         "file": null,
         "key": null,
@@ -409,10 +411,10 @@ ledger.zakat(zakat_report, parts) # --> False
         "math": null
       }
     ],
-    "63878921595731361792": [
+    "63878935432230182912": [
       {
         "action": "NAME",
-        "account": "63878921595731279872",
+        "account": "63878935432230060032",
         "ref": null,
         "file": null,
         "key": null,
@@ -420,11 +422,11 @@ ledger.zakat(zakat_report, parts) # --> False
         "math": null
       }
     ],
-    "63878921595731599360": [
+    "63878935432230477824": [
       {
         "action": "LOG",
-        "account": "63878921595731279872",
-        "ref": 63847385595731390000,
+        "account": "63878935432230060032",
+        "ref": 63847399432230230000,
         "file": null,
         "key": null,
         "value": 1000000,
@@ -432,19 +434,19 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       {
         "action": "TRACK",
-        "account": "63878921595731279872",
-        "ref": 63847385595731390000,
+        "account": "63878935432230060032",
+        "ref": 63847399432230230000,
         "file": null,
         "key": null,
         "value": 1000000,
         "math": null
       }
     ],
-    "63878921595731697664": [
+    "63878935432230608896": [
       {
         "action": "LOG",
         "account": "1",
-        "ref": 63878921595731670000,
+        "ref": 63878935432230580000,
         "file": null,
         "key": null,
         "value": -50000,
@@ -453,18 +455,18 @@ ledger.zakat(zakat_report, parts) # --> False
       {
         "action": "SUBTRACT",
         "account": "1",
-        "ref": 63878921595730590000,
+        "ref": 63878935432229270000,
         "file": null,
         "key": null,
         "value": 50000,
         "math": null
       }
     ],
-    "63878921595731976192": [
+    "63878935432230797312": [
       {
         "action": "LOG",
-        "account": "63878921595731001344",
-        "ref": 63878921595731935000,
+        "account": "63878935432229683200",
+        "ref": 63878935432230765000,
         "file": null,
         "key": null,
         "value": -50000,
@@ -472,65 +474,18 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       {
         "action": "SUBTRACT",
-        "account": "63878921595731001344",
-        "ref": 63878921595731160000,
+        "account": "63878935432229683200",
+        "ref": 63878935432229910000,
         "file": null,
         "key": null,
         "value": 50000,
         "math": null
       }
     ],
-    "63878921595732140032": [
-      {
-        "action": "LOG",
-        "account": "63878921595731001344",
-        "ref": 63878921595732115000,
-        "file": null,
-        "key": null,
-        "value": -10000,
-        "math": null
-      },
-      {
-        "action": "SUBTRACT",
-        "account": "63878921595731001344",
-        "ref": 63878921595731160000,
-        "file": null,
-        "key": null,
-        "value": 10000,
-        "math": null
-      },
+    "63878935432231010304": [
       {
         "action": "CREATE",
-        "account": "البنك",
-        "ref": null,
-        "file": null,
-        "key": null,
-        "value": null,
-        "math": null
-      },
-      {
-        "action": "LOG",
-        "account": "البنك",
-        "ref": 63878921595731160000,
-        "file": null,
-        "key": null,
-        "value": 10000,
-        "math": null
-      },
-      {
-        "action": "TRACK",
-        "account": "البنك",
-        "ref": 63878921595731160000,
-        "file": null,
-        "key": null,
-        "value": 10000,
-        "math": null
-      }
-    ],
-    "63878921595732418560": [
-      {
-        "action": "CREATE",
-        "account": "63878921595732377600",
+        "account": "63878935432230936576",
         "ref": null,
         "file": null,
         "key": null,
@@ -538,10 +493,10 @@ ledger.zakat(zakat_report, parts) # --> False
         "math": null
       }
     ],
-    "63878921595732459520": [
+    "63878935432231067648": [
       {
         "action": "NAME",
-        "account": "63878921595732377600",
+        "account": "63878935432230936576",
         "ref": null,
         "file": null,
         "key": null,
@@ -549,11 +504,11 @@ ledger.zakat(zakat_report, parts) # --> False
         "math": null
       }
     ],
-    "63878921595732508672": [
+    "63878935432231133184": [
       {
         "action": "LOG",
-        "account": "63878921595731001344",
-        "ref": 63878921595732490000,
+        "account": "63878935432229683200",
+        "ref": 63878935432231110000,
         "file": null,
         "key": null,
         "value": -10000,
@@ -561,8 +516,8 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       {
         "action": "SUBTRACT",
-        "account": "63878921595731001344",
-        "ref": 63878921595731160000,
+        "account": "63878935432229683200",
+        "ref": 63878935432229910000,
         "file": null,
         "key": null,
         "value": 10000,
@@ -570,8 +525,8 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       {
         "action": "LOG",
-        "account": "63878921595732377600",
-        "ref": 63878921595731160000,
+        "account": "63878935432230936576",
+        "ref": 63878935432229910000,
         "file": null,
         "key": null,
         "value": 10000,
@@ -579,30 +534,112 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       {
         "action": "TRACK",
-        "account": "63878921595732377600",
-        "ref": 63878921595731160000,
+        "account": "63878935432230936576",
+        "ref": 63878935432229910000,
         "file": null,
         "key": null,
         "value": 10000,
         "math": null
       }
     ],
-    "63878921595732664320": [
+    "63878935432231501824": [
+      {
+        "action": "CREATE",
+        "account": "63878935432231419904",
+        "ref": null,
+        "file": null,
+        "key": null,
+        "value": null,
+        "math": null
+      }
+    ],
+    "63878935432231550976": [
+      {
+        "action": "NAME",
+        "account": "63878935432231419904",
+        "ref": null,
+        "file": null,
+        "key": null,
+        "value": "",
+        "math": null
+      }
+    ],
+    "63878935432231624704": [
+      {
+        "action": "LOG",
+        "account": "63878935432229683200",
+        "ref": 63878935432231590000,
+        "file": null,
+        "key": null,
+        "value": -10000,
+        "math": null
+      },
+      {
+        "action": "SUBTRACT",
+        "account": "63878935432229683200",
+        "ref": 63878935432229910000,
+        "file": null,
+        "key": null,
+        "value": 10000,
+        "math": null
+      },
+      {
+        "action": "LOG",
+        "account": "63878935432231419904",
+        "ref": 63878935432229910000,
+        "file": null,
+        "key": null,
+        "value": 10000,
+        "math": null
+      },
+      {
+        "action": "TRACK",
+        "account": "63878935432231419904",
+        "ref": 63878935432229910000,
+        "file": null,
+        "key": null,
+        "value": 10000,
+        "math": null
+      }
+    ],
+    "63878935432231919616": [
+      {
+        "action": "CREATE",
+        "account": "63878935432231854080",
+        "ref": null,
+        "file": null,
+        "key": null,
+        "value": null,
+        "math": null
+      }
+    ],
+    "63878935432231968768": [
+      {
+        "action": "NAME",
+        "account": "63878935432231854080",
+        "ref": null,
+        "file": null,
+        "key": null,
+        "value": "",
+        "math": null
+      }
+    ],
+    "63878935432232042496": [
       {
         "action": "EXCHANGE",
-        "account": "البنك (USD)",
-        "ref": 63878921595732640000,
+        "account": "63878935432231854080",
+        "ref": 63878935432232010000,
         "file": null,
         "key": null,
         "value": 3.75,
         "math": null
       }
     ],
-    "63878921595732713472": [
+    "63878935432232132608": [
       {
         "action": "LOG",
-        "account": "63878921595731001344",
-        "ref": 63878921595732705000,
+        "account": "63878935432229683200",
+        "ref": 63878935432232110000,
         "file": null,
         "key": null,
         "value": -37500,
@@ -610,26 +647,17 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       {
         "action": "SUBTRACT",
-        "account": "63878921595731001344",
-        "ref": 63878921595731160000,
+        "account": "63878935432229683200",
+        "ref": 63878935432229910000,
         "file": null,
         "key": null,
         "value": 37500,
         "math": null
       },
       {
-        "action": "CREATE",
-        "account": "البنك (USD)",
-        "ref": null,
-        "file": null,
-        "key": null,
-        "value": null,
-        "math": null
-      },
-      {
         "action": "LOG",
-        "account": "البنك (USD)",
-        "ref": 63878921595731160000,
+        "account": "63878935432231854080",
+        "ref": 63878935432229910000,
         "file": null,
         "key": null,
         "value": 10000,
@@ -637,19 +665,19 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       {
         "action": "TRACK",
-        "account": "البنك (USD)",
-        "ref": 63878921595731160000,
+        "account": "63878935432231854080",
+        "ref": 63878935432229910000,
         "file": null,
         "key": null,
         "value": 10000,
         "math": null
       }
     ],
-    "63878921595733188608": [
+    "63878935432232796160": [
       {
         "action": "REPORT",
         "account": null,
-        "ref": 63878921595733200000,
+        "ref": 63878935432232830000,
         "file": null,
         "key": null,
         "value": null,
@@ -657,8 +685,8 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       {
         "action": "ZAKAT",
-        "account": "63878921595731279872",
-        "ref": 63847385595731390000,
+        "account": "63878935432230060032",
+        "ref": 63847399432230230000,
         "file": null,
         "key": "last",
         "value": 0,
@@ -666,8 +694,8 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       {
         "action": "ZAKAT",
-        "account": "63878921595731279872",
-        "ref": 63847385595731390000,
+        "account": "63878935432230060032",
+        "ref": 63847399432230230000,
         "file": null,
         "key": "total",
         "value": 25000,
@@ -675,8 +703,8 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       {
         "action": "ZAKAT",
-        "account": "63878921595731279872",
-        "ref": 63847385595731390000,
+        "account": "63878935432230060032",
+        "ref": 63847399432230230000,
         "file": null,
         "key": "count",
         "value": 1,
@@ -684,8 +712,8 @@ ledger.zakat(zakat_report, parts) # --> False
       },
       {
         "action": "LOG",
-        "account": "63878921595731279872",
-        "ref": 63878921595733280000,
+        "account": "63878935432230060032",
+        "ref": 63878935432233090000,
         "file": null,
         "key": null,
         "value": -25000,
@@ -695,7 +723,7 @@ ledger.zakat(zakat_report, parts) # --> False
   },
   "lock": null,
   "report": {
-    "63878921595733196800": {
+    "63878935432232828928": {
       "valid": true,
       "statistics": {
         "overall_wealth": 2900000,
@@ -704,12 +732,12 @@ ledger.zakat(zakat_report, parts) # --> False
         "zakat_cut_balances": 25000
       },
       "plan": {
-        "63878921595731279872": [
+        "63878935432230060032": [
           {
             "box": {
               "capital": 1000000,
               "count": 1,
-              "last": 63878921595733220000,
+              "last": 63878935432232860000,
               "rest": 975000,
               "total": 25000
             },
@@ -722,12 +750,12 @@ ledger.zakat(zakat_report, parts) # --> False
             "exchange": {
               "rate": 1,
               "description": null,
-              "time": 63878921595733010000
+              "time": 63878935432232550000
             },
             "below_nisab": false,
             "total": 25000,
             "count": 1,
-            "ref": 63847385595731390000
+            "ref": 63847399432230230000
           }
         ]
       }

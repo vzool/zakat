@@ -189,28 +189,166 @@ class Object:
 
 
 class Timestamp(int):
-    """Represents a timestamp as an integer."""
-    pass
+    """Represents a timestamp as an integer, which must be greater than zero."""
 
+    def __new__(cls, value):
+        """
+        Creates a new Timestamp instance.
 
-def NO_TIME() -> Timestamp:
-    """Returns a Timestamp representing no time (0)."""
-    return Timestamp(0)
+        Parameters:
+        - value (int or str): The integer value to be used as the timestamp.
+
+        Raises:
+        - TypeError: If the provided value is not an integer or a string representing an integer.
+        - ValueError: If the provided value is not greater than zero.
+
+        Returns:
+        - Timestamp: A new Timestamp instance.
+        """
+        if isinstance(value, str):
+            try:
+                value = int(value)
+            except ValueError:
+                raise TypeError(f"String value must represent an integer, instead ({type(value)}: {value}) is given.")
+        if not isinstance(value, int):
+            raise TypeError(f"Timestamp value must be an integer, instead ({type(value)}: {value}) is given.")
+
+        if value <= 0:
+            raise ValueError("Timestamp value must be greater than zero.")
+
+        return super().__new__(cls, value)
+
+    @classmethod
+    def test(cls):
+        """
+        Runs tests for the Timestamp class to ensure it behaves correctly.
+        """
+        test_data = {
+            123: True,
+            "123": True,
+            0: False,
+            "0": False,
+            -1: False,
+            "-1": False,
+            "abc": False,
+            1: True,
+            "1": True,
+        }
+
+        for input_value, expected_output in test_data.items():
+            if expected_output:
+                try:
+                    timestamp = cls(input_value)
+                    assert int(timestamp) == int(input_value), f"Test failed for valid input: '{input_value}'"
+                except (TypeError, ValueError) as e:
+                    assert False, f"Unexpected error for valid input: '{input_value}': {e}"
+            else:
+                try:
+                    cls(input_value)
+                    assert False, f"Expected error for invalid input: '{input_value}'"
+                except (TypeError, ValueError):
+                    pass  # Expected exception
+
 
 class AccountID(str):
     """
-    Represents a unique identifier for an account.
-
-    This class encapsulates account IDs, which are strings. While any string is technically valid,
-    it is strongly recommended to use integer values represented as strings (e.g., "123").
-    This preference stems from the fact that JSON dictionary keys are always strings, ensuring
-    consistent data handling.
-
-    Account IDs are immutable after creation. To associate a human-readable name with an account,
-    use the `name` attribute of the corresponding account object. This allows for updating
-    account names without altering the immutable ID.
+    A class representing an Account ID, which is a string that must be a positive integer greater than zero.
+    Inherits from str, so it behaves like a string.
     """
-    pass
+
+    def __new__(cls, value):
+        """
+        Creates a new AccountID instance.
+
+        Parameters:
+        - value (str): The string value to be used as the AccountID.
+
+        Raises:
+        - ValueError: If the provided value is not a valid AccountID.
+
+        Returns:
+        - AccountID: A new AccountID instance.
+        """
+        if isinstance(value, Timestamp):
+            value = str(value) # convert timestamp to string
+        if not cls.is_valid_account_id(value):
+            raise ValueError(f"Invalid AccountID: '{value}'")
+        return super().__new__(cls, value)
+
+    @staticmethod
+    def is_valid_account_id(s: str) -> bool:
+        """
+        Checks if a string is a valid AccountID (positive integer greater than zero).
+
+        Parameters:
+        - s (str): The string to check.
+
+        Returns:
+         - bool: True if the string is a valid AccountID, False otherwise.
+        """
+        if not s:
+            return False
+
+        if s[0] == '0':
+            return False
+
+        if s.startswith('-'):
+            return False
+
+        if not s.isdigit():
+            return False
+
+        try:
+            num = int(s)
+            return num > 0
+        except ValueError:
+            return False
+
+    @classmethod
+    def test(cls, debug: bool = False):
+        """
+        Runs tests for the AccountID class to ensure it behaves correctly.
+
+        This method tests various valid and invalid input strings to verify that:
+            - Valid AccountIDs are created successfully.
+            - Invalid AccountIDs raise ValueError exceptions.
+        """
+        test_data = {
+            "123": True,
+            "0": False,
+            "01": False,
+            "-1": False,
+            "abc": False,
+            "12.3": False,
+            "": False,
+            "9999999999999999999999999999999999999": True,
+            "1": True,
+            "10": True,
+            "000000000000000001": False,
+            " ": False,
+            "1 ": False,
+            " 1": False,
+            "1.0": False,
+            Timestamp(12345): True, # Test timestamp input
+        }
+
+        for input, expected_output in test_data.items():
+            if expected_output:
+                try:
+                    account_id = cls(input)
+                    if debug:
+                        print(f'"{str(account_id)}", "{input}"')
+                    if isinstance(input, Timestamp):
+                        input = str(input)
+                    assert str(account_id) == input, f"Test failed for valid input: '{input_string}'"
+                except ValueError as e:
+                    assert False, f"Unexpected ValueError for valid input: '{input_string}': {e}"
+            else:
+                try:
+                    cls(input)
+                    assert False, f"Expected ValueError for invalid input: '{input_string}'"
+                except ValueError as e:
+                    pass  # Expected exception
 
 
 @dataclasses.dataclass
@@ -719,7 +857,7 @@ class Time:
             second=0,
             microsecond=0,
         )).total_seconds() * 10 ** 9
-        return Timestamp(now.toordinal() * 86_400_000_000_000 + ns_in_day)
+        return Timestamp(int(now.toordinal() * 86_400_000_000_000 + ns_in_day))
 
     @staticmethod
     def time(now: Optional[datetime.datetime] = None) -> Timestamp:
@@ -1839,7 +1977,7 @@ class ZakatTracker:
 
     def track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: AccountID = AccountID('1'),
               created_time_ns: Optional[Timestamp] = None,
-              debug: bool = False) -> Timestamp:
+              debug: bool = False) -> Optional[Timestamp]:
         """
         This function tracks a transaction for a specific account, so it do creates a new account if it doesn't exist, logs the transaction if logging is True, and updates the account's balance and box.
 
@@ -1851,7 +1989,7 @@ class ZakatTracker:
         - debug (bool, optional): Whether to print debug information. Default is False.
 
         Returns:
-        - Timestamp: The timestamp of the transaction in nanoseconds since epoch(1AD).
+        - Optional[Timestamp]: The timestamp of the transaction in nanoseconds since epoch(1AD).
 
         Raises:
         - ValueError: The created_time_ns should be greater than zero.
@@ -1870,7 +2008,7 @@ class ZakatTracker:
     def __track(self, unscaled_value: float | int | decimal.Decimal = 0, desc: str = '', account: AccountID = AccountID('1'),
               logging: bool = True,
               created_time_ns: Optional[Timestamp] = None,
-              debug: bool = False) -> Timestamp:
+              debug: bool = False) -> Optional[Timestamp]:
         """
         Internal function to track a transaction.
 
@@ -1885,7 +2023,7 @@ class ZakatTracker:
         - debug (bool, optional): Enables debug printing. Defaults to False.
 
         Returns:
-        - Timestamp: The timestamp of the transaction in nanoseconds since the epoch.
+        - Optional[Timestamp]: The timestamp of the transaction in nanoseconds since the epoch.
 
         Raises:
         - ValueError: If `created_time_ns` is not greater than zero.
@@ -1911,7 +2049,7 @@ class ZakatTracker:
             if no_lock:
                 assert lock is not None
                 self.free(lock)
-            return NO_TIME()
+            return None
         value = self.scale(unscaled_value)
         if logging:
             self.__log(value=value, desc=desc, account=account, created_time_ns=created_time_ns, ref=None, debug=debug)
@@ -3523,6 +3661,10 @@ class ZakatTracker:
         if debug:
             random.seed(1234567890)
 
+        # sanity check - core
+
+        Timestamp.test()
+        AccountID.test(debug)
         Time.test(debug)
 
         # sanity check - random forward time
@@ -3648,6 +3790,8 @@ class ZakatTracker:
         assert self.free(lock)
         assert not self.free(lock)
 
+        wallet_account_id = self.create_account('wallet')
+
         table = {
             AccountID('1'): [
                 (0, 10, 1000, 1000, 1000, 1, 1),
@@ -3657,7 +3801,7 @@ class ZakatTracker:
                 (1, 50, -500, -500, -500, 4, 5),
                 (1, 100, -10500, -10500, -10500, 5, 6),
             ],
-            AccountID('wallet'): [
+            wallet_account_id: [
                 (1, 90, -9000, -9000, -9000, 1, 1),
                 (0, 100, 1000, 1000, 1000, 2, 2),
                 (1, 190, -18000, -18000, -18000, 3, 3),
@@ -3753,14 +3897,14 @@ class ZakatTracker:
             count = len(self.__vault.history)
             if debug:
                 print('history-count', count)
-            assert count == 10
+            assert count == 12
             # try mode
             for _ in range(count):
                 assert self.recall(dry=True, debug=debug)
             count = len(self.__vault.history)
             if debug:
                 print('history-count', count)
-            assert count == 10
+            assert count == 12
             _accounts = list(table.keys())
             accounts_limit = len(_accounts) + 1
             for i in range(-1, -accounts_limit, -1):
@@ -3775,7 +3919,9 @@ class ZakatTracker:
                     assert self.balance(account) == self.balance(account, False)
                     assert self.balance(account) == row[2]
                     assert self.recall(dry=False, debug=debug)
-            assert self.recall(dry=False, debug=debug) is False
+            assert self.recall(dry=False, debug=debug)
+            assert self.recall(dry=False, debug=debug)
+            assert not self.recall(dry=False, debug=debug)
             count = len(self.__vault.history)
             if debug:
                 print('history-count', count)
@@ -3919,6 +4065,8 @@ class ZakatTracker:
             }
 
             selected_time = Time.time() - ZakatTracker.TimeCycle()
+            ages_account_id = self.create_account('ages')
+            future_account_id = self.create_account('future')
 
             for total in case:
                 if debug:
@@ -3928,7 +4076,7 @@ class ZakatTracker:
                     self.track(
                         unscaled_value=x[0],
                         desc=f'test-{x} ages',
-                        account=AccountID('ages'),
+                        account=ages_account_id,
                         created_time_ns=selected_time * x[1],
                     )
 
@@ -3937,8 +4085,8 @@ class ZakatTracker:
                     print('unscaled_total', unscaled_total)
                 refs = self.transfer(
                     unscaled_amount=unscaled_total,
-                    from_account='ages',
-                    to_account='future',
+                    from_account=ages_account_id,
+                    to_account=future_account_id,
                     desc='Zakat Movement',
                     debug=debug,
                 )
@@ -3946,16 +4094,16 @@ class ZakatTracker:
                 if debug:
                     print('refs', refs)
 
-                ages_cache_balance = self.balance('ages')
-                ages_fresh_balance = self.balance('ages', False)
+                ages_cache_balance = self.balance(ages_account_id)
+                ages_fresh_balance = self.balance(ages_account_id, False)
                 rest = case[total]['rest']
                 if debug:
                     print('source', ages_cache_balance, ages_fresh_balance, rest)
                 assert ages_cache_balance == rest
                 assert ages_fresh_balance == rest
 
-                future_cache_balance = self.balance('future')
-                future_fresh_balance = self.balance('future', False)
+                future_cache_balance = self.balance(future_account_id)
+                future_fresh_balance = self.balance(future_account_id, False)
                 if debug:
                     print('target', future_cache_balance, future_fresh_balance, total)
                     print('refs', refs)
@@ -3963,15 +4111,15 @@ class ZakatTracker:
                 assert future_fresh_balance == total
 
                 # TODO: check boxes times for `ages` should equal box times in `future`
-                for ref in self.__vault.account['ages'].box:
-                    ages_capital = self.__vault.account['ages'].box[ref].capital
-                    ages_rest = self.__vault.account['ages'].box[ref].rest
+                for ref in self.__vault.account[ages_account_id].box:
+                    ages_capital = self.__vault.account[ages_account_id].box[ref].capital
+                    ages_rest = self.__vault.account[ages_account_id].box[ref].rest
                     future_capital = 0
-                    if ref in self.__vault.account['future'].box:
-                        future_capital = self.__vault.account['future'].box[ref].capital
+                    if ref in self.__vault.account[future_account_id].box:
+                        future_capital = self.__vault.account[future_account_id].box[ref].capital
                     future_rest = 0
-                    if ref in self.__vault.account['future'].box:
-                        future_rest = self.__vault.account['future'].box[ref].rest
+                    if ref in self.__vault.account[future_account_id].box:
+                        future_rest = self.__vault.account[future_account_id].box[ref].rest
                     if ages_capital != 0 and future_capital != 0 and future_rest != 0:
                         if debug:
                             print('================================================================')
@@ -3994,17 +4142,20 @@ class ZakatTracker:
             if debug:
                 print('####################################################################')
 
+            wallet_account_id = self.create_account('wallet')
+            safe_account_id = self.create_account('safe')
+            bank_account_id = self.create_account('bank')
             transaction = [
                 (
-                    20, 'wallet', 1, -2000, -2000, -2000, 1, 1,
+                    20, wallet_account_id, 1, -2000, -2000, -2000, 1, 1,
                     2000, 2000, 2000, 1, 1,
                 ),
                 (
-                    750, 'wallet', 'safe', -77000, -77000, -77000, 2, 2,
+                    750, wallet_account_id, safe_account_id, -77000, -77000, -77000, 2, 2,
                     75000, 75000, 75000, 1, 1,
                 ),
                 (
-                    600, 'safe', 'bank', 15000, 15000, 15000, 1, 2,
+                    600, safe_account_id, bank_account_id, 15000, 15000, 15000, 1, 2,
                     60000, 60000, 60000, 1, 1,
                 ),
             ]
@@ -4061,39 +4212,37 @@ class ZakatTracker:
 
             assert self.nolock()
             history_count = len(self.__vault.history)
-            if debug:
-                print('history-count', history_count)
             transaction_count = len(transaction)
-            assert history_count == transaction_count
+            if debug:
+                print('history-count', history_count, transaction_count)
+            assert history_count == transaction_count * 3
             assert not self.free(Time.time())
             assert self.free(self.lock())
             assert self.nolock()
-            assert len(self.__vault.history) == transaction_count
+            assert len(self.__vault.history) == transaction_count * 3
 
             # recall
 
             assert self.nolock()
-            assert len(self.__vault.history) == 3
-            assert self.recall(dry=False, debug=debug) is True
-            assert len(self.__vault.history) == 2
-            assert self.recall(dry=False, debug=debug) is True
-            assert len(self.__vault.history) == 1
-            assert self.recall(dry=False, debug=debug) is True
+            for i in range(transaction_count * 3, 0, -1):
+                assert len(self.__vault.history) == i
+                assert self.recall(dry=False, debug=debug) is True
             assert len(self.__vault.history) == 0
             assert self.recall(dry=False, debug=debug) is False
             assert len(self.__vault.history) == 0
 
             # exchange
 
-            self.exchange('cash', 25, 3.75, '2024-06-25')
-            self.exchange('cash', 22, 3.73, '2024-06-22')
-            self.exchange('cash', 15, 3.69, '2024-06-15')
-            self.exchange('cash', 10, 3.66)
+            cash_account_id = self.create_account('cash')
+            self.exchange(cash_account_id, 25, 3.75, '2024-06-25')
+            self.exchange(cash_account_id, 22, 3.73, '2024-06-22')
+            self.exchange(cash_account_id, 15, 3.69, '2024-06-15')
+            self.exchange(cash_account_id, 10, 3.66)
 
             assert self.nolock()
 
             for i in range(1, 30):
-                exchange = self.exchange('cash', i)
+                exchange = self.exchange(cash_account_id, i)
                 rate, description, created = exchange.rate, exchange.description, exchange.time
                 if debug:
                     print(i, rate, description, created)
@@ -4135,25 +4284,27 @@ class ZakatTracker:
             self.reset()
 
             # حفظ أسعار الصرف باستخدام التواريخ بالنانو ثانية
-            self.exchange('cash', ZakatTracker.day_to_time(25), 3.75, '2024-06-25')
-            self.exchange('cash', ZakatTracker.day_to_time(22), 3.73, '2024-06-22')
-            self.exchange('cash', ZakatTracker.day_to_time(15), 3.69, '2024-06-15')
-            self.exchange('cash', ZakatTracker.day_to_time(10), 3.66)
+            cash_account_id = self.create_account('cash')
+            self.exchange(cash_account_id, ZakatTracker.day_to_time(25), 3.75, '2024-06-25')
+            self.exchange(cash_account_id, ZakatTracker.day_to_time(22), 3.73, '2024-06-22')
+            self.exchange(cash_account_id, ZakatTracker.day_to_time(15), 3.69, '2024-06-15')
+            self.exchange(cash_account_id, ZakatTracker.day_to_time(10), 3.66)
 
             assert self.nolock()
 
+            test_account_id = self.create_account('test')
             for i in [x * 0.12 for x in range(-15, 21)]:
                 if i <= 0:
-                    assert self.exchange('test', Time.time(), i, f'range({i})') == Exchange()
+                    assert self.exchange(test_account_id, Time.time(), i, f'range({i})') == Exchange()
                 else:
-                    assert self.exchange('test', Time.time(), i, f'range({i})') is not Exchange()
+                    assert self.exchange(test_account_id, Time.time(), i, f'range({i})') is not Exchange()
 
             assert self.nolock()
 
            # اختبار النتائج باستخدام التواريخ بالنانو ثانية
             for i in range(1, 31):
                 timestamp_ns = ZakatTracker.day_to_time(i)
-                exchange = self.exchange('cash', timestamp_ns)
+                exchange = self.exchange(cash_account_id, timestamp_ns)
                 rate, description, created = exchange.rate, exchange.description, exchange.time
                 if debug:
                     print(i, rate, description, created)
@@ -4193,9 +4344,9 @@ class ZakatTracker:
 
             # test transfer between accounts with different exchange rate
 
-            a_SAR = 'Bank (SAR)'
-            b_USD = 'Bank (USD)'
-            c_SAR = 'Safe (SAR)'
+            a_SAR = self.create_account('Bank (SAR)')
+            b_USD = self.create_account('Bank (USD)')
+            c_SAR = self.create_account('Safe (SAR)')
             # 0: track, 1: check-exchange, 2: do-exchange, 3: transfer
             for case in [
                 (0, a_SAR, 'SAR Gift', 1000, 100000),
@@ -4337,6 +4488,8 @@ class ZakatTracker:
             # check & zakat with exchange rates for many cycles
 
             lock = None
+            safe_account_id = self.create_account('safe')
+            cave_account_id = self.create_account('cave')
             for rate, values in {
                 1: {
                     'in': [1000, 2000, 10000],
@@ -4355,14 +4508,14 @@ class ZakatTracker:
                 if debug:
                     print('rate', rate, 'values', values)
                 for case in [
-                    (a, 'safe', Time.time() - ZakatTracker.TimeCycle(), [
-                        {'safe': {0: {'below_nisab': x}}},
+                    (a, safe_account_id, Time.time() - ZakatTracker.TimeCycle(), [
+                        {safe_account_id: {0: {'below_nisab': x}}},
                     ], False, m),
-                    (b, 'safe', Time.time() - ZakatTracker.TimeCycle(), [
-                        {'safe': {0: {'count': 1, 'total': y}}},
+                    (b, safe_account_id, Time.time() - ZakatTracker.TimeCycle(), [
+                        {safe_account_id: {0: {'count': 1, 'total': y}}},
                     ], True, n),
-                    (c, 'cave', Time.time() - (ZakatTracker.TimeCycle() * 3), [
-                        {'cave': {0: {'count': 3, 'total': z}}},
+                    (c, cave_account_id, Time.time() - (ZakatTracker.TimeCycle() * 3), [
+                        {cave_account_id: {0: {'count': 3, 'total': z}}},
                     ], True, o),
                 ]:
                     if debug:
@@ -4442,17 +4595,17 @@ class ZakatTracker:
                     assert old_vault_deep == self.__vault
                     assert old_vault_dict == dataclasses.asdict(self.__vault)
                     # corrupt the data
-                    log_ref = NO_TIME()
+                    log_ref = None
                     tmp_file_ref = Time.time()
-                    for k in self.__vault.account['cave'].log:
+                    for k in self.__vault.account[cave_account_id].log:
                         log_ref = k
-                        self.__vault.account['cave'].log[k].file[tmp_file_ref] = 'HACKED'
+                        self.__vault.account[cave_account_id].log[k].file[tmp_file_ref] = 'HACKED'
                         break
                     assert old_vault != self.__vault
                     assert old_vault_deep != self.__vault
                     assert old_vault_dict != dataclasses.asdict(self.__vault)
                     # fix the data
-                    del self.__vault.account['cave'].log[log_ref].file[tmp_file_ref]
+                    del self.__vault.account[cave_account_id].log[log_ref].file[tmp_file_ref]
                     assert old_vault == self.__vault
                     assert old_vault_deep == self.__vault
                     assert old_vault_dict == dataclasses.asdict(self.__vault)
