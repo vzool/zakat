@@ -289,14 +289,15 @@ class AccountID(str):
         if not s:
             return False
 
-        if s[0] == '0':
-            return False
-
-        if s.startswith('-'):
-            return False
-
-        if not s.isdigit():
-            return False
+        try:
+            if s[0] == '0':
+                return False
+            if s.startswith('-'):
+                return False
+            if not s.isdigit():
+                return False
+        except:
+            pass
 
         try:
             num = int(s)
@@ -1797,6 +1798,7 @@ class ZakatTracker:
         Returns:
         - bool: True if the account exists, False otherwise.
         """
+        account = AccountID(account)
         return account in self.__vault.account
 
     def box_size(self, account: AccountID) -> int:
@@ -1958,6 +1960,7 @@ class ZakatTracker:
         Returns:
         - bool: True if the reference exists for the given account and reference type, False otherwise.
         """
+        account = AccountID(account)
         if account in self.__vault.account:
             return ref in getattr(self.__vault.account[account], ref_type)
         return False
@@ -2031,6 +2034,7 @@ class ZakatTracker:
         """
         if debug:
             print('track', f'unscaled_value={unscaled_value}, debug={debug}')
+        account = AccountID(account)
         if created_time_ns is None:
             created_time_ns = Time.time()
         if created_time_ns <= 0:
@@ -2111,6 +2115,7 @@ class ZakatTracker:
         """
         if debug:
             print('_log', f'debug={debug}')
+        account = AccountID(account)
         if created_time_ns is None:
             created_time_ns = Time.time()
         if created_time_ns <= 0:
@@ -2156,6 +2161,7 @@ class ZakatTracker:
         """
         if debug:
             print('exchange', f'debug={debug}')
+        account = AccountID(account)
         if created_time_ns is None:
             created_time_ns = Time.time()
         if created_time_ns <= 0:
@@ -2513,6 +2519,7 @@ class ZakatTracker:
         - If cached is True, the function returns the cached balance.
         - If cached is False, the function calculates the balance from the box by summing up the 'rest' values of all box items.
         """
+        account = AccountID(account)
         if cached:
             return self.__vault.account[account].balance
         x = 0
@@ -2695,6 +2702,7 @@ class ZakatTracker:
         """
         if debug:
             print('sub', f'debug={debug}')
+        account = AccountID(account)
         if unscaled_value <= 0:
             raise ValueError('The unscaled_value should be greater than zero.')
         if created_time_ns is None:
@@ -2773,6 +2781,8 @@ class ZakatTracker:
         """
         if debug:
             print('transfer', f'debug={debug}')
+        from_account = AccountID(from_account)
+        to_account = AccountID(to_account)
         if from_account == to_account:
             raise ValueError(f'Transfer to the same account is forbidden. {to_account}')
         if unscaled_amount <= 0:
@@ -3391,6 +3401,7 @@ class ZakatTracker:
 
         no_lock = self.nolock()
         lock = self.__lock()
+        names = self.names()
         for date, rows in sorted(data.items()):
             try:
                 len_rows = len(rows)
@@ -3400,6 +3411,12 @@ class ZakatTracker:
                         unscaled_value,
                         decimal_places=scale_decimal_places,
                     ) if scale_decimal_places > 0 else unscaled_value
+                    if account not in names:
+                        account_id = self.create_account(account)
+                        names[account] = account_id
+                        account = account_id
+                    else:
+                        account = names[account]
                     if rate > 0:
                         self.exchange(account=account, created_time_ns=date, rate=rate)
                     if value > 0:
@@ -3939,9 +3956,19 @@ class ZakatTracker:
             # test_names
             self.reset()
             x = "test_names"
-            assert self.name(x) == ''
+            failed = False
+            try:
+                assert self.name(x) == ''
+            except:
+                failed = True
+            assert failed
             assert self.names() == {}
-            assert self.name(x, 'qwe') == ''
+            failed = False
+            try:
+                assert self.name(x, 'qwe') == ''
+            except:
+                failed = True
+            assert failed
             account_id0 = self.create_account(x)
             assert isinstance(account_id0, AccountID)
             assert int(account_id0) > 0
@@ -4011,10 +4038,11 @@ class ZakatTracker:
             # Not allowed for duplicate transactions in the same account and time
 
             created = Time.time()
-            self.track(100, 'test-1', 'same', True, created)
+            same_account_id = self.create_account('same')
+            self.track(100, 'test-1', same_account_id, True, created)
             failed = False
             try:
-                self.track(50, 'test-1', 'same', True, created)
+                self.track(50, 'test-1', same_account_id, True, created)
             except:
                 failed = True
             assert failed is True
@@ -4147,7 +4175,7 @@ class ZakatTracker:
             bank_account_id = self.create_account('bank')
             transaction = [
                 (
-                    20, wallet_account_id, 1, -2000, -2000, -2000, 1, 1,
+                    20, wallet_account_id, AccountID(1), -2000, -2000, -2000, 1, 1,
                     2000, 2000, 2000, 1, 1,
                 ),
                 (
@@ -4241,6 +4269,7 @@ class ZakatTracker:
 
             assert self.nolock()
 
+            bank_account_id = self.create_account('bank')
             for i in range(1, 30):
                 exchange = self.exchange(cash_account_id, i)
                 rate, description, created = exchange.rate, exchange.description, exchange.time
@@ -4268,7 +4297,7 @@ class ZakatTracker:
                 elif i >= 25:
                     assert rate == 3.75
                     assert description is not None
-                exchange = self.exchange('bank', i)
+                exchange = self.exchange(bank_account_id, i)
                 rate, description, created = exchange.rate, exchange.description, exchange.time
                 if debug:
                     print(i, rate, description, created)
@@ -4302,6 +4331,7 @@ class ZakatTracker:
             assert self.nolock()
 
            # اختبار النتائج باستخدام التواريخ بالنانو ثانية
+            bank_account_id = self.create_account('bank')
             for i in range(1, 31):
                 timestamp_ns = ZakatTracker.day_to_time(i)
                 exchange = self.exchange(cash_account_id, timestamp_ns)
@@ -4330,7 +4360,7 @@ class ZakatTracker:
                 elif i >= 25:
                     assert rate == 3.75
                     assert description is not None
-                exchange = self.exchange('bank', i)
+                exchange = self.exchange(bank_account_id, i)
                 rate, description, created = exchange.rate, exchange.description, exchange.time
                 if debug:
                     print(i, rate, description, created)
@@ -4760,6 +4790,7 @@ class ZakatTracker:
                             if i >= count:
                                 break
                         if debug:
+                            print('[debug]', j)
                             print('[debug]', cp.account[j])
                         if cp.account[j] != AccountPaymentPart(0.0, 0.0, 0.0):
                             suite.append(cp)
