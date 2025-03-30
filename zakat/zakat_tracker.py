@@ -530,13 +530,13 @@ class Vault:
     Attributes:
     - account: A dictionary mapping account IDs to Account objects.
     - exchange: A dictionary mapping account IDs to dictionaries of timestamps and Exchange objects.
-    - history: A dictionary mapping timestamps to lists of History objects.
+    - history: A dictionary mapping timestamps to dictionaries of History objects.
     - lock: An optional timestamp for a lock.
     - report: A dictionary mapping timestamps to tuples.
     """
     account: dict[AccountID, Account] = dataclasses.field(default_factory=dict)
     exchange: dict[AccountID, dict[Timestamp, Exchange]] = dataclasses.field(default_factory=dict)
-    history: dict[Timestamp, list[History]] = dataclasses.field(default_factory=dict)
+    history: dict[Timestamp, dict[Timestamp, History]] = dataclasses.field(default_factory=dict)
     lock: Optional[Timestamp] = None
     report: dict[Timestamp, ZakatReport] = dataclasses.field(default_factory=dict)
 
@@ -1090,15 +1090,16 @@ class ZakatTracker:
                         - rate (float): Exchange rate when compared to local currency.
                         - description (str): The description of the exchange rate.
             - history (dict):
-                - {timestamp} (list): A list of dictionaries storing the history of actions performed.
-                    - {action_dict} (dict):
-                        - action (Action): The type of action (CREATE, TRACK, LOG, SUB, ADD_FILE, REMOVE_FILE, BOX_TRANSFER, EXCHANGE, REPORT, ZAKAT).
-                        - account (str): The account reference associated with the action.
-                        - ref (int): The reference number of the transaction.
-                        - file (int): The reference number of the file (if applicable).
-                        - key (str): The key associated with the action (e.g., 'rest', 'total').
-                        - value (int): The value associated with the action.
-                        - math (MathOperation): The mathematical operation performed (if applicable).
+                - {lock_timestamp} (dict): A list of dictionaries storing the history of actions performed.
+                    - {order_timestamp} (dict):
+                        - {action_dict} (dict):
+                            - action (Action): The type of action (CREATE, TRACK, LOG, SUB, ADD_FILE, REMOVE_FILE, BOX_TRANSFER, EXCHANGE, REPORT, ZAKAT).
+                            - account (str): The account reference associated with the action.
+                            - ref (int): The reference number of the transaction.
+                            - file (int): The reference number of the file (if applicable).
+                            - key (str): The key associated with the action (e.g., 'rest', 'total').
+                            - value (int): The value associated with the action.
+                            - math (MathOperation): The mathematical operation performed (if applicable).
             - lock (int or None): The timestamp indicating the current lock status (None if not locked).
             - report (dict):
                 - {timestamp} (tuple): A tuple storing Zakat report details.
@@ -1404,7 +1405,7 @@ class ZakatTracker:
         lock = self.__vault.lock
         if no_lock:
             lock = self.__vault.lock = Time.time()
-            self.__vault.history[lock] = []
+            self.__vault.history[lock] = {}
         if action is None:
             if lock_once:
                 assert no_lock, 'forbidden: lock called twice!!!'
@@ -1414,7 +1415,7 @@ class ZakatTracker:
         assert lock is not None
         assert lock > 0
         assert account is None or action != Action.REPORT
-        self.__vault.history[lock].append(History(
+        self.__vault.history[lock][Time.time()] = History(
             action=action,
             account=account,
             ref=ref,
@@ -1422,7 +1423,7 @@ class ZakatTracker:
             key=key,
             value=value,
             math=math_operation,
-        ))
+        )
         return lock
 
     def nolock(self) -> bool:
@@ -1518,17 +1519,16 @@ class ZakatTracker:
         ref = sorted(self.__vault.history.keys())[-1]
         if debug:
             print('recall', ref)
-        memory = self.__vault.history[ref]
+        memory = sorted(self.__vault.history[ref], reverse=True)
         if debug:
             print(type(memory), 'memory', memory)
         if lock is not None:
             assert self.__vault.lock == lock, "Invalid current lock"
             assert ref == lock, "Invalid last lock"
             assert self.__history(), "History mode should be enabled, found off!!!"
-        limit = len(memory) + 1
         sub_positive_log_negative = 0
-        for i in range(-1, -limit, -1):
-            x = memory[i]
+        for i in memory:
+            x = self.__vault.history[ref][i]
             if debug:
                 print(type(x), x)
             if x.action != Action.REPORT:
@@ -2131,7 +2131,7 @@ class ZakatTracker:
             value=value,
             desc=desc,
             ref=ref,
-            file={},            
+            file={},
         )
         self.__step(Action.LOG, account, ref=created_time_ns, value=value)
         return created_time_ns
@@ -3216,10 +3216,10 @@ class ZakatTracker:
                 )
 
         # Load History
-        for timestamp, history_list in data.get("history", {}).items():
-            vault.history[Timestamp(timestamp)] = []
-            for history_data in history_list:
-                vault.history[Timestamp(timestamp)].append(History(
+        for timestamp, history_dict in data.get("history", {}).items():
+            vault.history[Timestamp(timestamp)] = {}
+            for history_key, history_data in history_dict.items():
+                vault.history[Timestamp(timestamp)][Timestamp(history_key)] = History(
                     action=Action(history_data["action"]),
                     account=AccountID(history_data["account"]) if history_data.get("account") is not None else None,
                     ref=Timestamp(history_data.get("ref")) if history_data.get("ref") is not None else None,
@@ -3227,7 +3227,7 @@ class ZakatTracker:
                     key=history_data.get("key"),
                     value=history_data.get("value"),
                     math=MathOperation(history_data.get("math")) if history_data.get("math") is not None else None
-                ))
+                )
 
         # Load Lock
         vault.lock = Timestamp(data["lock"]) if data.get("lock") is not None else None
@@ -3857,11 +3857,11 @@ class ZakatTracker:
                 assert len(self.__vault.account[x].log[ref].file) == 0
                 for i in range(3):
                     file_ref = self.add_file(x, ref, 'file_' + str(i))
-                    time.sleep(0.0000001)
                     assert file_ref != 0
                     if debug:
                         print('ref', ref, 'file', file_ref)
                     assert len(self.__vault.account[x].log[ref].file) == i + 1
+                    assert file_ref in self.__vault.account[x].log[ref].file
                 file_ref = self.add_file(x, ref, 'file_' + str(3))
                 assert self.remove_file(x, ref, file_ref)
                 daily_logs = self.daily_logs(debug=debug)
