@@ -359,7 +359,7 @@ class BoxZakat:
 
     Attributes:
     - count (int): The number of times zakat has been applied to the box.
-    - last (int): The timestamp (e.g., Unix epoch) of the most recent zakat calculation.
+    - last (int): The timestamp since 1AD epoch of the most recent zakat calculation.
     - total (int): The cumulative total value of zakat applied to the box.
     """
     count: int
@@ -375,7 +375,7 @@ class Box:
     Attributes:
     - capital (int): The initial capital value of the box.
     - rest (int): The current remaining value within the box.
-    - zakat (Optional[BoxZakat]): An optional `BoxZakat` object containing the accumulated zakat information for the box. Defaults to None if no zakat has been applied.
+    - zakat (BoxZakat): A `BoxZakat` object containing the accumulated zakat information for the box.
     """
     capital: int
     rest: int
@@ -651,7 +651,7 @@ class JSONEncoder(json.JSONEncoder):
     Example:
     ```bash
     >>> json.dumps(Action.CREATE, cls=JSONEncoder)
-    ''CREATE''
+    'CREATE'
     >>> json.dumps(decimal.Decimal('10.5'), cls=JSONEncoder)
     '10.5'
     ```
@@ -882,8 +882,7 @@ class Time:
         time resolution.
 
         Parameters:
-        - now (datetime.datetime, optional): The datetime object to generate the timestamp from.
-        If not provided, the current datetime is used.
+        - now (datetime.datetime, optional): The datetime object to generate the timestamp from. If not provided, the current datetime is used.
 
         Returns:
         - Timestamp: The unique timestamp in nanoseconds since the epoch (January 1, 1AD).
@@ -1071,10 +1070,11 @@ class ZakatTracker:
                     - box (dict): A dictionary storing transaction details.
                         - {timestamp} (dict):
                             - capital (int): The initial amount of the transaction.
-                            - count (int): The number of times Zakat has been calculated for this transaction.
-                            - last (int): The timestamp of the last Zakat calculation.
                             - rest (int): The remaining amount after Zakat deductions and withdrawal.
-                            - total (int): The total Zakat deducted from this transaction.
+                            - zakat (dict):
+                                - count (int): The number of times Zakat has been calculated for this transaction.
+                                - last (int): The timestamp of the last Zakat calculation.
+                                - total (int): The total Zakat deducted from this transaction.
                     - count (int): The total number of transactions for the account.
                     - log (dict): A dictionary storing transaction logs.
                         - {timestamp} (dict):
@@ -1115,7 +1115,7 @@ class ZakatTracker:
         Returns:
         - str: The current version of the software.
         """
-        version = '0.3.1'
+        version = '0.3.2'
         git_hash, unstaged_count, commit_count_since_last_tag = get_git_status()
         if git_hash and (unstaged_count > 0 or commit_count_since_last_tag > 0):
             version += f".{commit_count_since_last_tag}dev{unstaged_count}+{git_hash}"
@@ -1531,149 +1531,136 @@ class ZakatTracker:
             x = memory[i]
             if debug:
                 print(type(x), x)
+            if x.action != Action.REPORT:
+                assert x.account is not None
+                if x.action != Action.EXCHANGE:
+                    assert self.account_exists(x.account)
             match x.action:
                 case Action.CREATE:
-                    if x.account is not None:
-                        if self.account_exists(x.account):
-                            if debug:
-                                print('account', self.__vault.account[x.account])
-                            assert len(self.__vault.account[x.account].box) == 0
-                            assert len(self.__vault.account[x.account].log) == 0
-                            assert self.__vault.account[x.account].balance == 0
-                            assert self.__vault.account[x.account].count == 0
-                            assert self.__vault.account[x.account].name == ''
-                            if dry:
-                                continue
-                            del self.__vault.account[x.account]
+                    if debug:
+                        print('account', self.__vault.account[x.account])
+                    assert len(self.__vault.account[x.account].box) == 0
+                    assert len(self.__vault.account[x.account].log) == 0
+                    assert self.__vault.account[x.account].balance == 0
+                    assert self.__vault.account[x.account].count == 0
+                    assert self.__vault.account[x.account].name == ''
+                    if dry:
+                        continue
+                    del self.__vault.account[x.account]
 
                 case Action.NAME:
-                    if x.account is not None:
-                        if self.account_exists(x.account):
-                            if dry:
-                                continue
-                            assert x.value is not None
-                            self.__vault.account[x.account].name = x.value
+                    assert x.value is not None
+                    if dry:
+                        continue
+                    self.__vault.account[x.account].name = x.value
 
                 case Action.TRACK:
-                    if x.account is not None:
-                        if self.account_exists(x.account):
-                            if dry:
-                                continue
-                            assert x.value is not None
-                            assert x.ref is not None
-                            self.__vault.account[x.account].balance -= x.value
-                            self.__vault.account[x.account].count -= 1
-                            del self.__vault.account[x.account].box[x.ref]
+                    assert x.value is not None
+                    assert x.ref is not None
+                    if dry:
+                        continue
+                    self.__vault.account[x.account].balance -= x.value
+                    self.__vault.account[x.account].count -= 1
+                    del self.__vault.account[x.account].box[x.ref]
 
                 case Action.LOG:
-                    if x.account is not None:
-                        if self.account_exists(x.account):
-                            if x.ref in self.__vault.account[x.account].log:
-                                if dry:
-                                    continue
-                                assert x.value is not None
-                                if sub_positive_log_negative == -x.value:
-                                    self.__vault.account[x.account].count -= 1
-                                    sub_positive_log_negative = 0
-                                box_ref = self.__vault.account[x.account].log[x.ref].ref
-                                if not box_ref is None:
-                                    assert self.box_exists(x.account, box_ref)
-                                    box_value = self.__vault.account[x.account].log[x.ref].value
-                                    assert box_value < 0
+                    assert x.ref in self.__vault.account[x.account].log
+                    assert x.value is not None
+                    if dry:
+                        continue
+                    if sub_positive_log_negative == -x.value:
+                        self.__vault.account[x.account].count -= 1
+                        sub_positive_log_negative = 0
+                    box_ref = self.__vault.account[x.account].log[x.ref].ref
+                    if not box_ref is None:
+                        assert self.box_exists(x.account, box_ref)
+                        box_value = self.__vault.account[x.account].log[x.ref].value
+                        assert box_value < 0
 
-                                    try:
-                                        self.__vault.account[x.account].box[box_ref].rest += -box_value
-                                    except TypeError:
-                                        self.__vault.account[x.account].box[box_ref].rest += decimal.Decimal(-box_value)
+                        try:
+                            self.__vault.account[x.account].box[box_ref].rest += -box_value
+                        except TypeError:
+                            self.__vault.account[x.account].box[box_ref].rest += decimal.Decimal(-box_value)
 
-                                    try:
-                                        self.__vault.account[x.account].balance += -box_value
-                                    except TypeError:
-                                        self.__vault.account[x.account].balance += decimal.Decimal(-box_value)
+                        try:
+                            self.__vault.account[x.account].balance += -box_value
+                        except TypeError:
+                            self.__vault.account[x.account].balance += decimal.Decimal(-box_value)
 
-                                    self.__vault.account[x.account].count -= 1
-                                del self.__vault.account[x.account].log[x.ref]
+                        self.__vault.account[x.account].count -= 1
+                    del self.__vault.account[x.account].log[x.ref]
 
                 case Action.SUBTRACT:
-                    if x.account is not None:
-                        if self.account_exists(x.account):
-                            if x.ref in self.__vault.account[x.account].box:
-                                if dry:
-                                    continue
-                                assert x.value is not None
-                                self.__vault.account[x.account].box[x.ref].rest += x.value
-                                self.__vault.account[x.account].balance += x.value
-                                sub_positive_log_negative = x.value
+                    assert x.ref in self.__vault.account[x.account].box
+                    assert x.value is not None
+                    if dry:
+                        continue
+                    self.__vault.account[x.account].box[x.ref].rest += x.value
+                    self.__vault.account[x.account].balance += x.value
+                    sub_positive_log_negative = x.value
 
                 case Action.ADD_FILE:
-                    if x.account is not None:
-                        if self.account_exists(x.account):
-                            if x.ref in self.__vault.account[x.account].log:
-                                if x.file in self.__vault.account[x.account].log[x.ref].file:
-                                    if dry:
-                                        continue
-                                    del self.__vault.account[x.account].log[x.ref].file[x.file]
-
-                case Action.REMOVE_FILE:
-                    if x.account is not None:
-                        if self.account_exists(x.account):
-                            if x.ref in self.__vault.account[x.account].log:
-                                if dry:
-                                    continue
-                                assert x.file is not None
-                                assert x.value is not None
-                                self.__vault.account[x.account].log[x.ref].file[x.file] = x.value
-
-                case Action.BOX_TRANSFER:
-                    if x.account is not None:
-                        if self.account_exists(x.account):
-                            if x.ref in self.__vault.account[x.account].box:
-                                if dry:
-                                    continue
-                                assert x.value is not None
-                                self.__vault.account[x.account].box[x.ref].rest -= x.value
-
-                case Action.EXCHANGE:
-                    if x.account is not None:
-                        if x.account in self.__vault.exchange:
-                            if x.ref in self.__vault.exchange[x.account]:
-                                if dry:
-                                    continue
-                                del self.__vault.exchange[x.account][x.ref]
-
-                case Action.REPORT:
-                    if x.ref in self.__vault.report:
+                    assert x.ref in self.__vault.account[x.account].log
+                    assert x.file is not None
+                    #assert x.file in self.__vault.account[x.account].log[x.ref].file
+                    if x.file in self.__vault.account[x.account].log[x.ref].file:
                         if dry:
                             continue
-                        del self.__vault.report[x.ref]
+                        del self.__vault.account[x.account].log[x.ref].file[x.file]
+
+                case Action.REMOVE_FILE:
+                    assert x.ref in self.__vault.account[x.account].log
+                    assert x.file is not None
+                    assert x.value is not None
+                    if dry:
+                        continue
+                    self.__vault.account[x.account].log[x.ref].file[x.file] = x.value
+
+                case Action.BOX_TRANSFER:
+                    assert x.ref in self.__vault.account[x.account].box
+                    assert x.value is not None
+                    if dry:
+                        continue
+                    self.__vault.account[x.account].box[x.ref].rest -= x.value
+
+                case Action.EXCHANGE:
+                    assert x.account in self.__vault.exchange
+                    assert x.ref in self.__vault.exchange[x.account]
+                    if dry:
+                        continue
+                    del self.__vault.exchange[x.account][x.ref]
+
+                case Action.REPORT:
+                    assert x.ref in self.__vault.report
+                    if dry:
+                        continue
+                    del self.__vault.report[x.ref]
 
                 case Action.ZAKAT:
-                    if x.account is not None:
-                        if self.account_exists(x.account):
-                            if x.ref in self.__vault.account[x.account].box:
-                                assert x.key is not None
-                                if hasattr(self.__vault.account[x.account].box[x.ref], x.key):
-                                    if dry:
-                                        continue
-                                    match x.math:
-                                        case MathOperation.ADDITION:
-                                            setattr(
-                                                self.__vault.account[x.account].box[x.ref],
-                                                x.key,
-                                                getattr(self.__vault.account[x.account].box[x.ref], x.key) - x.value,
-                                            )
-                                        case MathOperation.EQUAL:
-                                            setattr(
-                                                self.__vault.account[x.account].box[x.ref],
-                                                x.key,
-                                                x.value,
-                                            )
-                                        case MathOperation.SUBTRACTION:
-                                            setattr(
-                                                self.__vault.account[x.account].box[x.ref],
-                                                x.key,
-                                                getattr(self.__vault.account[x.account].box[x.ref], x.key) + x.value,
-                                            )
+                    assert x.ref in self.__vault.account[x.account].box
+                    assert x.key is not None
+                    assert hasattr(self.__vault.account[x.account].box[x.ref].zakat, x.key)
+                    if dry:
+                        continue
+                    match x.math:
+                        case MathOperation.ADDITION:
+                            setattr(
+                                self.__vault.account[x.account].box[x.ref].zakat,
+                                x.key,
+                                getattr(self.__vault.account[x.account].box[x.ref].zakat, x.key) - x.value,
+                            )
+                        case MathOperation.EQUAL:
+                            setattr(
+                                self.__vault.account[x.account].box[x.ref].zakat,
+                                x.key,
+                                x.value,
+                            )
+                        case MathOperation.SUBTRACTION:
+                            setattr(
+                                self.__vault.account[x.account].box[x.ref],
+                                x.key,
+                                getattr(self.__vault.account[x.account].box[x.ref], x.key) + x.value,
+                            )
 
         if not dry:
             del self.__vault.history[ref]
