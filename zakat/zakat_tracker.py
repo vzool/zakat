@@ -146,7 +146,7 @@ class MathOperation(enum.Enum):
     SUBTRACTION = 'SUBTRACTION'
 
 
-def factory_value(x) -> callable:
+def factory_value(value) -> callable:
     """
     Creates a factory function that always returns the given value.
 
@@ -154,13 +154,13 @@ def factory_value(x) -> callable:
     need to be callable (e.g., for default_factory).
 
     Parameters:
-    - x: The value to be returned by the factory.
+    - value: The value to be returned by the factory.
 
     Returns:
     - callable: A function that, when called, returns the value x.
     """
     def factory():
-        return x
+        return value
     return factory
 
 
@@ -333,21 +333,21 @@ class AccountID(str):
             Timestamp(12345): True, # Test timestamp input
         }
 
-        for input, expected_output in test_data.items():
+        for input_value, expected_output in test_data.items():
             if expected_output:
                 try:
-                    account_id = cls(input)
+                    account_id = cls(input_value)
                     if debug:
-                        print(f'"{str(account_id)}", "{input}"')
-                    if isinstance(input, Timestamp):
-                        input = str(input)
-                    assert str(account_id) == input, f"Test failed for valid input: '{input_string}'"
+                        print(f'"{str(account_id)}", "{input_value}"')
+                    if isinstance(input_value, Timestamp):
+                        input_value = str(input_value)
+                    assert str(account_id) == input_value, f"Test failed for valid input: '{input_value}'"
                 except ValueError as e:
-                    assert False, f"Unexpected ValueError for valid input: '{input_string}': {e}"
+                    assert False, f"Unexpected ValueError for valid input: '{input_value}': {e}"
             else:
                 try:
-                    cls(input)
-                    assert False, f"Expected ValueError for invalid input: '{input_string}'"
+                    cls(input_value)
+                    assert False, f"Expected ValueError for invalid input: '{input_value}'"
                 except ValueError as e:
                     pass  # Expected exception
 
