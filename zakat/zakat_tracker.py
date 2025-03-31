@@ -1192,6 +1192,7 @@ class ZakatTracker:
     __base_path = ""
     __vault_path = ""
     __memory_mode = False
+    __debug_output = []
     __vault: Vault
 
     def __init__(self, db_path: str = './zakat_db/', history_mode: bool = True):
@@ -1602,11 +1603,10 @@ class ZakatTracker:
                 case Action.ADD_FILE:
                     assert x.ref in self.__vault.account[x.account].log
                     assert x.file is not None
-                    #assert x.file in self.__vault.account[x.account].log[x.ref].file
-                    if x.file in self.__vault.account[x.account].log[x.ref].file:
-                        if dry:
-                            continue
-                        del self.__vault.account[x.account].log[x.ref].file[x.file]
+                    assert dry or x.file in self.__vault.account[x.account].log[x.ref].file
+                    if dry:
+                        continue
+                    del self.__vault.account[x.account].log[x.ref].file[x.file]
 
                 case Action.REMOVE_FILE:
                     assert x.ref in self.__vault.account[x.account].log
@@ -4826,7 +4826,10 @@ class ZakatTracker:
             assert self.save(f'1000-transactions-test.{self.ext()}')
             return True
         except Exception as e:
-            # pp().pprint(self.__vault)
+            if self.__debug_output:
+                pp().pprint(self.__vault)
+                print('============================================================================')
+                pp().pprint(self.__debug_output)
             assert self.save(f'test-snapshot.{self.ext()}')
             raise e
 
