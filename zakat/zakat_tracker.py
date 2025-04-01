@@ -3358,13 +3358,15 @@ class ZakatTracker:
             print('import_csv', f'debug={debug}')
         cache: list[int] = []
         try:
-            with open(self.import_csv_cache_path(), 'r', encoding='utf-8') as stream:
-                cache = json.load(stream)
-        except:
-            pass
+            if not self.memory_mode():
+                with open(self.import_csv_cache_path(), 'r', encoding='utf-8') as stream:
+                    cache = json.load(stream)
+        except Exception as e:
+            if debug:
+                print(e)
         date_formats = [
-            '%Y-%m-%d %H:%M:%S',
-            '%Y-%m-%dT%H:%M:%S',
+            '%Y-%m-%d %H:%M:%S.%f',
+            '%Y-%m-%dT%H:%M:%S.%f',
             '%Y-%m-%dT%H%M%S.%f',
             '%Y-%m-%d',
         ]
@@ -3387,10 +3389,14 @@ class ZakatTracker:
                 date: int = 0
                 for time_format in date_formats:
                     try:
-                        date = Time.time(datetime.datetime.strptime(row[3], time_format))
+                        date_str = row[3]
+                        if "." not in date_str:
+                            date_str += ".000000"
+                        date = Time.time(datetime.datetime.strptime(date_str, time_format))
                         break
-                    except:
-                        pass
+                    except Exception as e:
+                        if debug:
+                            print(e)
                 if date <= 0:
                     bad[i] = row + ['invalid date']
                 if value == 0:
@@ -3473,8 +3479,9 @@ class ZakatTracker:
                 for (i, account, desc, value, date, rate, _) in rows:
                     bad[i] = (account, desc, value, date, rate, e)
                 break
-        with open(self.import_csv_cache_path(), 'w', encoding='utf-8') as stream:
-            stream.write(json.dumps(cache))
+        if not self.memory_mode():
+            with open(self.import_csv_cache_path(), 'w', encoding='utf-8') as stream:
+                stream.write(json.dumps(cache))
         if no_lock:
             assert lock is not None
             self.free(lock)
@@ -3636,8 +3643,10 @@ class ZakatTracker:
                 account = f'acc-{random.randint(1, count)}'
                 desc = f'Some text {random.randint(1, count)}'
                 value = random.randint(1000, 100000)
-                date = ZakatTracker.generate_random_date(datetime.datetime(1000, 1, 1),
-                                                         datetime.datetime(2023, 12, 31)).strftime('%Y-%m-%d %H:%M:%S')
+                date = ZakatTracker.generate_random_date(
+                    datetime.datetime(1000, 1, 1),
+                    datetime.datetime(2023, 12, 31),
+                ).strftime('%Y-%m-%d %H:%M:%S.%f' if i % 2 == 0 else '%Y-%m-%d %H:%M:%S')
                 if not i % 13 == 0:
                     value *= -1
                 row = [account, desc, value, date]
@@ -3686,6 +3695,9 @@ class ZakatTracker:
             random.seed(1234567890)
 
         # sanity check - core
+
+        assert sorted([6, 0, 9, 3], reverse=False) == [0, 3, 6, 9]
+        assert sorted([6, 0, 9, 3], reverse=True) == [9, 6, 3, 0]
 
         Timestamp.test()
         AccountID.test(debug)

@@ -1,5 +1,4 @@
 import sqlite3, csv
-import datetime
 from datetime import timedelta
 import argparse
 import os
@@ -104,6 +103,11 @@ def process_bluecoins_data(db_file):
         data = {}
         duplicated = 0
         filtered = 0
+        currencies = str.join(',', [
+            "'SDG'",
+            "'SAR'",
+            "'USD'",
+        ])
         for date, count in dates:
             records = cursor.execute(f"""
                 SELECT  t.transactionsTableID as id,
@@ -117,9 +121,7 @@ def process_bluecoins_data(db_file):
                 LEFT JOIN ITEMTABLE AS i ON t.itemID = i.itemTableID
                 WHERE   t.amount != 0
                         AND t.date = '{date}'
-                        AND t.transactionCurrency IN (
-                                'SDG', 'SAR', 'USD'
-                            )
+                        AND t.transactionCurrency IN ({currencies})
                 ORDER BY t.transactionsTableID ASC;
             """).fetchall()
             # transform
