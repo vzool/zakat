@@ -4,8 +4,59 @@ from datetime import timedelta
 import argparse
 import os
 from pprint import PrettyPrinter as pp
+from datetime import datetime, timedelta
+
 
 debug = False
+
+
+def add_millisecond_and_format(datetime_str: str, extra_ms: int = 1) -> str:
+    """
+    Parses a datetime string, adds a specified number of milliseconds, and returns the result as a string.
+    If the input string does not contain milliseconds, it adds ".000000" before adding.
+
+    Parameters:
+    - datetime_str: A string representing a datetime, including milliseconds (e.g., "2023-10-27 10:30:45.123").
+    - extra_ms: The number of milliseconds to add (default: 1).
+
+    Returns:
+    - A string representing the incremented datetime in "YYYY-MM-DD HH:MM:SS.ffffff" format.
+    - Returns an error message if the input datetime string is invalid.
+    """
+    try:
+        if "." not in datetime_str:
+            datetime_str += ".000000" #added milliseconds if not present
+        dt = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S.%f")
+        incremented_dt = dt + timedelta(milliseconds=extra_ms*1e-3)
+        return incremented_dt.strftime("%Y-%m-%d %H:%M:%S.%f")
+    except ValueError:
+        return "Invalid datetime format. Please use 'YYYY-MM-DD HH:MM:SS.ffffff'"
+
+
+def test_add_millisecond_and_format():
+    """Tests for the add_millisecond_and_format function using test cases in an array."""
+
+    test_cases = [
+        ("2023-10-27 10:30:45.123456", "2023-10-27 10:30:45.123457"),
+        ("2023-10-27 10:30:45.123", "2023-10-27 10:30:45.123001"),
+        ("2023-10-27 10:30:45", "2023-10-27 10:30:45.000001"),
+        ("2023-10-27T10:30:45.123456Z", "Invalid datetime format. Please use 'YYYY-MM-DD HH:MM:SS.ffffff'"),
+        ("2023-10-27 10:30:59.999999", "2023-10-27 10:31:00.000000"),
+        ("2023-12-31 23:59:59.999999", "2024-01-01 00:00:00.000000"), #test year roll over
+        ("2023-10-27 10:30:45.123455", "2023-10-27 10:30:45.123457", 2), # test with extra_ms=2
+        ("2023-10-27 10:30:45", "2023-10-27 10:30:45.000002", 2), # test with extra_ms=2, and no initial ms
+    ]
+
+    for test_case in test_cases:
+        input_str = test_case[0]
+        expected_output = test_case[1]
+        extra_ms = test_case[2] if len(test_case) > 2 else 1
+        actual_output = add_millisecond_and_format(input_str, extra_ms)
+        assert actual_output == expected_output, f"Test failed for input: {input_str}, actual: {actual_output}, expected: {expected_output}, extra_ms: {extra_ms}"
+
+    if debug:
+        print("All tests passed!")
+
 
 def process_bluecoins_data(db_file):
     """
@@ -76,7 +127,7 @@ def process_bluecoins_data(db_file):
             for record in records:
                 id1, account1, desc1, value1, date1, rate1 = record
                 assert id1 not in rows
-                rows[id1] = (account1, desc1, value1, date1, rate1)
+                rows[id1] = (account1, desc1, value1, date1 + ".000000", rate1)
 
             # look for transfer to the same account
             index = sorted(rows)
@@ -116,7 +167,7 @@ def process_bluecoins_data(db_file):
                 y = 0
                 for i, row in rows.items():
                     account1, desc1, value1, date1, rate1 = row
-                    new_date = f"{date}.{y}"
+                    new_date = add_millisecond_and_format(date, y)
                     y += 1
                     print(f"{date1} => {new_date}")
                     rows[i] = account1, desc1, value1, new_date, rate1
@@ -148,7 +199,10 @@ def process_bluecoins_data(db_file):
     except FileNotFoundError:
         print(f"Error: Database file '{db_file}' not found.")
 
+
 if __name__ == "__main__":
+    # Run the tests
+    test_add_millisecond_and_format()
     parser = argparse.ArgumentParser(description="Process Bluecoins database and export data to CSV.")
     parser.add_argument("db_file", help="Path to the Bluecoins database file (.fydb)")
     args = parser.parse_args()
