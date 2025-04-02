@@ -3102,8 +3102,13 @@ class ZakatTracker:
                 target_exchange = self.exchange(account)
                 assert target_exchange.rate is not None
                 amount = ZakatTracker.exchange_calc(part.part, part.rate, target_exchange.rate)
+                unscaled_amount = self.unscale(int(amount))
+                if unscaled_amount <= 0:
+                    if debug:
+                        print(f"The amount({unscaled_amount:.20f}) it was {amount:.20f} should be greater tha zero.")
+                    continue
                 self.subtract(
-                    unscaled_value=self.unscale(int(amount)),
+                    unscaled_value=unscaled_amount,
                     desc='zakat-part-دفعة-زكاة',
                     account=account,
                     debug=debug,
@@ -3326,6 +3331,31 @@ class ZakatTracker:
         _, filename = os.path.split(path + f'.import_csv.{ext}')
         return self.base_path(filename)
 
+    @staticmethod
+    def get_transaction_csv_headers() -> list[str]:
+        """
+        Returns a list of strings representing the headers for a transaction CSV file.
+
+        The headers include:
+        - account: The account associated with the transaction.
+        - desc: A description of the transaction.
+        - value: The monetary value of the transaction.
+        - date: The date of the transaction.
+        - rate: The applicable rate (if any) for the transaction.
+        - reference: An optional reference number or identifier for the transaction.
+
+        Returns:
+        - list[str]: A list containing the CSV header strings.
+        """
+        return [
+            "account",
+            "desc",
+            "value",
+            "date",
+            "rate",
+            "reference",
+        ]
+
     def import_csv(self, path: str = 'file.csv', scale_decimal_places: int = 0, debug: bool = False) -> tuple:
         """
         The function reads the CSV file, checks for duplicate transactions, and creates the transactions in the system.
@@ -3345,14 +3375,14 @@ class ZakatTracker:
         * The exchange rate for each account is based on the last encountered transaction rate that is not equal
             to 1.0 or the previous rate for that account.
         * Those rates will be merged into the exchange rates main data, and later it will be used for all subsequent
-            transactions of the same account within the whole imported and existing dataset when doing `check` and
+            transactions of the same account within the whole imported and existing dataset when doing `transfer`, `check` and
             `zakat` operations.
 
         Example:
-            The CSV file should have the following format, rate is optional per transaction:
-            account, desc, value, date, rate
+            The CSV file should have the following format, rate and reference are optionals per transaction:
+            account, desc, value, date, rate, reference
             For example:
-            safe-45, 'Some text', 34872, 1988-06-30 00:00:00, 1
+            safe-45, 'Some text', 34872, 1988-06-30 00:00:00.000000, 1, 6554
         """
         if debug:
             print('import_csv', f'debug={debug}')
@@ -3375,6 +3405,10 @@ class ZakatTracker:
         with open(path, newline='', encoding='utf-8') as f:
             i = 0
             for row in csv.reader(f, delimiter=','):
+                if debug:
+                    print(f"csv_row({i})", row, type(row))
+                if row == self.get_transaction_csv_headers():
+                    continue
                 i += 1
                 hashed = hash(tuple(row))
                 if hashed in cache:
@@ -3384,8 +3418,11 @@ class ZakatTracker:
                 desc = row[1]
                 value = float(row[2])
                 rate = 1.0
-                if row[4:5]:  # Empty list if index is out of range
+                reference = ''
+                if row[4:5]: # Empty list if index is out of range
                     rate = float(row[4])
+                if row[5:6]:
+                    reference = row[5]
                 date: int = 0
                 for time_format in date_formats:
                     try:
@@ -3404,7 +3441,16 @@ class ZakatTracker:
                     continue
                 if date not in data:
                     data[date] = []
-                data[date].append((i, account, desc, value, date, rate, hashed))
+                data[date].append((
+                    i,
+                    account,
+                    desc,
+                    value,
+                    date,
+                    rate,
+                    reference,
+                    hashed,
+                ))
 
         if debug:
             print('import_csv', len(data))
@@ -3419,7 +3465,7 @@ class ZakatTracker:
             try:
                 len_rows = len(rows)
                 if len_rows == 1:
-                    (_, account, desc, unscaled_value, date, rate, hashed) = rows[0]
+                    (_, account, desc, unscaled_value, date, rate, reference, hashed) = rows[0]
                     value = self.unscale(
                         unscaled_value,
                         decimal_places=scale_decimal_places,
@@ -3447,8 +3493,8 @@ class ZakatTracker:
                 # (one positive and the other negative), this indicates it is a transfer.
                 if len_rows != 2:
                     raise Exception(f'more than two transactions({len_rows}) at the same time')
-                (i, account1, desc1, unscaled_value1, date1, rate1, _) = rows[0]
-                (j, account2, desc2, unscaled_value2, date2, rate2, _) = rows[1]
+                (i, account1, desc1, unscaled_value1, date1, rate1, _, _) = rows[0]
+                (j, account2, desc2, unscaled_value2, date2, rate2, _, _) = rows[1]
                 if account1 == account2 or desc1 != desc2 or abs(unscaled_value1) != abs(
                         unscaled_value2) or date1 != date2:
                     raise Exception('invalid transfer')
@@ -3476,8 +3522,12 @@ class ZakatTracker:
                     created_time_ns=date1,
                 )
             except Exception as e:
-                for (i, account, desc, value, date, rate, _) in rows:
-                    bad[i] = (account, desc, value, date, rate, e)
+                for row in rows:
+                    _tuple = tuple()
+                    for field in row:
+                        _tuple += (field,)
+                    _tuple += (e,)
+                    bad[i] = _tuple
                 break
         if not self.memory_mode():
             with open(self.import_csv_cache_path(), 'w', encoding='utf-8') as stream:
@@ -3639,6 +3689,7 @@ class ZakatTracker:
         i = 0
         with open(path, 'w', newline='', encoding='utf-8') as csvfile:
             writer = csv.writer(csvfile)
+            writer.writerow(ZakatTracker.get_transaction_csv_headers())
             for i in range(count):
                 account = f'acc-{random.randint(1, count)}'
                 desc = f'Some text {random.randint(1, count)}'
@@ -3657,6 +3708,8 @@ class ZakatTracker:
                     row.append(rate)
                     if debug:
                         print('after-append', row)
+                if i % 2 == 1:
+                    row += (Time.time(),)
                 writer.writerow(row)
                 i = i + 1
         return i
@@ -4733,7 +4786,7 @@ class ZakatTracker:
                     os.remove(cache_path)
                 self.reset()
                 lock = self.lock()
-                (created, found, bad) = self.import_csv(csv_path, debug)
+                (created, found, bad) = self.import_csv(csv_path, debug=debug)
                 bad_count = len(bad)
                 if debug:
                     print(f'csv-imported: ({created}, {found}, {bad_count}) = count({csv_count})')
@@ -4745,7 +4798,7 @@ class ZakatTracker:
                 tmp_size = os.path.getsize(cache_path)
                 assert tmp_size > 0
 
-                (created_2, found_2, bad_2) = self.import_csv(csv_path)
+                (created_2, found_2, bad_2) = self.import_csv(csv_path, debug=debug)
                 bad_2_count = len(bad_2)
                 if debug:
                     print(f'csv-imported: ({created_2}, {found_2}, {bad_2_count})')

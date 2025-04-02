@@ -56,6 +56,30 @@ def test_add_millisecond_and_format():
     if debug:
         print("All tests passed!")
 
+def get_transaction_csv_headers() -> list[str]:
+    """
+    Returns a list of strings representing the headers for a transaction CSV file.
+
+    The headers include:
+    - account: The account associated with the transaction.
+    - desc: A description of the transaction.
+    - value: The monetary value of the transaction.
+    - date: The date of the transaction.
+    - rate: The applicable rate (if any) for the transaction.
+    - reference: An optional reference number or identifier for the transaction.
+
+    Returns:
+    - list[str]: A list containing the CSV header strings.
+    """
+    return [
+        "account",
+        "desc",
+        "value",
+        "date",
+        "rate",
+        "reference",
+    ]
+
 
 def process_bluecoins_data(db_file):
     """
@@ -129,15 +153,22 @@ def process_bluecoins_data(db_file):
             for record in records:
                 id1, account1, desc1, value1, date1, rate1 = record
                 assert id1 not in rows
-                rows[id1] = (account1, desc1, value1, date1 + ".000000", rate1)
+                rows[id1] = (
+                    account1,
+                    desc1,
+                    value1,
+                    date1 + ".000000",
+                    rate1,
+                    id1,
+                )
 
             # look for transfer to the same account
             index = sorted(rows)
             same_account_transfer = []
             for i in range(0, len(index)):
                 if i > 0:
-                    account1, desc1, value1, date1, rate1 = rows[index[i]]
-                    account2, desc2, value2, date2, rate2 = rows[index[i - 1]]
+                    account1, desc1, value1, date1, rate1, id1 = rows[index[i]]
+                    account2, desc2, value2, date2, rate2, id2 = rows[index[i - 1]]
                     if account1 == account2 and date1 == date2 and abs(value1) == abs(value2):
                         if debug:
                             print('bad============================================')
@@ -168,11 +199,11 @@ def process_bluecoins_data(db_file):
                 pp().pprint(rows)
                 y = 0
                 for i, row in rows.items():
-                    account1, desc1, value1, date1, rate1 = row
+                    account1, desc1, value1, date1, rate1, id1 = row
                     new_date = add_millisecond_and_format(date, y)
                     y += 1
                     print(f"{date1} => {new_date}")
-                    rows[i] = account1, desc1, value1, new_date, rate1
+                    rows[i] = account1, desc1, value1, new_date, rate1, id1
                 print('--------------------------------------------')
             if rows:
                 data[date] = rows
@@ -186,10 +217,11 @@ def process_bluecoins_data(db_file):
         # Open a CSV file for writing
         with open(csv_file, 'w', newline='', encoding='utf-8') as csvfile:
             # Create a CSV writer object
-            csvwriter = csv.writer(csvfile)
+            csv_writer = csv.writer(csvfile)
+            csv_writer.writerow(get_transaction_csv_headers())
             # Write the rows to the CSV file
             for _, rows in data.items():
-                csvwriter.writerows(rows.values())
+                csv_writer.writerows(rows.values())
         print(f"Total read transactions {total}, with {total - filtered} error/ignored.")
         print(f"Filtered to {filtered} records, found {duplicated} duplicated.")
         print(f'Imported {filtered} to {csv_file}')
