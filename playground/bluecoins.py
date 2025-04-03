@@ -121,8 +121,12 @@ def process_bluecoins_data(db_file):
         if days:
             days = days[0]
 
+        cols = 99
         currencies = cursor.execute("""
-            SELECT transactionCurrency, COUNT(*) AS count
+            SELECT  transactionCurrency,
+                    COUNT(*) AS count,
+                    max(conversionRateNew) AS max_rate,
+                    min(conversionRateNew) AS min_rate
             FROM TRANSACTIONSTABLE
             GROUP BY transactionCurrency
             ORDER BY count DESC;
@@ -135,14 +139,14 @@ def process_bluecoins_data(db_file):
         currencies_count = len(currencies)
         print(f"Found ({currencies_count}) currencies...")
         if currencies_count > 0:
-            print("=" * 40)
-            print(f"\tCurrency\t|\tCount\t|")
-            print("=" * 40)
-            for currency, count in currencies:
-                print(f"\t{currency}\t|\t{count}\t|")
-        print("-" * 40)
+            print("=" * cols)
+            print(f"Currency|\tCount\t|\t\tMax Rate\t\t|\t\tMin Rate\t\t|")
+            print("=" * cols)
+            for currency, count, max_rate, min_rate in currencies:
+                print(f"{currency}\t|\t{count}\t|\t{max_rate:.24f}\t|\t{min_rate:.24f}\t|")
+        print("-" * cols)
         print(f"Selected Currencies: {selected_currencies}")
-        print("=" * 40)
+        print("=" * cols)
 
         print(f"Found: {total} transactions shown across {days} days within {dates_range}.")
         print("Processing...")
@@ -216,14 +220,21 @@ def process_bluecoins_data(db_file):
                 account1, desc1, value1, date1, rate1, id1 = rows[keys[0]]
                 account2, desc2, value2, date2, rate2, id2 = rows[keys[1]]
                 if account1 != account2 and abs(value1) != abs(value2):
+                    print('============================================')
                     print(f"Found same time different account and amount")
+                    pp().pprint(rows)
+                    print('--------------------------------------------')
                     new_date = add_millisecond_and_format(date2, 1)
                     print(f"{date2} => {new_date}")
                     rows[keys[1]] = account2, desc2, value2, new_date, rate2, id2
+                    print('--------------------------------------------')
+                    pp().pprint(rows)
+                    print('--------------------------------------------')
             if rest_count > 2:
                 print('============================================')
                 print(f"More than 2 transacions ({rest_count})...")
                 pp().pprint(rows)
+                print('--------------------------------------------')
                 y = 0
                 for i, row in rows.items():
                     account1, desc1, value1, date1, rate1, id1 = row
@@ -231,6 +242,8 @@ def process_bluecoins_data(db_file):
                     y += 1
                     print(f"{date1} => {new_date}")
                     rows[i] = account1, desc1, value1, new_date, rate1, id1
+                print('--------------------------------------------')
+                pp().pprint(rows)
                 print('--------------------------------------------')
             if rows:
                 data[date] = rows
