@@ -121,17 +121,35 @@ def process_bluecoins_data(db_file):
         if days:
             days = days[0]
 
+        currencies = cursor.execute("""
+            SELECT transactionCurrency, COUNT(*) AS count
+            FROM TRANSACTIONSTABLE
+            GROUP BY transactionCurrency
+            ORDER BY count DESC;
+        """).fetchall()
+        selected_currencies = str.join(',', [
+            "'SDG'",
+            "'SAR'",
+            "'USD'",
+        ])
+        currencies_count = len(currencies)
+        print(f"Found ({currencies_count}) currencies...")
+        if currencies_count > 0:
+            print("=" * 40)
+            print(f"\tCurrency\t|\tCount\t|")
+            print("=" * 40)
+            for currency, count in currencies:
+                print(f"\t{currency}\t|\t{count}\t|")
+        print("-" * 40)
+        print(f"Selected Currencies: {selected_currencies}")
+        print("=" * 40)
+
         print(f"Found: {total} transactions shown across {days} days within {dates_range}.")
         print("Processing...")
 
         data = {}
         duplicated = 0
         filtered = 0
-        currencies = str.join(',', [
-            "'SDG'",
-            "'SAR'",
-            "'USD'",
-        ])
         for date, count in dates:
             records = cursor.execute(f"""
                 SELECT  t.transactionsTableID as id,
@@ -145,7 +163,7 @@ def process_bluecoins_data(db_file):
                 LEFT JOIN ITEMTABLE AS i ON t.itemID = i.itemTableID
                 WHERE   t.amount != 0
                         AND t.date = '{date}'
-                        AND t.transactionCurrency IN ({currencies})
+                        AND t.transactionCurrency IN ({selected_currencies})
                 ORDER BY t.transactionsTableID ASC;
             """).fetchall()
             # transform
@@ -193,6 +211,15 @@ def process_bluecoins_data(db_file):
             rows = unique_rows
             rest_count = len(rows)
             filtered += rest_count
+            if rest_count == 2:
+                keys = list(rows.keys())
+                account1, desc1, value1, date1, rate1, id1 = rows[keys[0]]
+                account2, desc2, value2, date2, rate2, id2 = rows[keys[1]]
+                if account1 != account2 and abs(value1) != abs(value2):
+                    print(f"Found same time different account and amount")
+                    new_date = add_millisecond_and_format(date2, 1)
+                    print(f"{date2} => {new_date}")
+                    rows[keys[1]] = account2, desc2, value2, new_date, rate2, id2
             if rest_count > 2:
                 print('============================================')
                 print(f"More than 2 transacions ({rest_count})...")
