@@ -2755,7 +2755,7 @@ class ZakatTracker:
 
     def transfer(self, unscaled_amount: float | int | decimal.Decimal, from_account: AccountID, to_account: AccountID, desc: str = '',
                  created_time_ns: Optional[Timestamp] = None,
-                 debug: bool = False) -> TransferReport:
+                 debug: bool = False) -> Optional[TransferReport]:
         """
         Transfers a specified value from one account to another.
 
@@ -2768,7 +2768,7 @@ class ZakatTracker:
         - debug (bool, optional): A flag indicating whether to print debug information. Defaults to False.
 
         Returns:
-        - TransferReport: A class of timestamps corresponding to the transactions made during the transfer.
+        - Optional[TransferReport]: A class of timestamps corresponding to the transactions made during the transfer.
 
         Raises:
         - ValueError: Transfer to the same account is forbidden.
@@ -2783,7 +2783,7 @@ class ZakatTracker:
         if from_account == to_account:
             raise ValueError(f'Transfer to the same account is forbidden. {to_account}')
         if unscaled_amount <= 0:
-            return []
+            return None
         if created_time_ns is None:
             created_time_ns = Time.time()
         if created_time_ns <= 0:
@@ -3790,6 +3790,22 @@ class ZakatTracker:
 
         assert sorted([6, 0, 9, 3], reverse=False) == [0, 3, 6, 9]
         assert sorted([6, 0, 9, 3], reverse=True) == [9, 6, 3, 0]
+        assert sorted(
+            {6: '6', 0: '0', 9: '9', 3: '3'}.items(),
+            reverse=False,
+        ) == [(0, '0'), (3, '3'), (6, '6'), (9, '9')]
+        assert sorted(
+            {6: '6', 0: '0', 9: '9', 3: '3'}.items(),
+            reverse=True,
+        ) == [(9, '9'), (6, '6'), (3, '3'), (0, '0')]
+        assert sorted(
+            {'6': 6, '0': 0, '9': 9, '3': 3}.items(),
+            reverse=False,
+        ) == [('0', 0), ('3', 3), ('6', 6), ('9', 9)]
+        assert sorted(
+            {'6': 6, '0': 0, '9': 9, '3': 3}.items(),
+            reverse=True,
+        ) == [('9', 9), ('6', 6), ('3', 3), ('0', 0)]
 
         Timestamp.test()
         AccountID.test(debug)
