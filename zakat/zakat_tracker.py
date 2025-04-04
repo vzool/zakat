@@ -1016,10 +1016,10 @@ class Time:
         # sanity check - convert date since 1AD to 9999AD
 
         for year in range(1, 10_000):
-            ns = Time.time(datetime.datetime.strptime(f'{year:04d}-12-30 18:30:45', '%Y-%m-%d %H:%M:%S'))
+            ns = Time.time(datetime.datetime.strptime(f'{year:04d}-12-30 18:30:45.906030', '%Y-%m-%d %H:%M:%S.%f'))
             date = Time.time_to_datetime(ns)
             if debug:
-                print(date)
+                print(date, date.microsecond)
             assert ns > 0
             assert date.year == year
             assert date.month == 12
@@ -1027,6 +1027,7 @@ class Time:
             assert date.hour == 18
             assert date.minute == 30
             assert date.second in [44, 45]
+            #assert date.microsecond == 906030
 
 
 class ZakatTracker:
@@ -3461,43 +3462,76 @@ class ZakatTracker:
         no_lock = self.nolock()
         lock = self.__lock()
         names = self.names()
+
+        # sync accounts
+        if debug:
+            print('before-names', names, len(names))
+        for date, rows in sorted(data.items()):
+            new_rows = []
+            for row in rows:
+                (i, account, desc, unscaled_value, date, rate, reference, hashed) = row
+                if account not in names:
+                    account_id = self.create_account(account)
+                    names[account] = account_id
+                account_id = names[account]
+                assert account_id
+                new_rows.append((
+                    i,
+                    account_id,
+                    desc,
+                    unscaled_value,
+                    date,
+                    rate,
+                    reference,
+                    hashed,
+                ))
+            assert new_rows
+            assert date in data
+            data[date] = new_rows
+        if debug:
+            print('after-names', names, len(names))
+            assert names == self.names()
+
+        # do ops
         for date, rows in sorted(data.items()):
             try:
-                len_rows = len(rows)
-                if len_rows == 1:
-                    (_, account, desc, unscaled_value, date, rate, reference, hashed) = rows[0]
-                    value = self.unscale(
-                        unscaled_value,
+                def process(x):
+                    (_, x_account, x_desc, x_unscaled_value, x_date, x_rate, x_reference, x_hashed) = x
+                    x_value = self.unscale(
+                        x_unscaled_value,
                         decimal_places=scale_decimal_places,
-                    ) if scale_decimal_places > 0 else unscaled_value
-                    if account not in names:
-                        account_id = self.create_account(account)
-                        names[account] = account_id
-                        account = account_id
-                    else:
-                        account = names[account]
-                    if rate > 0:
-                        self.exchange(account=account, created_time_ns=date, rate=rate)
-                    if value > 0:
-                        self.track(unscaled_value=value, desc=desc, account=account, created_time_ns=date)
+                    ) if scale_decimal_places > 0 else x_unscaled_value
+                    if x_rate > 0:
+                        self.exchange(account=x_account, created_time_ns=x_date, rate=x_rate)
+                    if x_value > 0:
+                        self.track(unscaled_value=x_value, desc=x_desc, account=x_account, created_time_ns=x_date)
                     elif value < 0:
-                        self.subtract(unscaled_value=-value, desc=desc, account=account, created_time_ns=date)
-                    created += 1
-                    cache.append(hashed)
-                    continue
-                if debug:
-                    print('-- Duplicated time detected', date, 'len', len_rows)
-                    print(rows)
-                    print('---------------------------------')
+                        self.subtract(unscaled_value=-x_value, desc=x_desc, account=x_account, created_time_ns=x_date)
+                    return x_hashed
+                len_rows = len(rows)
                 # If records are found at the same time with different accounts in the same amount
                 # (one positive and the other negative), this indicates it is a transfer.
-                if len_rows != 2:
-                    raise Exception(f'more than two transactions({len_rows}) at the same time')
-                (i, account1, desc1, unscaled_value1, date1, rate1, _, _) = rows[0]
-                (j, account2, desc2, unscaled_value2, date2, rate2, _, _) = rows[1]
-                if account1 == account2 or desc1 != desc2 or abs(unscaled_value1) != abs(
-                        unscaled_value2) or date1 != date2:
-                    raise Exception('invalid transfer')
+                if len_rows > 2 or len_rows == 1:
+                    for row in rows:
+                        hashed = process(row)
+                        assert hashed not in cache
+                        cache.append(hashed)
+                        created += 1
+                    continue
+                (i, account1, desc1, unscaled_value1, date1, rate1, _, hashed1) = rows[0]
+                (j, account2, desc2, unscaled_value2, date2, rate2, reference2, hashed2) = rows[1]
+                if account1 == account2:
+                    continue
+                    # raise Exception(f'invalid transfer')
+                # not transfer - same time - normal ops
+                if abs(unscaled_value1) != abs(unscaled_value2) and date1 == date2:
+                    rows[1] = (j, account2, desc2, unscaled_value2, date2 + 1, rate2, reference2, hashed2)
+                    for row in rows:
+                        hashed = process(row)
+                        assert hashed not in cache
+                        cache.append(hashed)
+                        created += 1
+                    continue
                 if rate1 > 0:
                     self.exchange(account1, created_time_ns=date1, rate=rate1)
                 if rate2 > 0:
@@ -3510,10 +3544,15 @@ class ZakatTracker:
                     unscaled_value2,
                     decimal_places=scale_decimal_places,
                 ) if scale_decimal_places > 0 else unscaled_value2
+                # just transfer
                 values = {
                     value1: account1,
                     value2: account2,
                 }
+                if debug:
+                    print('values', values)
+                if len(values) <= 1:
+                    continue
                 self.transfer(
                     unscaled_amount=abs(value1),
                     from_account=values[min(values.keys())],
@@ -4791,10 +4830,9 @@ class ZakatTracker:
                 if debug:
                     print(f'csv-imported: ({created}, {found}, {bad_count}) = count({csv_count})')
                     print('bad', bad)
-                # TODO: assert created + found + bad_count == csv_count
-                # TODO: assert created == csv_count
-                # TODO: assert bad_count == 0
-                assert bad_count > 0
+                assert created + found + bad_count == csv_count
+                assert created == csv_count
+                assert bad_count == 0
                 tmp_size = os.path.getsize(cache_path)
                 assert tmp_size > 0
 
@@ -4803,14 +4841,13 @@ class ZakatTracker:
                 if debug:
                     print(f'csv-imported: ({created_2}, {found_2}, {bad_2_count})')
                     print('bad', bad)
-                assert bad_2_count > 0
-                # TODO: assert tmp_size == os.path.getsize(cache_path)
-                # TODO: assert created_2 + found_2 + bad_2_count == csv_count
-                # TODO: assert created == found_2
-                # TODO: assert bad_count == bad_2_count
-                # TODO: assert found_2 == csv_count
-                # TODO: assert bad_2_count == 0
-                # TODO: assert created_2 == 0
+                assert tmp_size == os.path.getsize(cache_path)
+                assert created_2 + found_2 + bad_2_count == csv_count
+                assert created == found_2
+                assert bad_count == bad_2_count
+                assert found_2 == csv_count
+                assert bad_2_count == 0
+                assert created_2 == 0
 
                 # payment parts
 
