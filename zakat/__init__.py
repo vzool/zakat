@@ -17,6 +17,9 @@ This library provides the ZakatLibrary classes, functions for tracking and calcu
 # Importing necessary classes and functions from the main module
 from zakat.zakat_tracker import (
     Time,
+    SizeInfo,
+    FileInfo,
+    FileStats,
     ImportStatistics,
     CSVRecord,
     ImportReport,
@@ -68,6 +71,9 @@ __all__ = [
     "time",
     "time_to_datetime",
     "tracker",
+    "SizeInfo",
+    "FileInfo",
+    "FileStats",
     "ImportStatistics",
     "CSVRecord",
     "ImportReport",

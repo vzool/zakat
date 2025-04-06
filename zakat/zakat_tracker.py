@@ -696,6 +696,51 @@ class ImportReport:
     bad: list[CSVRecord]
 
 
+@dataclasses.dataclass
+class SizeInfo:
+    """
+    Represents size information in bytes and human-readable format.
+    
+    Attributes:
+    - bytes (float): The size in bytes.
+    - human_readable (str): The human-readable representation of the size.
+    """
+    bytes: float
+    human_readable: str
+
+
+@dataclasses.dataclass
+class FileInfo:
+    """
+    Represents information about a file.
+    
+    Attributes:
+    - type (str): The type of the file.
+    - path (str): The full path to the file.
+    - exists (bool): A boolean indicating whether the file exists.
+    - size (int): The size of the file in bytes.
+    - human_readable_size (str): The human-readable representation of the file size.
+    """
+    type: str
+    path: str
+    exists: bool
+    size: int
+    human_readable_size: str
+
+
+@dataclasses.dataclass
+class FileStats:
+    """
+    Represents statistics related to file storage.
+    
+    Attributes:
+    - ram (:class:`SizeInfo`): Information about the RAM usage.
+    - database (:class:`SizeInfo`): Information about the database size.
+    """
+    ram: SizeInfo
+    database: SizeInfo
+
+
 class JSONEncoder(json.JSONEncoder):
     """
     Custom JSON encoder to handle specific object types.
@@ -1247,10 +1292,10 @@ class ZakatTracker:
         """
         return 'json'
 
-    __base_path = ""
-    __vault_path = ""
+    __base_path = pathlib.Path("")
+    __vault_path = pathlib.Path("")
     __memory_mode = False
-    __debug_output = []
+    __debug_output: list[any] = []
     __vault: Vault
 
     def __init__(self, db_path: str = './zakat_db/', history_mode: bool = True):
@@ -1294,7 +1339,7 @@ class ZakatTracker:
         - str: The current or new path to the database file.
         """
         if path is None:
-            return self.__vault_path
+            return str(self.__vault_path)
         self.__vault_path = pathlib.Path(path).resolve()
         base_path = pathlib.Path(path).resolve()
         if base_path.is_file() or base_path.suffix:
@@ -1741,26 +1786,20 @@ class ZakatTracker:
         return dataclasses.asdict(self.__vault)
 
     @staticmethod
-    def stats_init() -> dict[str, tuple[int, str]]:
+    def stats_init() -> FileStats:
         """
-        Initialize and return a dictionary containing initial statistics for the ZakatTracker instance.
-
-        The dictionary contains two keys: 'database' and 'ram'. Each key maps to a tuple containing two elements:
-        - The initial size of the respective statistic in bytes (int).
-        - The initial size of the respective statistic in a human-readable format (str).
-
-        Parameters:
-        None
+        Initialize and return the initial file statistics.
 
         Returns:
-        - dict[str, tuple]: A dictionary with initial statistics for the ZakatTracker instance.
+        - FileStats: A :class:`FileStats` instance with initial values
+            of 0 bytes for both RAM and database.
         """
-        return {
-            'database': (0, '0'),
-            'ram': (0, '0'),
-        }
+        return FileStats(
+            database=SizeInfo(0, '0'),
+            ram=SizeInfo(0, '0'),
+        )
 
-    def stats(self, ignore_ram: bool = True) -> dict[str, tuple[float, str]]:
+    def stats(self, ignore_ram: bool = True) -> FileStats:
         """
         Calculates and returns statistics about the object's data storage.
 
@@ -1773,7 +1812,7 @@ class ZakatTracker:
         - ignore_ram (bool, optional): Whether to ignore the RAM size. Default is True
 
         Returns:
-        - dict[str, tuple[float, str]]: A dictionary containing the following statistics:
+        - FileStats: A dataclass containing the following statistics:
 
             * 'database': A tuple with two elements:
                 - The database file size in bytes (float).
@@ -1786,20 +1825,20 @@ class ZakatTracker:
         ```bash
         >>> x = ZakatTracker()
         >>> stats = x.stats()
-        >>> print(stats['database'])
-        (256000, '250.0 KB')
-        >>> print(stats['ram'])
-        (12345, '12.1 KB')
+        >>> print(stats.database)
+        SizeInfo(bytes=256000, human_readable='250.0 KB')
+        >>> print(stats.ram)
+        SizeInfo(bytes=12345, human_readable='12.1 KB')
         ```
         """
         ram_size = 0.0 if ignore_ram else self.get_dict_size(self.vault())
         file_size = os.path.getsize(self.path())
-        return {
-            'database': (file_size, self.human_readable_size(file_size)),
-            'ram': (ram_size, self.human_readable_size(ram_size)),
-        }
+        return FileStats(
+            database=SizeInfo(file_size, self.human_readable_size(file_size)),
+            ram=SizeInfo(ram_size, self.human_readable_size(ram_size)),
+        )
 
-    def files(self) -> list[dict[str, str | int]]:
+    def files(self) -> list[FileInfo]:
         """
         Retrieves information about files associated with this class.
 
@@ -1810,7 +1849,7 @@ class ZakatTracker:
         None
 
         Returns:
-        - list[dict[str, str | int]]: A list of dictionaries, each containing information
+        - list[FileInfo]: A list of dataclass, each containing information
             about a specific file:
 
             * type (str): The type of file ('database', 'snapshot', 'import_csv').
@@ -1818,13 +1857,6 @@ class ZakatTracker:
             * exists (bool): Whether the file exists on the filesystem.
             * size (int): The file size in bytes (0 if the file doesn't exist).
             * human_readable_size (str): A human-friendly representation of the file size (e.g., '10 KB', '2.5 MB').
-
-        Example:
-        ```
-        file_info = MyClass.files()
-        for info in file_info:
-            print(f'Type: {info['type']}, Exists: {info['exists']}, Size: {info['human_readable_size']}')
-        ```
         """
         result = []
         for file_type, path in {
@@ -1834,14 +1866,14 @@ class ZakatTracker:
         }.items():
             exists = os.path.exists(path)
             size = os.path.getsize(path) if exists else 0
-            human_readable_size = self.human_readable_size(size) if exists else 0
-            result.append({
-                'type': file_type,
-                'path': path,
-                'exists': exists,
-                'size': size,
-                'human_readable_size': human_readable_size,
-            })
+            human_readable_size = self.human_readable_size(size) if exists else '0'
+            result.append(FileInfo(
+                type=file_type,
+                path=path,
+                exists=exists,
+                size=size,
+                human_readable_size=human_readable_size,
+            ))
         return result
 
     def account_exists(self, account: AccountID) -> bool:
@@ -5021,7 +5053,7 @@ class ZakatTracker:
             raise e
 
 
-def test(path: str = None, debug: bool = False):
+def test(path: Optional[str] = None, debug: bool = False):
     """
     Executes a test suite for the ZakatTracker.
 
