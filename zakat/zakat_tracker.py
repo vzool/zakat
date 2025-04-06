@@ -741,6 +741,41 @@ class FileStats:
     database: SizeInfo
 
 
+@dataclasses.dataclass
+class TimeSummary:
+    """Summary of positive, negative, and total values over a period."""
+    positive: int = 0
+    negative: int = 0
+    total: int = 0
+
+
+@dataclasses.dataclass
+class Transaction:
+    """Represents a single transaction record."""
+    account: str
+    account_id: AccountID
+    desc: str
+    file: dict[Timestamp, str]
+    value: int
+    time: Timestamp
+    transfer: bool
+
+
+@dataclasses.dataclass
+class DailyRecords(TimeSummary):
+    """Represents the records for a single day, including a summary and a list of transactions."""
+    rows: list[Transaction] = dataclasses.field(default_factory=list)
+
+
+@dataclasses.dataclass
+class Timeline:
+    """Aggregated transaction data organized by daily, weekly, monthly, and yearly summaries."""
+    daily: dict[str, DailyRecords] = dataclasses.field(default_factory=dict)
+    weekly: dict[datetime.datetime, TimeSummary] = dataclasses.field(default_factory=dict)
+    monthly: dict[str, TimeSummary] = dataclasses.field(default_factory=dict)
+    yearly: dict[int, TimeSummary] = dataclasses.field(default_factory=dict)
+
+
 class JSONEncoder(json.JSONEncoder):
     """
     Custom JSON encoder to handle specific object types.
@@ -2359,117 +2394,107 @@ class ZakatTracker:
             return self.__vault.account[account].log
         return {}
 
-    @staticmethod
-    def daily_logs_init() -> dict[str, dict]:
+    def timeline(self, weekday: WeekDay = WeekDay.FRIDAY, debug: bool = False) -> Timeline:
         """
-        Initialize a dictionary to store daily, weekly, monthly, and yearly logs.
+        Aggregates transaction logs into a structured timeline.
+
+        This method retrieves transaction logs from all accounts and organizes them
+        into daily, weekly, monthly, and yearly summaries. Each level of the
+        timeline includes a `TimeSummary` object with the total positive, negative,
+        and overall values for that period. The daily level also includes a list
+        of individual `Transaction` records.
 
         Parameters:
-        None
+        - weekday (WeekDay, optional): The day of the week to use as the anchor
+                for weekly summaries. Defaults to WeekDay.FRIDAY.
+        - debug (bool, optional): If True, prints intermediate debug information
+                during processing. Defaults to False.
 
         Returns:
-        - dict: A dictionary with keys 'daily', 'weekly', 'monthly', and 'yearly', each containing an empty dictionary.
-            Later each key maps to another dictionary, which will store the logs for the corresponding time period.
-        """
-        return {
-            'daily': {},
-            'weekly': {},
-            'monthly': {},
-            'yearly': {},
-        }
-
-    def daily_logs(self, weekday: WeekDay = WeekDay.FRIDAY, debug: bool = False):
-        """
-        Retrieve the daily logs (transactions) from all accounts.
-
-        The function groups the logs by day, month, and year, and calculates the total value for each group.
-        It returns a dictionary where the keys are the timestamps of the daily groups,
-        and the values are dictionaries containing the total value and the logs for that group.
-
-        Parameters:
-        - weekday (WeekDay, optional): Select the weekday is collected for the week data. Default is WeekDay.Friday.
-        - debug (bool, optional): Whether to print debug information. Default is False.
-
-        Returns:
-        - dict: A dictionary containing the daily logs.
+        - Timeline: An object containing the aggregated transaction data, organized
+                into daily, weekly, monthly, and yearly summaries. The 'daily'
+                attribute is a dictionary where keys are dates (YYYY-MM-DD) and
+                values are `DailyRecords` objects. The 'weekly' attribute is a
+                dictionary where keys are the starting datetime of the week and
+                values are `TimeSummary` objects. The 'monthly' attribute is a
+                dictionary where keys are year-month strings (YYYY-MM) and values
+                are `TimeSummary` objects. The 'yearly' attribute is a dictionary
+                where keys are years (YYYY) and values are `TimeSummary` objects.
 
         Example:
         ```bash
-        >>> tracker = ZakatTracker()
-        >>> tracker.subtract(51, 'desc', 'account1')
-        >>> ref = tracker.track(100, 'desc', 'account2')
-        >>> tracker.add_file('account2', ref, 'file_0')
-        >>> tracker.add_file('account2', ref, 'file_1')
-        >>> tracker.add_file('account2', ref, 'file_2')
-        >>> tracker.daily_logs()
-        {
-            'daily': {
-                '2024-06-30': {
-                    'positive': 100,
-                    'negative': 51,
-                    'total': 99,
-                    'rows': [
-                        {
-                            'account': 'account1',
-                            'desc': 'desc',
-                            'file': {},
-                            'ref': None,
-                            'value': -51,
-                            'time': 1690977015000000000,
-                            'transfer': False,
-                        },
-                        {
-                            'account': 'account2',
-                            'desc': 'desc',
-                            'file': {
-                                1722919011626770944: 'file_0',
-                                1722919011626812928: 'file_1',
-                                1722919011626846976: 'file_2',
+        >>> from zakat import tracker
+        >>> ledger = tracker(':memory:')
+        >>> account1_id = ledger.create_account('account1')
+        >>> account2_id = ledger.create_account('account2')
+        >>> ledger.subtract(51, 'desc', account1_id)
+        >>> ref = ledger.track(100, 'desc', account2_id)
+        >>> ledger.add_file(account2_id, ref, 'file_0')
+        >>> ledger.add_file(account2_id, ref, 'file_1')
+        >>> ledger.add_file(account2_id, ref, 'file_2')
+        >>> ledger.timeline()
+        Timeline(
+            daily={
+                "2025-04-06": DailyRecords(
+                    positive=10000,
+                    negative=5100,
+                    total=4900,
+                    rows=[
+                        Transaction(
+                            account="account2",
+                            account_id="63879638114290122752",
+                            desc="desc2",
+                            file={
+                                63879638220705865728: "file_0",
+                                63879638223391350784: "file_1",
+                                63879638225766047744: "file_2",
                             },
-                            'ref': None,
-                            'value': 100,
-                            'time': 1690977015000000000,
-                            'transfer': False,
-                        },
+                            value=10000,
+                            time=63879638181936513024,
+                            transfer=False,
+                        ),
+                        Transaction(
+                            account="account1",
+                            account_id="63879638104007106560",
+                            desc="desc",
+                            file={},
+                            value=-5100,
+                            time=63879638149199421440,
+                            transfer=False,
+                        ),
                     ],
-                },
+                )
             },
-            'weekly': {
-                datetime: {
-                    'positive': 100,
-                    'negative': 51,
-                    'total': 99,
-                },
+            weekly={
+                datetime.datetime(2025, 4, 2, 15, 56, 21): TimeSummary(
+                    positive=10000, negative=0, total=10000
+                ),
+                datetime.datetime(2025, 4, 2, 15, 55, 49): TimeSummary(
+                    positive=0, negative=5100, total=-5100
+                ),
             },
-            'monthly': {
-                '2024-06': {
-                    'positive': 100,
-                    'negative': 51,
-                    'total': 99,
-                },
-            },
-            'yearly': {
-                2024: {
-                    'positive': 100,
-                    'negative': 51,
-                    'total': 99,
-                },
-            },
-        }
+            monthly={"2025-04": TimeSummary(positive=10000, negative=5100, total=4900)},
+            yearly={2025: TimeSummary(positive=10000, negative=5100, total=4900)},
+        )
         ```
         """
-        logs = {}
-        for account in self.accounts():
-            for k, v in self.logs(account).items():
-                l = dataclasses.asdict(v)
-                l['time'] = k
-                l['account'] = account
-                if k not in logs:
-                    logs[k] = []
-                logs[k].append(l)
+        logs: dict[Timestamp, list[Transaction]] = {}
+        for account_id in self.accounts():
+            for log_ref, log in self.logs(account_id).items():
+                if log_ref not in logs:
+                    logs[log_ref] = []
+                logs[log_ref].append(Transaction(
+                    account=self.name(account_id),
+                    account_id=account_id,
+                    desc=log.desc,
+                    file=log.file,
+                    value=log.value,
+                    time=log_ref,
+                    transfer=False,
+                ))
         if debug:
             print('logs', logs)
-        y = self.daily_logs_init()
+        y = Timeline()
         for i in sorted(logs, reverse=True):
             dt = Time.time_to_datetime(i)
             daily = f'{dt.year}-{dt.month:02d}-{dt.day:02d}'
@@ -2477,13 +2502,8 @@ class ZakatTracker:
             monthly = f'{dt.year}-{dt.month:02d}'
             yearly = dt.year
             # daily
-            if daily not in y['daily']:
-                y['daily'][daily] = {
-                    'positive': 0,
-                    'negative': 0,
-                    'total': 0,
-                    'rows': [],
-                }
+            if daily not in y.daily:
+                y.daily[daily] = DailyRecords()
             transfer = len(logs[i]) > 1
             if debug:
                 print('logs[i]', logs[i])
@@ -2491,50 +2511,38 @@ class ZakatTracker:
                 if debug:
                     print('z', z)
                 # daily
-                value = z['value']
+                value = z.value
                 if value > 0:
-                    y['daily'][daily]['positive'] += value
+                    y.daily[daily].positive += value
                 else:
-                    y['daily'][daily]['negative'] += -value
-                y['daily'][daily]['total'] += value
-                z['transfer'] = transfer
-                y['daily'][daily]['rows'].append(z)
+                    y.daily[daily].negative += -value
+                y.daily[daily].total += value
+                z.transfer = transfer
+                y.daily[daily].rows.append(z)
                 # weekly
-                if weekly not in y['weekly']:
-                    y['weekly'][weekly] = {
-                        'positive': 0,
-                        'negative': 0,
-                        'total': 0,
-                    }
+                if weekly not in y.weekly:
+                    y.weekly[weekly] = TimeSummary()
                 if value > 0:
-                    y['weekly'][weekly]['positive'] += value
+                    y.weekly[weekly].positive += value
                 else:
-                    y['weekly'][weekly]['negative'] += -value
-                y['weekly'][weekly]['total'] += value
+                    y.weekly[weekly].negative += -value
+                y.weekly[weekly].total += value
                 # monthly
-                if monthly not in y['monthly']:
-                    y['monthly'][monthly] = {
-                        'positive': 0,
-                        'negative': 0,
-                        'total': 0,
-                    }
+                if monthly not in y.monthly:
+                    y.monthly[monthly] = TimeSummary()
                 if value > 0:
-                    y['monthly'][monthly]['positive'] += value
+                    y.monthly[monthly].positive += value
                 else:
-                    y['monthly'][monthly]['negative'] += -value
-                y['monthly'][monthly]['total'] += value
+                    y.monthly[monthly].negative += -value
+                y.monthly[monthly].total += value
                 # yearly
-                if yearly not in y['yearly']:
-                    y['yearly'][yearly] = {
-                        'positive': 0,
-                        'negative': 0,
-                        'total': 0,
-                    }
+                if yearly not in y.yearly:
+                    y.yearly[yearly] = TimeSummary()
                 if value > 0:
-                    y['yearly'][yearly]['positive'] += value
+                    y.yearly[yearly].positive += value
                 else:
-                    y['yearly'][yearly]['negative'] += -value
-                y['yearly'][yearly]['total'] += value
+                    y.yearly[yearly].negative += -value
+                y.yearly[yearly].total += value
         if debug:
             print('y', y)
         return y
@@ -4083,12 +4091,13 @@ class ZakatTracker:
                     assert file_ref in self.__vault.account[x].log[ref].file
                 file_ref = self.add_file(x, ref, 'file_' + str(3))
                 assert self.remove_file(x, ref, file_ref)
-                daily_logs = self.daily_logs(debug=debug)
+                timeline = self.timeline(debug=debug)
                 if debug:
-                    print('daily_logs', daily_logs)
-                for k, v in daily_logs.items():
-                    assert k
-                    assert v
+                    print('timeline', timeline)
+                assert timeline.daily
+                assert timeline.weekly
+                assert timeline.monthly
+                assert timeline.yearly
                 z = self.balance(x)
                 if debug:
                     print('debug-0', z, y)
