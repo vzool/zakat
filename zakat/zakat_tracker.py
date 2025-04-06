@@ -640,6 +640,62 @@ class TransferReport(list[TransferRecord]):
     pass
 
 
+@dataclasses.dataclass
+class ImportStatistics:
+    """
+    Statistics summarizing the results of an import operation.
+
+    Attributes:
+    - created (int): The number of new records successfully created.
+    - found (int): The number of existing records found and potentially updated.
+    - bad (int): The number of records that failed to import due to errors.
+    """
+    created: int
+    found: int
+    bad: int
+
+
+@dataclasses.dataclass
+class CSVRecord:
+    """
+    Represents a single record read from a CSV file.
+
+    Attributes:
+    - index (int): The original row number of the record in the CSV file (0-based).
+    - account (str): The account identifier.
+    - desc (str): A description associated with the record.
+    - value (int): The numerical value of the record.
+    - date (str): The date associated with the record (format may vary).
+    - rate (float): A rate or factor associated with the record.
+    - reference (str): An optional reference string.
+    - hashed (str): A hashed representation of the record's content.
+    - error (str): An error message if there was an issue processing this record.
+    """
+    index: int
+    account: str
+    desc: str
+    value: int
+    date: str
+    rate: float
+    reference: str
+    hashed: str
+    error: str
+
+
+@dataclasses.dataclass
+class ImportReport:
+    """
+    A report summarizing the outcome of an import operation.
+
+    Attributes:
+    - statistics (ImportStatistics): Statistical information about the import.
+    - bad (list[CSVRecord]): A list of CSV records that failed to import,
+                                 including any error messages.
+    """
+    statistics: ImportStatistics
+    bad: list[CSVRecord]
+
+
 class JSONEncoder(json.JSONEncoder):
     """
     Custom JSON encoder to handle specific object types.
@@ -672,9 +728,10 @@ class JSONEncoder(json.JSONEncoder):
             return float(o)
         if isinstance(o, Exception):
             return str(o)
-        if isinstance(o, Vault):
+        if isinstance(o, Vault) or isinstance(o, ImportReport):
             return dataclasses.asdict(o)
         return super().default(o)
+
 
 class JSONDecoder(json.JSONDecoder):
     """
@@ -3357,9 +3414,9 @@ class ZakatTracker:
             "reference",
         ]
 
-    def import_csv(self, path: str = 'file.csv', scale_decimal_places: int = 0, debug: bool = False) -> tuple:
+    def import_csv(self, path: str = 'file.csv', scale_decimal_places: int = 0, debug: bool = False) -> ImportReport:
         """
-        The function reads the CSV file, checks for duplicate transactions, and creates the transactions in the system.
+        The function reads the CSV file, checks for duplicate transactions and tries it's best to creates the transactions history accordingly in the system.
 
         Parameters:
         - path (str, optional): The path to the CSV file. Default is 'file.csv'.
@@ -3367,7 +3424,7 @@ class ZakatTracker:
         - debug (bool, optional): A flag indicating whether to print debug information.
 
         Returns:
-        - tuple: A tuple containing the number of transactions created, the number of transactions found in the cache,
+        - ImportReport: A dataclass containing the number of transactions created, the number of transactions found in the cache,
                 and a dictionary of bad transactions.
 
         Notes:
@@ -3401,8 +3458,8 @@ class ZakatTracker:
             '%Y-%m-%dT%H%M%S.%f',
             '%Y-%m-%d',
         ]
-        created, found, bad = 0, 0, {}
-        data: dict[int, list] = {}
+        statistics = ImportStatistics(0, 0, 0)
+        data: dict[int, list[CSVRecord]] = {}
         with open(path, newline='', encoding='utf-8') as f:
             i = 0
             for row in csv.reader(f, delimiter=','):
@@ -3413,7 +3470,7 @@ class ZakatTracker:
                 i += 1
                 hashed = hash(tuple(row))
                 if hashed in cache:
-                    found += 1
+                    statistics.found += 1
                     continue
                 account = row[0]
                 desc = row[1]
@@ -3435,29 +3492,41 @@ class ZakatTracker:
                     except Exception as e:
                         if debug:
                             print(e)
+                record = CSVRecord(
+                    index=i,
+                    account=account,
+                    desc=desc,
+                    value=value,
+                    date=date,
+                    rate=rate,
+                    reference=reference,
+                    hashed=hashed,
+                    error='',
+                )
                 if date <= 0:
-                    bad[i] = row + ['invalid date']
+                    record.error = 'invalid date'
+                    statistics.bad += 1
                 if value == 0:
-                    bad[i] = row + ['invalid value']
+                    record.error = 'invalid value'
+                    statistics.bad += 1
                     continue
                 if date not in data:
                     data[date] = []
-                data[date].append((
-                    i,
-                    account,
-                    desc,
-                    value,
-                    date,
-                    rate,
-                    reference,
-                    hashed,
-                ))
+                data[date].append(record)
 
         if debug:
             print('import_csv', len(data))
 
-        if bad:
-            return created, found, bad
+        if statistics.bad > 0:
+            return ImportReport(
+                statistics=statistics,
+                bad=[
+                    item
+                    for sublist in data.values()
+                    for item in sublist
+                    if item.error
+                ],
+            )
 
         no_lock = self.nolock()
         lock = self.__lock()
@@ -3467,24 +3536,15 @@ class ZakatTracker:
         if debug:
             print('before-names', names, len(names))
         for date, rows in sorted(data.items()):
-            new_rows = []
+            new_rows: list[CSVRecord] = []
             for row in rows:
-                (i, account, desc, unscaled_value, date, rate, reference, hashed) = row
-                if account not in names:
-                    account_id = self.create_account(account)
-                    names[account] = account_id
-                account_id = names[account]
+                if row.account not in names:
+                    account_id = self.create_account(row.account)
+                    names[row.account] = account_id
+                account_id = names[row.account]
                 assert account_id
-                new_rows.append((
-                    i,
-                    account_id,
-                    desc,
-                    unscaled_value,
-                    date,
-                    rate,
-                    reference,
-                    hashed,
-                ))
+                row.account = account_id
+                new_rows.append(row)
             assert new_rows
             assert date in data
             data[date] = new_rows
@@ -3495,19 +3555,18 @@ class ZakatTracker:
         # do ops
         for date, rows in sorted(data.items()):
             try:
-                def process(x):
-                    (_, x_account, x_desc, x_unscaled_value, x_date, x_rate, x_reference, x_hashed) = x
-                    x_value = self.unscale(
-                        x_unscaled_value,
+                def process(x: CSVRecord):
+                    x.value = self.unscale(
+                        x.value,
                         decimal_places=scale_decimal_places,
-                    ) if scale_decimal_places > 0 else x_unscaled_value
-                    if x_rate > 0:
-                        self.exchange(account=x_account, created_time_ns=x_date, rate=x_rate)
-                    if x_value > 0:
-                        self.track(unscaled_value=x_value, desc=x_desc, account=x_account, created_time_ns=x_date)
-                    elif value < 0:
-                        self.subtract(unscaled_value=-x_value, desc=x_desc, account=x_account, created_time_ns=x_date)
-                    return x_hashed
+                    ) if scale_decimal_places > 0 else x.value
+                    if x.rate > 0:
+                        self.exchange(account=x.account, created_time_ns=x.date, rate=x.rate)
+                    if x.value > 0:
+                        self.track(unscaled_value=x.value, desc=x.desc, account=x.account, created_time_ns=x.date)
+                    elif x.value < 0:
+                        self.subtract(unscaled_value=-x.value, desc=x.desc, account=x.account, created_time_ns=x.date)
+                    return x.hashed
                 len_rows = len(rows)
                 # If records are found at the same time with different accounts in the same amount
                 # (one positive and the other negative), this indicates it is a transfer.
@@ -3516,49 +3575,49 @@ class ZakatTracker:
                         hashed = process(row)
                         assert hashed not in cache
                         cache.append(hashed)
-                        created += 1
+                        statistics.created += 1
                     continue
-                (i, account1, desc1, unscaled_value1, date1, rate1, _, hashed1) = rows[0]
-                (j, account2, desc2, unscaled_value2, date2, rate2, reference2, hashed2) = rows[1]
-                if account1 == account2:
+                x1 = rows[0]
+                x2 = rows[1]
+                if x1.account == x2.account:
                     continue
                     # raise Exception(f'invalid transfer')
                 # not transfer - same time - normal ops
-                if abs(unscaled_value1) != abs(unscaled_value2) and date1 == date2:
-                    rows[1] = (j, account2, desc2, unscaled_value2, date2 + 1, rate2, reference2, hashed2)
+                if abs(x1.value) != abs(x2.value) and x1.date == x2.date:
+                    rows[1].date += 1
                     for row in rows:
                         hashed = process(row)
                         assert hashed not in cache
                         cache.append(hashed)
-                        created += 1
+                        statistics.created += 1
                     continue
-                if rate1 > 0:
-                    self.exchange(account1, created_time_ns=date1, rate=rate1)
-                if rate2 > 0:
-                    self.exchange(account2, created_time_ns=date2, rate=rate2)
-                value1 = self.unscale(
-                    unscaled_value1,
+                if x1.rate > 0:
+                    self.exchange(x1.account, created_time_ns=x1.date, rate=x1.rate)
+                if x2.rate > 0:
+                    self.exchange(x2.account, created_time_ns=x2.date, rate=x2.rate)
+                x1.value = self.unscale(
+                    x1.value,
                     decimal_places=scale_decimal_places,
-                ) if scale_decimal_places > 0 else unscaled_value1
-                value2 = self.unscale(
-                    unscaled_value2,
+                ) if scale_decimal_places > 0 else x1.value
+                x2.value = self.unscale(
+                    x2.value,
                     decimal_places=scale_decimal_places,
-                ) if scale_decimal_places > 0 else unscaled_value2
+                ) if scale_decimal_places > 0 else x2.value
                 # just transfer
                 values = {
-                    value1: account1,
-                    value2: account2,
+                    x1.value: x1.account,
+                    x2.value: x2.account,
                 }
                 if debug:
                     print('values', values)
                 if len(values) <= 1:
                     continue
                 self.transfer(
-                    unscaled_amount=abs(value1),
+                    unscaled_amount=abs(x1.value),
                     from_account=values[min(values.keys())],
                     to_account=values[max(values.keys())],
-                    desc=desc1,
-                    created_time_ns=date1,
+                    desc=x1.desc,
+                    created_time_ns=x1.date,
                 )
             except Exception as e:
                 for row in rows:
@@ -3574,13 +3633,21 @@ class ZakatTracker:
         if no_lock:
             assert lock is not None
             self.free(lock)
-        y = created, found, bad
+        report = ImportReport(
+            statistics=statistics,
+            bad=[
+                item
+                for sublist in data.values()
+                for item in sublist
+                if item.error
+            ],
+        )
         if debug:
             debug_path = f'{self.import_csv_cache_path()}.debug.json'
             with open(debug_path, 'w', encoding='utf-8') as file:
-                json.dump(y, file, indent=4, cls=JSONEncoder)
+                json.dump(report, file, indent=4, cls=JSONEncoder)
                 print(f'generated debug report @ `{debug_path}`...')
-        return y
+        return report
 
     ########
     # TESTS #
@@ -4841,29 +4908,31 @@ class ZakatTracker:
                     os.remove(cache_path)
                 self.reset()
                 lock = self.lock()
-                (created, found, bad) = self.import_csv(csv_path, debug=debug)
-                bad_count = len(bad)
+                import_report = self.import_csv(csv_path, debug=debug)
+                bad_count = len(import_report.bad)
                 if debug:
-                    print(f'csv-imported: ({created}, {found}, {bad_count}) = count({csv_count})')
-                    print('bad', bad)
-                assert created + found + bad_count == csv_count
-                assert created == csv_count
+                    print(f'csv-imported: {import_report.statistics} = count({csv_count})')
+                    print('bad', import_report.bad)
+                assert import_report.statistics.created + import_report.statistics.found + bad_count == csv_count
+                assert import_report.statistics.created == csv_count
                 assert bad_count == 0
+                assert bad_count == import_report.statistics.bad
                 tmp_size = os.path.getsize(cache_path)
                 assert tmp_size > 0
 
-                (created_2, found_2, bad_2) = self.import_csv(csv_path, debug=debug)
-                bad_2_count = len(bad_2)
+                import_report_2 = self.import_csv(csv_path, debug=debug)
+                bad_2_count = len(import_report_2.bad)
                 if debug:
-                    print(f'csv-imported: ({created_2}, {found_2}, {bad_2_count})')
-                    print('bad', bad)
+                    print(f'csv-imported: {import_report_2}')
+                    print('bad', import_report_2.bad)
                 assert tmp_size == os.path.getsize(cache_path)
-                assert created_2 + found_2 + bad_2_count == csv_count
-                assert created == found_2
+                assert import_report_2.statistics.created + import_report_2.statistics.found + bad_2_count == csv_count
+                assert import_report.statistics.created == import_report_2.statistics.found
                 assert bad_count == bad_2_count
-                assert found_2 == csv_count
+                assert import_report_2.statistics.found == csv_count
                 assert bad_2_count == 0
-                assert created_2 == 0
+                assert bad_2_count == import_report_2.statistics.bad
+                assert import_report_2.statistics.created == 0
 
                 # payment parts
 
