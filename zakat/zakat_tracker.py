@@ -497,11 +497,13 @@ class ZakatSummary:
 
     Attributes:
     - total_wealth (int): The total wealth collected from all rest of transactions.
+    - num_wealth_items (int): The number of individual transactions contributing to the total wealth.
     - num_zakatable_items (int): The number of transactions subject to Zakat.
     - total_zakatable_amount (int): The total value of all transactions subject to Zakat.
     - total_zakat_due (int): The calculated amount of Zakat payable.
     """
     total_wealth: int = 0
+    num_wealth_items: int = 0
     num_zakatable_items: int = 0
     total_zakatable_amount: int = 0
     total_zakat_due: int = 0
@@ -2994,6 +2996,7 @@ class ZakatTracker:
                 exchange = self.exchange(x, created_time_ns=Time.time())
                 assert exchange.rate is not None
                 rest = ZakatTracker.exchange_calc(rest, float(exchange.rate), 1)
+                summary.num_wealth_items += 1
                 summary.total_wealth += rest
                 epoch = (created_time_ns - j) / cycle
                 if debug:

@@ -739,6 +739,7 @@ ledger.zakat(zakat_report, parts) # --> False
       "valid": true,
       "summary": {
         "total_wealth": 2900000,
+        "num_wealth_items": 6,
         "num_zakatable_items": 1,
         "total_zakatable_amount": 1000000,
         "total_zakat_due": 25000
