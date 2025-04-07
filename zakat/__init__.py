@@ -55,6 +55,8 @@ from zakat.zakat_tracker import (
     JSONDecoder,
     MathOperation,
     WeekDay,
+    StrictDataclass,
+    ImmutableWithSelectiveFreeze,
 )
 
 from zakat.file_server import (
@@ -116,4 +118,6 @@ __all__ = [
     "start_file_server",
     "find_available_port",
     "FileType",
+    "StrictDataclass",
+    "ImmutableWithSelectiveFreeze",
 ]

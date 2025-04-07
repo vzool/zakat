@@ -164,30 +164,6 @@ def factory_value(value) -> callable:
     return factory
 
 
-class Object:
-    # Frozen implemention REF https://discuss.python.org/t/dataclasses-freezing-specific-fields-should-be-possible/59968/2
-    def __post_init__(self):
-        self.__set_fields_frozen(self)
-    @classmethod
-    def __set_fields_frozen(cls, self):
-        flds = dataclasses.fields(cls)
-        for fld in flds:
-            if fld.metadata.get("frozen"):
-                field_name = fld.name
-                field_value = getattr(self, fld.name)
-                setattr(self, f"_{fld.name}", field_value)
-
-                def local_getter(self):
-                    return getattr(self, f"_{field_name}")
-
-                def frozen(name):
-                    def local_setter(self, value):
-                        raise RuntimeError(f"Field '{name}' is frozen!")
-                    return local_setter
-
-                setattr(cls, field_name, property(local_getter, frozen(field_name)))
-
-
 class Timestamp(int):
     """Represents a timestamp as an integer, which must be greater than zero."""
 
@@ -366,6 +342,70 @@ class StrictDataclass:
         _check_attribute(self, name, value)
 
 
+class ImmutableWithSelectiveFreeze:
+    """
+    A base class for creating immutable objects with the ability to selectively
+    freeze specific fields.
+
+    Inheriting from this class will automatically make all fields defined in
+    dataclasses as frozen after initialization if their metadata contains
+    `"frozen": True`. Attempting to set a value to a frozen field after
+    initialization will raise a RuntimeError.
+
+    Example:
+    ```python
+    @dataclasses.dataclass
+    class MyObject(ImmutableWithSelectiveFreeze):
+        name: str
+        count: int = dataclasses.field(metadata={"frozen": True})
+        description: str = "default"
+
+    obj = MyObject(name="Test", count=5)
+    print(obj.name)  # Output: Test
+    print(obj.count) # Output: 5
+    obj.name = "New Name" # This will work
+    try:
+        obj.count = 10  # This will raise a RuntimeError
+    except RuntimeError as e:
+        print(e)      # Output: Field 'count' is frozen!
+    print(obj.description) # Output: default
+    obj.description = "updated" # This will work
+    ```
+    """
+    # Implementation based on: https://discuss.python.org/t/dataclasses-freezing-specific-fields-should-be-possible/59968/2
+    def __post_init__(self):
+        """
+        Initializes the object and freezes fields marked with `"frozen": True`
+        in their metadata.
+        """
+        self.__set_fields_frozen(self)
+
+    @classmethod
+    def __set_fields_frozen(cls, self):
+        """
+        Iterates through the dataclass fields and freezes those with the
+        `"frozen": True` metadata.
+        """
+        flds = dataclasses.fields(cls)
+        for fld in flds:
+            if fld.metadata.get("frozen"):
+                field_name = fld.name
+                field_value = getattr(self, fld.name)
+                setattr(self, f"_{fld.name}", field_value)
+
+                def local_getter(self):
+                    """Getter for the frozen field."""
+                    return getattr(self, f"_{field_name}")
+
+                def frozen(name):
+                    """Creates a setter that raises a RuntimeError for frozen fields."""
+                    def local_setter(self, value):
+                        raise RuntimeError(f"Field '{name}' is frozen!")
+                    return local_setter
+
+                setattr(cls, field_name, property(local_getter, frozen(field_name)))
+
+
 @dataclasses.dataclass
 class BoxZakat(StrictDataclass):
     """
@@ -382,7 +422,10 @@ class BoxZakat(StrictDataclass):
 
 
 @dataclasses.dataclass
-class Box(StrictDataclass):
+class Box(
+        StrictDataclass,
+        # ImmutableWithSelectiveFreeze,
+    ):
     """
     Represents a financial box with capital, remaining value, and zakat details.
 
@@ -391,7 +434,7 @@ class Box(StrictDataclass):
     - rest (int): The current remaining value within the box.
     - zakat (BoxZakat): A `BoxZakat` object containing the accumulated zakat information for the box.
     """
-    capital: int
+    capital: int #= dataclasses.field(metadata={"frozen": True})
     rest: int
     zakat: BoxZakat
 
