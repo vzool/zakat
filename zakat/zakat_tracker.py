@@ -352,8 +352,22 @@ class AccountID(str):
                     pass  # Expected exception
 
 
+def _check_attribute(instance, name, value):
+    """Raises an AttributeError if the attribute doesn't exist."""
+    if name not in instance.__dataclass_fields__:
+        raise AttributeError(f"Cannot set non-existent attribute '{name}'")
+    object.__setattr__(instance, name, value)
+
+
 @dataclasses.dataclass
-class BoxZakat:
+class StrictDataclass:
+    """A dataclass that prevents setting non-existent attributes."""
+    def __setattr__(self, name: str, value: any) -> None:
+        _check_attribute(self, name, value)
+
+
+@dataclasses.dataclass
+class BoxZakat(StrictDataclass):
     """
     Represents the accumulated zakat information for a financial box.
 
@@ -368,7 +382,7 @@ class BoxZakat:
 
 
 @dataclasses.dataclass
-class Box:
+class Box(StrictDataclass):
     """
     Represents a financial box with capital, remaining value, and zakat details.
 
@@ -383,7 +397,7 @@ class Box:
 
 
 @dataclasses.dataclass
-class Log:
+class Log(StrictDataclass):
     """
     Represents a log entry for an account.
 
@@ -400,7 +414,7 @@ class Log:
 
 
 @dataclasses.dataclass
-class Account:
+class Account(StrictDataclass):
     """
     Represents a financial account.
 
@@ -425,7 +439,7 @@ class Account:
 
 
 @dataclasses.dataclass
-class Exchange:
+class Exchange(StrictDataclass):
     """
     Represents an exchange rate and related information.
 
@@ -440,7 +454,7 @@ class Exchange:
 
 
 @dataclasses.dataclass
-class History:
+class History(StrictDataclass):
     """
     Represents a history entry for an account action.
 
@@ -463,7 +477,7 @@ class History:
 
 
 @dataclasses.dataclass
-class BoxPlan:
+class BoxPlan(StrictDataclass):
     """
     Represents a plan for a box.
 
@@ -485,13 +499,14 @@ class BoxPlan:
     ref: Timestamp
 
 
-class ZakatPlan(dict[AccountID, list[BoxPlan]]):
+@dataclasses.dataclass
+class ZakatPlan(StrictDataclass, dict[AccountID, list[BoxPlan]]):
     """A dictionary mapping account IDs to lists of BoxPlan objects."""
     pass
 
 
 @dataclasses.dataclass
-class ZakatSummary:
+class ZakatSummary(StrictDataclass):
     """
     Summarizes key financial figures for a Zakat calculation.
 
@@ -510,7 +525,7 @@ class ZakatSummary:
 
 
 @dataclasses.dataclass
-class ZakatReport:
+class ZakatReport(StrictDataclass):
     """
     Represents a zakat report.
 
@@ -525,7 +540,7 @@ class ZakatReport:
 
 
 @dataclasses.dataclass
-class Vault:
+class Vault(StrictDataclass):
     """
     Represents a vault containing accounts, exchanges, and history.
 
@@ -544,7 +559,7 @@ class Vault:
 
 
 @dataclasses.dataclass
-class AccountPaymentPart:
+class AccountPaymentPart(StrictDataclass):
     """
     Represents a payment part for an account.
 
@@ -559,7 +574,7 @@ class AccountPaymentPart:
 
 
 @dataclasses.dataclass
-class PaymentParts:
+class PaymentParts(StrictDataclass):
     """
     Represents payment parts for multiple accounts.
 
@@ -576,7 +591,7 @@ class PaymentParts:
 
 
 @dataclasses.dataclass
-class SubtractAge:
+class SubtractAge(StrictDataclass):
     """
     Represents an age subtraction.
 
@@ -588,13 +603,14 @@ class SubtractAge:
     total: int
 
 
-class SubtractAges(list[SubtractAge]):
+@dataclasses.dataclass
+class SubtractAges(StrictDataclass, list[SubtractAge]):
     """A list of SubtractAge objects."""
     pass
 
 
 @dataclasses.dataclass
-class SubtractReport:
+class SubtractReport(StrictDataclass):
     """
     Represents a report of age subtractions.
 
@@ -607,7 +623,7 @@ class SubtractReport:
 
 
 @dataclasses.dataclass
-class TransferTime:
+class TransferTime(StrictDataclass):
     """
     Represents a transfer time.
 
@@ -619,13 +635,14 @@ class TransferTime:
     log_ref: Timestamp
 
 
-class TransferTimes(list[TransferTime]):
+@dataclasses.dataclass
+class TransferTimes(StrictDataclass, list[TransferTime]):
     """A list of TransferTime objects."""
     pass
 
 
 @dataclasses.dataclass
-class TransferRecord:
+class TransferRecord(StrictDataclass):
     """
     Represents a transfer record.
 
@@ -637,13 +654,13 @@ class TransferRecord:
     times: TransferTimes
 
 
-class TransferReport(list[TransferRecord]):
+class TransferReport(StrictDataclass, list[TransferRecord]):
     """A list of TransferRecord objects."""
     pass
 
 
 @dataclasses.dataclass
-class ImportStatistics:
+class ImportStatistics(StrictDataclass):
     """
     Statistics summarizing the results of an import operation.
 
@@ -658,7 +675,7 @@ class ImportStatistics:
 
 
 @dataclasses.dataclass
-class CSVRecord:
+class CSVRecord(StrictDataclass):
     """
     Represents a single record read from a CSV file.
 
@@ -685,7 +702,7 @@ class CSVRecord:
 
 
 @dataclasses.dataclass
-class ImportReport:
+class ImportReport(StrictDataclass):
     """
     A report summarizing the outcome of an import operation.
 
@@ -699,7 +716,7 @@ class ImportReport:
 
 
 @dataclasses.dataclass
-class SizeInfo:
+class SizeInfo(StrictDataclass):
     """
     Represents size information in bytes and human-readable format.
     
@@ -712,7 +729,7 @@ class SizeInfo:
 
 
 @dataclasses.dataclass
-class FileInfo:
+class FileInfo(StrictDataclass):
     """
     Represents information about a file.
     
@@ -731,7 +748,7 @@ class FileInfo:
 
 
 @dataclasses.dataclass
-class FileStats:
+class FileStats(StrictDataclass):
     """
     Represents statistics related to file storage.
     
@@ -744,7 +761,7 @@ class FileStats:
 
 
 @dataclasses.dataclass
-class TimeSummary:
+class TimeSummary(StrictDataclass):
     """Summary of positive, negative, and total values over a period."""
     positive: int = 0
     negative: int = 0
@@ -752,7 +769,7 @@ class TimeSummary:
 
 
 @dataclasses.dataclass
-class Transaction:
+class Transaction(StrictDataclass):
     """Represents a single transaction record."""
     account: str
     account_id: AccountID
@@ -764,13 +781,13 @@ class Transaction:
 
 
 @dataclasses.dataclass
-class DailyRecords(TimeSummary):
+class DailyRecords(TimeSummary, StrictDataclass):
     """Represents the records for a single day, including a summary and a list of transactions."""
     rows: list[Transaction] = dataclasses.field(default_factory=list)
 
 
 @dataclasses.dataclass
-class Timeline:
+class Timeline(StrictDataclass):
     """Aggregated transaction data organized by daily, weekly, monthly, and yearly summaries."""
     daily: dict[str, DailyRecords] = dataclasses.field(default_factory=dict)
     weekly: dict[datetime.datetime, TimeSummary] = dataclasses.field(default_factory=dict)
@@ -3921,6 +3938,48 @@ class ZakatTracker:
         Timestamp.test()
         AccountID.test(debug)
         Time.test(debug)
+
+        # test to prevents setting non-existent attributes
+
+        for cls in [
+            StrictDataclass,
+            BoxZakat,
+            Box,
+            Log,
+            Account,
+            Exchange,
+            History,
+            BoxPlan,
+            ZakatPlan,
+            ZakatSummary,
+            ZakatReport,
+            Vault,
+            AccountPaymentPart,
+            PaymentParts,
+            SubtractAge,
+            SubtractAges,
+            SubtractReport,
+            TransferTime,
+            TransferTimes,
+            TransferRecord,
+            ImportStatistics,
+            CSVRecord,
+            ImportReport,
+            SizeInfo,
+            FileInfo,
+            FileStats,
+            TimeSummary,
+            Transaction,
+            DailyRecords,
+            Timeline,
+        ]:
+            failed = False
+            try:
+                x = cls()
+                x.x = 123
+            except:
+                failed = True
+            assert failed
 
         # sanity check - random forward time
 
