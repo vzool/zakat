@@ -111,7 +111,7 @@ zakat_report = ledger.check(silver_gram_price=2.5)
 # discount from the same accounts if Zakat applicable individually or collectively
 ledger.zakat(zakat_report) # --> True
 # or Collect all Zakat and discount from selected accounts
-parts = ledger.build_payment_parts(zakat_report.statistics.zakat_cut_balances)
+parts = ledger.build_payment_parts(zakat_report.summary.total_zakat_due)
 # modify `parts` to distribute your Zakat on selected accounts
 ledger.zakat(zakat_report, parts) # --> False
 ```
@@ -728,11 +728,11 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
   "report": {
     "63879017256650784768": {
       "valid": true,
-      "statistics": {
-        "overall_wealth": 2900000,
-        "zakatable_transactions_count": 0,
-        "zakatable_transactions_balance": 1000000,
-        "zakat_cut_balances": 25000
+      "summary": {
+        "total_wealth": 2900000,
+        "num_zakatable_items": 1,
+        "total_zakatable_amount": 1000000,
+        "total_zakat_due": 25000
       },
       "plan": {
         "63879017256647622656": [

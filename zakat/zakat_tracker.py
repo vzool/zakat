@@ -491,20 +491,20 @@ class ZakatPlan(dict[AccountID, list[BoxPlan]]):
 
 
 @dataclasses.dataclass
-class ZakatReportStatistics:
+class ZakatSummary:
     """
-    Represents statistics for a zakat report.
+    Summarizes key financial figures for a Zakat calculation.
 
     Attributes:
-    - overall_wealth: The overall wealth.
-    - zakatable_transactions_count: The count of zakatable transactions.
-    - zakatable_transactions_balance: The balance of zakatable transactions.
-    - zakat_cut_balances: The zakat cut balances.
+    - total_wealth (int): The total wealth collected from all rest of transactions.
+    - num_zakatable_items (int): The number of transactions subject to Zakat.
+    - total_zakatable_amount (int): The total value of all transactions subject to Zakat.
+    - total_zakat_due (int): The calculated amount of Zakat payable.
     """
-    overall_wealth: int = 0
-    zakatable_transactions_count: int = 0
-    zakatable_transactions_balance: int = 0
-    zakat_cut_balances: int = 0
+    total_wealth: int = 0
+    num_zakatable_items: int = 0
+    total_zakatable_amount: int = 0
+    total_zakat_due: int = 0
 
 
 @dataclasses.dataclass
@@ -514,11 +514,11 @@ class ZakatReport:
 
     Attributes:
     - valid: A boolean indicating whether the Zakat is available.
-    - statistics: The ZakatReportStatistics object.
+    - summary: The ZakatSummary object.
     - plan: The ZakatPlan object.
     """
     valid: bool
-    statistics: ZakatReportStatistics
+    summary: ZakatSummary
     plan: ZakatPlan
 
 
@@ -2974,7 +2974,7 @@ class ZakatTracker:
             unscaled_nisab = ZakatTracker.Nisab(silver_gram_price)
         nisab = self.scale(unscaled_nisab)
         plan = ZakatPlan()
-        statistics = ZakatReportStatistics()
+        summary = ZakatSummary()
         below_nisab = 0
         valid = False
         if debug:
@@ -2994,7 +2994,7 @@ class ZakatTracker:
                 exchange = self.exchange(x, created_time_ns=Time.time())
                 assert exchange.rate is not None
                 rest = ZakatTracker.exchange_calc(rest, float(exchange.rate), 1)
-                statistics.overall_wealth += rest
+                summary.total_wealth += rest
                 epoch = (created_time_ns - j) / cycle
                 if debug:
                     print(f'Epoch: {epoch}', _box[j])
@@ -3009,7 +3009,8 @@ class ZakatTracker:
                     continue
                 if debug:
                     print('Epoch - PASSED')
-                statistics.zakatable_transactions_balance += rest
+                summary.num_zakatable_items += 1
+                summary.total_zakatable_amount += rest
                 is_nisab = rest >= nisab
                 total = 0
                 if is_nisab:
@@ -3022,7 +3023,7 @@ class ZakatTracker:
                 if total > 0:
                     if x not in plan:
                         plan[x] = []
-                    statistics.zakat_cut_balances += total
+                    summary.total_zakat_due += total
                     plan[x].append(BoxPlan(
                         below_nisab=not is_nisab,
                         total=total,
@@ -3037,7 +3038,7 @@ class ZakatTracker:
             print(f'below_nisab({below_nisab}) >= nisab({nisab})')
         return ZakatReport(
             valid=valid,
-            statistics=statistics,
+            summary=summary,
             plan=plan,
         )
 
@@ -3294,7 +3295,7 @@ class ZakatTracker:
                 value=log_data[str(ts)]['value'],
                 desc=log_data[str(ts)]['desc'],
                 ref=Timestamp(log_data[str(ts)].get('ref')) if log_data[str(ts)].get('ref') is not None else None,
-                file={Timestamp(ft): fv for ft, fv in log_data[str(ts)].get('file', {}).items()}
+                file={Timestamp(ft): fv for ft, fv in log_data[str(ts)].get('file', {}).items()},
             ) for ts in log_data}
 
             vault.account[account_reference] = Account(
@@ -3315,7 +3316,7 @@ class ZakatTracker:
                 vault.exchange[account_reference][Timestamp(timestamp)] = Exchange(
                     rate=exchange_details.get("rate"),
                     description=exchange_details.get("description"),
-                    time=Timestamp(exchange_details.get("time")) if exchange_details.get("time") is not None else None
+                    time=Timestamp(exchange_details.get("time")) if exchange_details.get("time") is not None else None,
                 )
 
         # Load History
@@ -3329,7 +3330,7 @@ class ZakatTracker:
                     file=Timestamp(history_data.get("file")) if history_data.get("file") is not None else None,
                     key=history_data.get("key"),
                     value=history_data.get("value"),
-                    math=MathOperation(history_data.get("math")) if history_data.get("math") is not None else None
+                    math=MathOperation(history_data.get("math")) if history_data.get("math") is not None else None,
                 )
 
         # Load Lock
@@ -3353,13 +3354,13 @@ class ZakatTracker:
                         below_nisab=box_plan_data["below_nisab"],
                         total=box_plan_data["total"],
                         count=box_plan_data["count"],
-                        ref=Timestamp(box_plan_data["ref"])
+                        ref=Timestamp(box_plan_data["ref"]),
                     ))
 
             vault.report[Timestamp(timestamp)] = ZakatReport(
                 valid=report_data["valid"],
-                statistics=ZakatReportStatistics(**report_data["statistics"]),
-                plan=zakat_plan
+                summary=ZakatSummary(**report_data["summary"]),
+                plan=zakat_plan,
             )
 
         return vault
@@ -3776,7 +3777,7 @@ class ZakatTracker:
         return size
 
     @staticmethod
-    def day_to_time(day: int, month: int = 6, year: int = 2024) -> int:  # افتراض أن الشهر هو يونيو والسنة 2024
+    def day_to_time(day: int, month: int = 6, year: int = 2024) -> Timestamp:  # افتراض أن الشهر هو يونيو والسنة 2024
         """
         Convert a specific day, month, and year into a timestamp.
 
@@ -3786,7 +3787,7 @@ class ZakatTracker:
         - year (int, optional): The year. Default is 2024.
 
         Returns:
-        - int: The timestamp representing the given day, month, and year.
+        - Timestamp: The timestamp representing the given day, month, and year.
 
         Note:
         - This method assumes the default month and year if not provided.
@@ -3828,7 +3829,7 @@ class ZakatTracker:
         - debug (bool, optional): A flag indicating whether to print debug information.
 
         Returns:
-        None
+        - int: number of generated records.
         """
         if debug:
             print('generate_random_csv_file', f'debug={debug}')
@@ -4604,6 +4605,11 @@ class ZakatTracker:
                 assert description is None
 
             assert self.nolock()
+            if debug:
+                print(self.__vault.history, len(self.__vault.history))
+            for _ in range(len(self.__vault.history)):
+                assert self.recall(dry=False, debug=debug)
+            assert not self.recall(dry=False, debug=debug)
 
             self.reset()
 
@@ -4807,8 +4813,8 @@ class ZakatTracker:
                     if debug:
                         print('report', report)
                     assert case[4] == report.valid
-                    assert case[5] == report.statistics.overall_wealth
-                    assert case[5] == report.statistics.zakatable_transactions_balance
+                    assert case[5] == report.summary.total_wealth
+                    assert case[5] == report.summary.total_zakatable_amount
 
                     if debug:
                         pp().pprint(report.plan)
@@ -4821,10 +4827,10 @@ class ZakatTracker:
                             assert report.plan[x][0].total == case[3][0][x][0]['below_nisab']
                         else:
                             if debug:
-                                print('[assert]', int(report.statistics.zakat_cut_balances), case[3][0][x][0]['total'])
+                                print('[assert]', int(report.summary.total_zakat_due), case[3][0][x][0]['total'])
                                 print('[assert]', int(report.plan[x][0].total), case[3][0][x][0]['total'])
                                 print('[assert]', report.plan[x][0].count ,case[3][0][x][0]['count'])
-                            assert int(report.statistics.zakat_cut_balances) == case[3][0][x][0]['total']
+                            assert int(report.summary.total_zakat_due) == case[3][0][x][0]['total']
                             assert int(report.plan[x][0].total) == case[3][0][x][0]['total']
                             assert report.plan[x][0].count == case[3][0][x][0]['count']
                     if debug:
