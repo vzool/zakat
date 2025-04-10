@@ -3954,8 +3954,7 @@ class ZakatTracker:
 
     def _test_core(self, restore: bool = False, debug: bool = False):
 
-        if debug:
-            random.seed(1234567890)
+        random.seed(1234567890)
 
         # sanity check - core
 
