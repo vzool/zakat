@@ -328,6 +328,21 @@ class AccountID(str):
                     pass  # Expected exception
 
 
+@dataclasses.dataclass
+class AccountRef:
+    """
+    Represents a reference to an account.
+
+    Attributes:
+    - account_id: The unique identifier (ID) of the account.
+    - account_name: The name associated with the account.
+    - balance: The cached current balance of the account.
+    """
+    account_id: AccountID
+    account_name: str
+    balance: int
+
+
 def _check_attribute(instance, name, value):
     """Raises an AttributeError if the attribute doesn't exist."""
     if name not in instance.__dataclass_fields__:
@@ -531,7 +546,7 @@ class BoxPlan(StrictDataclass):
     - below_nisab: A boolean indicating whether the value is below nisab.
     - total: The total value.
     - count: The count.
-    - ref: The timestamp reference.
+    - ref: The timestamp reference for related Box & Log.
     """
     box: Box
     log: Log
@@ -1229,6 +1244,15 @@ class Time:
             #assert date.microsecond == 906030
 
 
+def is_number(s):
+    """Checks if a string is a number (including negative numbers, decimals, and scientific notation)."""
+    try:
+        float(s)  # or int(s)
+        return True
+    except ValueError:
+        return False
+
+
 class ZakatTracker:
     """
     A class for tracking and calculating Zakat.
@@ -1316,7 +1340,7 @@ class ZakatTracker:
         Returns:
         - str: The current version of the software.
         """
-        version = '0.3.2'
+        version = '0.3.3'
         git_hash, unstaged_count, commit_count_since_last_tag = get_git_status()
         if git_hash and (unstaged_count > 0 or commit_count_since_last_tag > 0):
             version += f".{commit_count_since_last_tag}dev{unstaged_count}+{git_hash}"
@@ -1677,7 +1701,13 @@ class ZakatTracker:
         Returns:
         - dict: A copy of the history of steps taken in the ZakatTracker.
         """
-        return self.__vault.history.copy()
+        return {
+            lock: {
+                timestamp: dataclasses.asdict(history)
+                for timestamp, history in steps.items()
+            }
+            for lock, steps in self.__vault.history.items()
+        }
 
     def free(self, lock: Timestamp, auto_save: bool = True) -> bool:
         """
@@ -2411,20 +2441,24 @@ class ZakatTracker:
         """
         return self.__vault.exchange.copy()
 
-    def accounts(self) -> dict[AccountID, int]:
+    def accounts(self) -> dict[AccountID, AccountRef]:
         """
-        Returns a dictionary containing account references as keys and their respective balances as values.
+        Returns a dictionary containing account references as keys and their respective account reference with balances as values.
 
         Parameters:
         None
 
         Returns:
-        - dict[AccountID, int]: A dictionary where keys are account references and values are their respective balances.
+        - dict[AccountID, AccountRef]: A dictionary where keys are account references and values are their respective balances.
         """
-        result = {}
-        for i in self.__vault.account:
-            result[i] = self.__vault.account[i].balance
-        return result
+        return {
+            account_id: AccountRef(
+                account_id=account_id,
+                account_name=self.__vault.account[account_id].name,
+                balance=self.__vault.account[account_id].balance,
+            )
+            for account_id in self.__vault.account
+        }
 
     def boxes(self, account: AccountID) -> dict[Timestamp, Box]:
         """
@@ -2716,6 +2750,34 @@ class ZakatTracker:
             return status
         return False
 
+    def account(self, name: str, exact: bool = True) -> Optional[AccountRef]:
+        """
+        Retrieves an AccountRef object for the first account matching the given name.
+
+        This method searches for accounts with names that contain the provided 'name'
+        (case-insensitive substring matching). If a match is found, it returns an
+        AccountRef object containing the account's ID and name. If no matching
+        account is found, it returns None.
+
+        Parameters:
+        - name: The name (or partial name) of the account to retrieve.
+        - exact: If True, performs a case-insensitive exact match.
+                 If False, performs a case-insensitive substring search.
+                 Defaults to True.
+
+        Returns:
+        - AccountRef: An AccountRef object representing the found account, or None if no
+            matching account exists.
+        """
+        for account_name, account_id in self.names(name).items():
+            if not exact or account_name.lower() == name.lower():
+                return AccountRef(
+                    account_id=account_id,
+                    account_name=account_name,
+                    balance=self.__vault.account[account_id].balance,
+                )
+        return None
+
     def create_account(self, name: str) -> AccountID:
         """
         Creates a new account with the given name and returns its unique ID.
@@ -2734,12 +2796,16 @@ class ZakatTracker:
         - AccountID: The unique `AccountID` of the newly created account.
     
         Raises:
+        - AssertionError: Empty account name is forbidden.
+        - AssertionError: Account name in number is forbidden.
         - AssertionError: If an account with the same name already exists (case-insensitive).
         - AssertionError: If the provided name does not match the name set for the account.
         """
+        assert name.strip(), 'empty account name is forbidden'
+        assert not name.isdigit() and not name.isdecimal() and not name.isnumeric() and not is_number(name), f'Account name({name}) in number is forbidden'
+        account_ref = self.account(name, exact=True)
         # check if account not exists
-        for old_name, _ in self.names(name).items():
-            assert old_name.lower() != name.lower(), f'account name({name}) already used'
+        assert account_ref is None, f'account name({name}) already used'
         # create new account
         account_id = AccountID(Time.time())
         self.__track(0, '', account_id)
@@ -3133,11 +3199,11 @@ class ZakatTracker:
             total=0,
         )
         for x, y in self.accounts().items():
-            if positive_only and y <= 0:
+            if positive_only and y.balance <= 0:
                 continue
-            total += float(y)
+            total += float(y.balance)
             exchange = self.exchange(x)
-            parts.account[x] = AccountPaymentPart(balance=y, rate=exchange.rate, part=0)
+            parts.account[x] = AccountPaymentPart(balance=y.balance, rate=exchange.rate, part=0)
         parts.total = total
         return parts
 
@@ -3364,6 +3430,7 @@ class ZakatTracker:
             vault.account[account_reference] = Account(
                 balance=account_data["balance"],
                 created=Timestamp(account_data["created"]),
+                name=account_data.get("name", ""),
                 box=box,
                 count=account_data.get("count", 0),
                 log=log,
@@ -4336,6 +4403,26 @@ class ZakatTracker:
                 failed = True
             assert failed
 
+            # bad are names is forbidden
+
+            for bad_name in [
+                None,
+                '',
+                Time.time(),
+                -Time.time(),
+                f'{Time.time()}',
+                f'{-Time.time()}',
+                0.0,
+                '0.0',
+                ' ',
+            ]:
+                failed = False
+                try:
+                    self.create_account(bad_name)
+                except:
+                    failed = True
+                assert failed
+
             # rename account
             assert self.name(account_id) == account_name
             assert self.name(account_id, 'asd') == 'asd'
@@ -4543,9 +4630,9 @@ class ZakatTracker:
                     print(zz, z)
                 assert zz == z[3]
                 xx = self.accounts()[x]
-                assert xx == z[3]
+                assert xx.balance == z[3]
                 assert self.balance(x, False) == z[4]
-                assert xx == z[4]
+                assert xx.balance == z[4]
 
                 s = 0
                 log = self.__vault.account[x].log
@@ -4560,9 +4647,9 @@ class ZakatTracker:
 
                 yy = self.accounts()[y]
                 assert self.balance(y) == z[8]
-                assert yy == z[8]
+                assert yy.balance == z[8]
                 assert self.balance(y, False) == z[9]
-                assert yy == z[9]
+                assert yy.balance == z[9]
 
                 s = 0
                 log = self.__vault.account[y].log
