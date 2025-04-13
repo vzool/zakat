@@ -3315,7 +3315,7 @@ class ZakatTracker:
         if debug:
             print('######### zakat #######')
             print('parts_exist', parts_exist)
-        #assert report == self.__vault.cache.zakat, "bad Zakat report, call `check` first then call `zakat`"
+        assert report == self.__vault.cache.zakat, "bad Zakat report, call `check` first then call `zakat`"
         no_lock = self.nolock()
         lock = self.__lock()
         report_time = Time.time()
@@ -5148,14 +5148,15 @@ class ZakatTracker:
                                 assert int(report.summary.total_zakat_due) == case[3][0][x][0]['total']
                                 assert int(report.plan[x][0].total) == case[3][0][x][0]['total']
                                 assert report.plan[x][0].count == case[3][0][x][0]['count']
-                    if debug:
-                        pp().pprint(report)
-                    result = self.zakat(report, debug=debug)
-                    if debug:
-                        print('zakat-result', result, case[4])
-                    assert result == case[4]
-                    report = self.check(2.17, None, debug)
-                    assert report.valid is False
+                    else:
+                        if debug:
+                            pp().pprint(report)
+                        result = self.zakat(report, debug=debug)
+                        if debug:
+                            print('zakat-result', result, case[4])
+                        assert result == case[4]
+                        report = self.check(2.17, None, debug)
+                        assert report.valid is False
             self._test_storage(account_id=cave_account_id, debug=debug)
 
             # recall after zakat
@@ -5318,6 +5319,14 @@ class ZakatTracker:
                     if debug:
                         print('zakat-result', zakat_result)
                     assert report.valid == zakat_result
+                    # test verified zakat report is required
+                    if zakat_result:
+                        failed = False
+                        try:
+                            self.zakat(report, parts=case, debug=debug)
+                        except:
+                            failed = True
+                        assert failed
 
                 assert self.free(lock)
 
