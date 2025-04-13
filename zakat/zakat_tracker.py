@@ -579,16 +579,31 @@ class ZakatSummary(StrictDataclass):
 @dataclasses.dataclass
 class ZakatReport(StrictDataclass):
     """
-    Represents a zakat report.
+    Represents a Zakat report containing the calculation summary, plan, and parameters.
 
     Attributes:
+    - created: The timestamp when the report was created.
     - valid: A boolean indicating whether the Zakat is available.
     - summary: The ZakatSummary object.
     - plan: A dictionary mapping account IDs to lists of BoxPlan objects.
+    - parameters: A dictionary holding the input parameters used during the Zakat calculation.
     """
+    created: Timestamp
     valid: bool
     summary: ZakatSummary
     plan: dict[AccountID, list[BoxPlan]]
+    parameters: dict
+
+
+@dataclasses.dataclass
+class Cache(StrictDataclass):
+    """
+    A container for cached data related to Zakat.
+
+    Attributes:
+    - zakat: The most recent Zakat report.
+    """
+    zakat: Optional[ZakatReport] = None
 
 
 @dataclasses.dataclass
@@ -602,12 +617,14 @@ class Vault(StrictDataclass):
     - history: A dictionary mapping timestamps to dictionaries of History objects.
     - lock: An optional timestamp for a lock.
     - report: A dictionary mapping timestamps to tuples.
+    - cache: A Cache object containing cached Zakat-related data.
     """
     account: dict[AccountID, Account] = dataclasses.field(default_factory=dict)
     exchange: dict[AccountID, dict[Timestamp, Exchange]] = dataclasses.field(default_factory=dict)
     history: dict[Timestamp, dict[Timestamp, History]] = dataclasses.field(default_factory=dict)
     lock: Optional[Timestamp] = None
     report: dict[Timestamp, ZakatReport] = dataclasses.field(default_factory=dict)
+    cache: Cache = dataclasses.field(default_factory=Cache)
 
 
 @dataclasses.dataclass
@@ -3088,6 +3105,13 @@ class ZakatTracker:
         """
         if debug:
             print('check', f'debug={debug}')
+        before_parameters = {
+            "silver_gram_price": silver_gram_price,
+            "unscaled_nisab": unscaled_nisab,
+            "debug": debug,
+            "created_time_ns": created_time_ns,
+            "cycle": cycle,
+        }
         if created_time_ns is None:
             created_time_ns = Time.time()
         if cycle is None:
@@ -3099,6 +3123,13 @@ class ZakatTracker:
         summary = ZakatSummary()
         below_nisab = 0
         valid = False
+        after_parameters = {
+            "silver_gram_price": silver_gram_price,
+            "unscaled_nisab": unscaled_nisab,
+            "debug": debug,
+            "created_time_ns": created_time_ns,
+            "cycle": cycle,
+        }
         if debug:
             print('exchanges', self.exchanges())
         for x in self.__vault.account:
@@ -3159,11 +3190,18 @@ class ZakatTracker:
         valid = valid or below_nisab >= nisab
         if debug:
             print(f'below_nisab({below_nisab}) >= nisab({nisab})')
-        return ZakatReport(
+        report = ZakatReport(
+            created=Time.time(),
             valid=valid,
             summary=summary,
             plan=plan,
+            parameters={
+                'before': before_parameters,
+                'after': after_parameters,
+            },
         )
+        self.__vault.cache.zakat = report
+        return report
 
     def build_payment_parts(self, scaled_demand: int, positive_only: bool = True) -> PaymentParts:
         """
@@ -3277,6 +3315,7 @@ class ZakatTracker:
         if debug:
             print('######### zakat #######')
             print('parts_exist', parts_exist)
+        #assert report == self.__vault.cache.zakat, "bad Zakat report, call `check` first then call `zakat`"
         no_lock = self.nolock()
         lock = self.__lock()
         report_time = Time.time()
@@ -3339,6 +3378,7 @@ class ZakatTracker:
         if no_lock:
             assert lock is not None
             self.free(lock)
+        self.__vault.cache.zakat = None
         return True
 
     @staticmethod
@@ -3483,10 +3523,45 @@ class ZakatTracker:
                     ))
 
             vault.report[Timestamp(timestamp)] = ZakatReport(
+                created=report_data["created"],
                 valid=report_data["valid"],
                 summary=ZakatSummary(**report_data["summary"]),
                 plan=zakat_plan,
+                parameters=report_data["parameters"],
             )
+
+        # Load Cache
+        vault.cache = Cache()
+        cache_data = data.get("cache", {})
+        if "zakat" in cache_data:
+            cache_zakat_data = cache_data.get("zakat", {})
+            if cache_zakat_data:
+                zakat_plan: dict[AccountID, list[BoxPlan]] = {}
+                for account_reference, box_plans in cache_zakat_data.get("plan", {}).items():
+                    account_reference = AccountID(account_reference)
+                    zakat_plan[account_reference] = []
+                    for box_plan_data in box_plans:
+                        zakat_plan[account_reference].append(BoxPlan(
+                            box=Box(
+                                capital=box_plan_data["box"]["capital"],
+                                rest=box_plan_data["box"]["rest"],
+                                zakat=BoxZakat(**box_plan_data["box"]["zakat"]),
+                            ),
+                            log=Log(**box_plan_data["log"]),
+                            exchange=Exchange(**box_plan_data["exchange"]),
+                            below_nisab=box_plan_data["below_nisab"],
+                            total=box_plan_data["total"],
+                            count=box_plan_data["count"],
+                            ref=Timestamp(box_plan_data["ref"]),
+                        ))
+
+                vault.cache.zakat = ZakatReport(
+                    created=cache_zakat_data["created"],
+                    valid=cache_zakat_data["valid"],
+                    summary=ZakatSummary(**cache_zakat_data["summary"]),
+                    plan=zakat_plan,
+                    parameters=cache_zakat_data["parameters"],
+                )
 
         return vault
 
