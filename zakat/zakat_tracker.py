@@ -4352,6 +4352,56 @@ class ZakatTracker:
             assert count == 0
             self.reset()
 
+    def _test_storage(self, account_id: Optional[AccountID] = None, debug: bool = False) -> bool:
+        old_vault = dataclasses.replace(self.__vault)
+        old_vault_deep = copy.deepcopy(self.__vault)
+        old_vault_dict = dataclasses.asdict(self.__vault)
+        _path = self.path(f'./zakat_test_db/test.{self.ext()}')
+        if os.path.exists(_path):
+            os.remove(_path)
+        for hashed in [False, True]:
+            self.save(hash_required=hashed)
+            assert os.path.getsize(_path) > 0
+            self.reset()
+            assert self.recall(dry=False, debug=debug) is False
+            for hash_required in [False, True]:
+                if debug:
+                    print(f'[storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
+                self.load(hash_required=hashed and hash_required)
+                if debug:
+                    print('[debug]', type(self.__vault))
+                assert self.__vault.account is not None
+                assert old_vault == self.__vault
+                assert old_vault_deep == self.__vault
+                assert old_vault_dict == dataclasses.asdict(self.__vault)
+                if account_id is not None:
+                    # corrupt the data
+                    log_ref = None
+                    tmp_file_ref = Time.time()
+                    for k in self.__vault.account[account_id].log:
+                        log_ref = k
+                        self.__vault.account[account_id].log[k].file[tmp_file_ref] = 'HACKED'
+                        break
+                    assert old_vault != self.__vault
+                    assert old_vault_deep != self.__vault
+                    assert old_vault_dict != dataclasses.asdict(self.__vault)
+                    # fix the data
+                    del self.__vault.account[account_id].log[log_ref].file[tmp_file_ref]
+                    assert old_vault == self.__vault
+                    assert old_vault_deep == self.__vault
+                    assert old_vault_dict == dataclasses.asdict(self.__vault)
+            if hashed:
+                continue
+            failed = False
+            try:
+                hash_required = True
+                if debug:
+                    print(f'x [storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
+                self.load(hash_required=True)
+            except:
+                failed = True
+            assert failed
+
     def test(self, debug: bool = False) -> bool:
         if debug:
             print('test', f'debug={debug}')
@@ -5006,6 +5056,7 @@ class ZakatTracker:
                     assert case[4] == report.valid
                     assert case[5] == report.summary.total_wealth
                     assert case[5] == report.summary.total_zakatable_amount
+                    self._test_storage(debug=debug)
 
                     if debug:
                         pp().pprint(report.plan)
@@ -5032,56 +5083,7 @@ class ZakatTracker:
                     assert result == case[4]
                     report = self.check(2.17, None, debug)
                     assert report.valid is False
-
-            # storage
-
-            old_vault = dataclasses.replace(self.__vault)
-            old_vault_deep = copy.deepcopy(self.__vault)
-            old_vault_dict = dataclasses.asdict(self.__vault)
-            _path = self.path(f'./zakat_test_db/test.{self.ext()}')
-            if os.path.exists(_path):
-                os.remove(_path)
-            for hashed in [False, True]:
-                self.save(hash_required=hashed)
-                assert os.path.getsize(_path) > 0
-                self.reset()
-                assert self.recall(dry=False, debug=debug) is False
-                for hash_required in [False, True]:
-                    if debug:
-                        print(f'[storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
-                    self.load(hash_required=hashed and hash_required)
-                    if debug:
-                        print('[debug]', type(self.__vault))
-                    assert self.__vault.account is not None
-                    assert old_vault == self.__vault
-                    assert old_vault_deep == self.__vault
-                    assert old_vault_dict == dataclasses.asdict(self.__vault)
-                    # corrupt the data
-                    log_ref = None
-                    tmp_file_ref = Time.time()
-                    for k in self.__vault.account[cave_account_id].log:
-                        log_ref = k
-                        self.__vault.account[cave_account_id].log[k].file[tmp_file_ref] = 'HACKED'
-                        break
-                    assert old_vault != self.__vault
-                    assert old_vault_deep != self.__vault
-                    assert old_vault_dict != dataclasses.asdict(self.__vault)
-                    # fix the data
-                    del self.__vault.account[cave_account_id].log[log_ref].file[tmp_file_ref]
-                    assert old_vault == self.__vault
-                    assert old_vault_deep == self.__vault
-                    assert old_vault_dict == dataclasses.asdict(self.__vault)
-                if hashed:
-                    continue
-                failed = False
-                try:
-                    hash_required = True
-                    if debug:
-                        print(f'x [storage] save({hashed}) and load({hash_required}) = {hashed and hash_required}')
-                    self.load(hash_required=True)
-                except:
-                    failed = True
-                assert failed
+            self._test_storage(account_id=cave_account_id, debug=debug)
 
             # recall after zakat
 
