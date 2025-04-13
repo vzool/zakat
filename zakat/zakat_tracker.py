@@ -558,12 +558,6 @@ class BoxPlan(StrictDataclass):
 
 
 @dataclasses.dataclass
-class ZakatPlan(StrictDataclass, dict[AccountID, list[BoxPlan]]):
-    """A dictionary mapping account IDs to lists of BoxPlan objects."""
-    pass
-
-
-@dataclasses.dataclass
 class ZakatSummary(StrictDataclass):
     """
     Summarizes key financial figures for a Zakat calculation.
@@ -590,11 +584,11 @@ class ZakatReport(StrictDataclass):
     Attributes:
     - valid: A boolean indicating whether the Zakat is available.
     - summary: The ZakatSummary object.
-    - plan: The ZakatPlan object.
+    - plan: A dictionary mapping account IDs to lists of BoxPlan objects.
     """
     valid: bool
     summary: ZakatSummary
-    plan: ZakatPlan
+    plan: dict[AccountID, list[BoxPlan]]
 
 
 @dataclasses.dataclass
@@ -3101,7 +3095,7 @@ class ZakatTracker:
         if unscaled_nisab is None:
             unscaled_nisab = ZakatTracker.Nisab(silver_gram_price)
         nisab = self.scale(unscaled_nisab)
-        plan = ZakatPlan()
+        plan: dict[AccountID, list[BoxPlan]] = {}
         summary = ZakatSummary()
         below_nisab = 0
         valid = False
@@ -3275,6 +3269,7 @@ class ZakatTracker:
             print('zakat', f'debug={debug}')
         if not report.valid:
             return report.valid
+        assert report.plan
         parts_exist = parts is not None
         if parts_exist:
             if self.check_payment_parts(parts, debug=debug) != 0:
@@ -3468,7 +3463,7 @@ class ZakatTracker:
 
         # Load Report
         for timestamp, report_data in data.get("report", {}).items():
-            zakat_plan = ZakatPlan()
+            zakat_plan: dict[AccountID, list[BoxPlan]] = {}
             for account_reference, box_plans in report_data.get("plan", {}).items():
                 account_reference = AccountID(account_reference)
                 zakat_plan[account_reference] = []
@@ -4059,7 +4054,6 @@ class ZakatTracker:
             Exchange,
             History,
             BoxPlan,
-            ZakatPlan,
             ZakatSummary,
             ZakatReport,
             Vault,
@@ -4352,7 +4346,7 @@ class ZakatTracker:
             assert count == 0
             self.reset()
 
-    def _test_storage(self, account_id: Optional[AccountID] = None, debug: bool = False) -> bool:
+    def _test_storage(self, account_id: Optional[AccountID] = None, debug: bool = False):
         old_vault = dataclasses.replace(self.__vault)
         old_vault_deep = copy.deepcopy(self.__vault)
         old_vault_dict = dataclasses.asdict(self.__vault)
@@ -5052,29 +5046,33 @@ class ZakatTracker:
                     assert not self.nolock()
                     report = self.check(2.17, None, debug)
                     if debug:
-                        print('report', report)
+                        print('[report]', report)
                     assert case[4] == report.valid
                     assert case[5] == report.summary.total_wealth
                     assert case[5] == report.summary.total_zakatable_amount
-                    self._test_storage(debug=debug)
+                    if report.valid:
+                        if debug:
+                            pp().pprint(report.plan)
+                        assert report.plan
+                        assert self.zakat(report, debug=debug)
+                        if debug:
+                            pp().pprint(self.__vault)
+                        self._test_storage(debug=debug)
 
-                    if debug:
-                        pp().pprint(report.plan)
-
-                    for x in report.plan:
-                        assert case[1] == x
-                        if report.plan[x][0].below_nisab:
-                            if debug:
-                                print('[assert]', report.plan[x][0].total, case[3][0][x][0]['below_nisab'])
-                            assert report.plan[x][0].total == case[3][0][x][0]['below_nisab']
-                        else:
-                            if debug:
-                                print('[assert]', int(report.summary.total_zakat_due), case[3][0][x][0]['total'])
-                                print('[assert]', int(report.plan[x][0].total), case[3][0][x][0]['total'])
-                                print('[assert]', report.plan[x][0].count ,case[3][0][x][0]['count'])
-                            assert int(report.summary.total_zakat_due) == case[3][0][x][0]['total']
-                            assert int(report.plan[x][0].total) == case[3][0][x][0]['total']
-                            assert report.plan[x][0].count == case[3][0][x][0]['count']
+                        for x in report.plan:
+                            assert case[1] == x
+                            if report.plan[x][0].below_nisab:
+                                if debug:
+                                    print('[assert]', report.plan[x][0].total, case[3][0][x][0]['below_nisab'])
+                                assert report.plan[x][0].total == case[3][0][x][0]['below_nisab']
+                            else:
+                                if debug:
+                                    print('[assert]', int(report.summary.total_zakat_due), case[3][0][x][0]['total'])
+                                    print('[assert]', int(report.plan[x][0].total), case[3][0][x][0]['total'])
+                                    print('[assert]', report.plan[x][0].count ,case[3][0][x][0]['count'])
+                                assert int(report.summary.total_zakat_due) == case[3][0][x][0]['total']
+                                assert int(report.plan[x][0].total) == case[3][0][x][0]['total']
+                                assert report.plan[x][0].count == case[3][0][x][0]['count']
                     if debug:
                         pp().pprint(report)
                     result = self.zakat(report, debug=debug)
