@@ -3302,6 +3302,9 @@ class ZakatTracker:
 
         Returns:
         - bool: True if the zakat calculation is successful, False otherwise.
+
+        Raises:
+        - AssertionError: Bad Zakat report, call `check` first then call `zakat`.
         """
         if debug:
             print('zakat', f'debug={debug}')
@@ -3315,7 +3318,7 @@ class ZakatTracker:
         if debug:
             print('######### zakat #######')
             print('parts_exist', parts_exist)
-        assert report == self.__vault.cache.zakat, "bad Zakat report, call `check` first then call `zakat`"
+        assert report == self.__vault.cache.zakat, "Bad Zakat report, call `check` first then call `zakat`"
         no_lock = self.nolock()
         lock = self.__lock()
         report_time = Time.time()
