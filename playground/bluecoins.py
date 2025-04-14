@@ -121,6 +121,18 @@ def process_bluecoins_data(db_file):
         if days:
             days = days[0]
 
+        files = cursor.execute("""
+            SELECT COUNT(*), COUNT(DISTINCT transactionID)
+            FROM PICTURETABLE;
+        """).fetchone()
+        files_count, transaction_had_files_count = (files[0], files[1]) if files else (0,0)
+
+        labels = cursor.execute("""
+            SELECT COUNT(*), COUNT(DISTINCT transactionIDLabels)
+            FROM LABELSTABLE;
+        """).fetchone()
+        labels_count, transaction_had_labels_count = (labels[0], labels[1]) if labels else (0,0)
+
         cols = 99
         currencies = cursor.execute("""
             SELECT  transactionCurrency,
@@ -137,6 +149,8 @@ def process_bluecoins_data(db_file):
             "'USD'",
         ])
         currencies_count = len(currencies)
+        print(f"Found ({files_count}) files in ({transaction_had_files_count}) transactions...")
+        print(f"Found ({labels_count}) labels in ({transaction_had_labels_count}) transactions...")
         print(f"Found ({currencies_count}) currencies...")
         if currencies_count > 0:
             print("=" * cols)
