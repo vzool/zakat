@@ -78,7 +78,7 @@ from pprint import PrettyPrinter as pp
 
 
 # fix WindowsOS encoding issue
-if not 'pytest' in sys.modules: # workaround for https://github.com/pytest-dev/pytest/issues/4843
+if not 'pytest' in sys.modules or sys.platform.startswith('win'): # workaround for https://github.com/pytest-dev/pytest/issues/4843
     sys.stdin.reconfigure(encoding='utf-8', errors='namereplace')
     sys.stdout.reconfigure(encoding='utf-8', errors='namereplace')
 
