@@ -3206,7 +3206,7 @@ class ZakatTracker:
                 'after': after_parameters,
             },
         )
-        self.__vault.cache.zakat = report
+        self.__vault.cache.zakat = report if valid else None
         return report
 
     def build_payment_parts(self, scaled_demand: int, positive_only: bool = True) -> PaymentParts:
@@ -4790,9 +4790,6 @@ class ZakatTracker:
                 assert lock is not None
                 assert self.free(lock)
 
-            if debug:
-                pp().pprint(self.check(2.17))
-
             assert self.nolock()
             history_count = len(self.__vault.history)
             transaction_count = len(transaction)
@@ -5128,6 +5125,7 @@ class ZakatTracker:
                     lock = self.lock()
                     assert lock
                     assert not self.nolock()
+                    assert self.__vault.cache.zakat is None
                     report = self.check(2.17, None, debug)
                     if debug:
                         print('[report]', report)
@@ -5135,10 +5133,10 @@ class ZakatTracker:
                     assert case[5] == report.summary.total_wealth
                     assert case[5] == report.summary.total_zakatable_amount
                     if report.valid:
-                        if debug:
-                            pp().pprint(report.plan)
+                        assert self.__vault.cache.zakat is not None
                         assert report.plan
                         assert self.zakat(report, debug=debug)
+                        assert self.__vault.cache.zakat is None
                         if debug:
                             pp().pprint(self.__vault)
                         self._test_storage(debug=debug)
@@ -5158,8 +5156,7 @@ class ZakatTracker:
                                 assert int(report.plan[x][0].total) == case[3][0][x][0]['total']
                                 assert report.plan[x][0].count == case[3][0][x][0]['count']
                     else:
-                        if debug:
-                            pp().pprint(report)
+                        assert self.__vault.cache.zakat is None
                         result = self.zakat(report, debug=debug)
                         if debug:
                             print('zakat-result', result, case[4])
@@ -5321,6 +5318,7 @@ class ZakatTracker:
                         print('check_payment_parts', result, f'exceed: {exceed}')
                     assert result == 0
 
+                    assert self.__vault.cache.zakat is None
                     report = self.check(2.17, None, debug)
                     if debug:
                         print('valid', report.valid)
@@ -5330,6 +5328,7 @@ class ZakatTracker:
                     assert report.valid == zakat_result
                     # test verified zakat report is required
                     if zakat_result:
+                        assert self.__vault.cache.zakat is None
                         failed = False
                         try:
                             self.zakat(report, parts=case, debug=debug)
