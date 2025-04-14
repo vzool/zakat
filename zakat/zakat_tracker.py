@@ -77,9 +77,10 @@ from typing import Optional
 from pprint import PrettyPrinter as pp
 
 
-# tring to fix WindowsOS issue
-sys.stdin.reconfigure(encoding='utf-8')
-sys.stdout.reconfigure(encoding='utf-8')
+# fix WindowsOS encoding issue
+if not 'pytest' in sys.modules: # workaround for https://github.com/pytest-dev/pytest/issues/4843
+    sys.stdin.reconfigure(encoding='utf-8', errors='namereplace')
+    sys.stdout.reconfigure(encoding='utf-8', errors='namereplace')
 
 
 @enum.unique
@@ -334,14 +335,14 @@ class AccountID(str):
 
 
 @dataclasses.dataclass
-class AccountRef:
+class AccountDetails:
     """
-    Represents a reference to an account.
+    Details of an account.
 
     Attributes:
     - account_id: The unique identifier (ID) of the account.
-    - account_name: The name associated with the account.
-    - balance: The cached current balance of the account.
+    - account_name: Human-readable name of the account.
+    - balance: The current cached balance of the account.
     """
     account_id: AccountID
     account_name: str
@@ -2457,18 +2458,18 @@ class ZakatTracker:
         """
         return self.__vault.exchange.copy()
 
-    def accounts(self) -> dict[AccountID, AccountRef]:
+    def accounts(self) -> dict[AccountID, AccountDetails]:
         """
-        Returns a dictionary containing account references as keys and their respective account reference with balances as values.
+        Returns a dictionary containing account references as keys and their respective account details as values.
 
         Parameters:
         None
 
         Returns:
-        - dict[AccountID, AccountRef]: A dictionary where keys are account references and values are their respective balances.
+        - dict[AccountID, AccountDetails]: A dictionary where keys are account references and values are their respective details.
         """
         return {
-            account_id: AccountRef(
+            account_id: AccountDetails(
                 account_id=account_id,
                 account_name=self.__vault.account[account_id].name,
                 balance=self.__vault.account[account_id].balance,
@@ -2766,13 +2767,13 @@ class ZakatTracker:
             return status
         return False
 
-    def account(self, name: str, exact: bool = True) -> Optional[AccountRef]:
+    def account(self, name: str, exact: bool = True) -> Optional[AccountDetails]:
         """
-        Retrieves an AccountRef object for the first account matching the given name.
+        Retrieves an AccountDetails object for the first account matching the given name.
 
         This method searches for accounts with names that contain the provided 'name'
         (case-insensitive substring matching). If a match is found, it returns an
-        AccountRef object containing the account's ID and name. If no matching
+        AccountDetails object containing the account's ID, name and balance. If no matching
         account is found, it returns None.
 
         Parameters:
@@ -2782,12 +2783,12 @@ class ZakatTracker:
                  Defaults to True.
 
         Returns:
-        - AccountRef: An AccountRef object representing the found account, or None if no
+        - AccountDetails: An AccountDetails object representing the found account, or None if no
             matching account exists.
         """
         for account_name, account_id in self.names(name).items():
             if not exact or account_name.lower() == name.lower():
-                return AccountRef(
+                return AccountDetails(
                     account_id=account_id,
                     account_name=account_name,
                     balance=self.__vault.account[account_id].balance,

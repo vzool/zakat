@@ -8,6 +8,7 @@ build
 *.camel
 tmp
 *.json
+*.json.tmp
 *.pyc
 __pycache__
 .pytest_cache
