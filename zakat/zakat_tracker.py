@@ -83,6 +83,16 @@ if not 'pytest' in sys.modules or sys.platform.startswith('win'): # workaround f
     sys.stdout.reconfigure(encoding='utf-8', errors='namereplace')
 
 
+# assert is required even when option -O passed-in
+failed = False
+try:
+    assert failed
+except:
+    failed = True
+if not failed:
+    raise AssertionError
+
+
 @enum.unique
 class WeekDay(enum.Enum):
     """
