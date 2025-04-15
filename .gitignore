@@ -16,3 +16,4 @@ __pycache__
 uploads
 *.txt
 docs/api
+test_*

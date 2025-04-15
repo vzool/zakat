@@ -17,6 +17,7 @@ clean:
 	rm -rf tests/*.camel
 	rm -rf tests/*.json
 	rm -rf snapshots
+	rm -rf test_*
 
 .PHONY: dev-build
 # dev-build the library

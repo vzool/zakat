@@ -73,6 +73,10 @@ import tempfile
 import dataclasses
 import subprocess
 import copy
+import lzma
+import tarfile
+import io
+import re
 from typing import Optional
 from pprint import PrettyPrinter as pp
 
@@ -1059,6 +1063,27 @@ def get_git_status() -> tuple[str, int, int]:
         return '', 0, 0
 
 
+def get_first_directory_inside(directory_path: str) -> str | None:
+    """
+    Gets the name of the first directory found immediately inside the given directory.
+
+    Parameters:
+    - directory_path: The path to the directory to inspect.
+
+    Returns:
+    - The name of the first subdirectory found, or None if no subdirectories exist.
+    """
+    if not os.path.isdir(directory_path):
+        return None
+
+    for item in os.listdir(directory_path):
+        item_path = os.path.join(directory_path, item)
+        if os.path.isdir(item_path):
+            return item
+
+    return None
+
+
 class Time:
     """
     Utility class for generating and manipulating nanosecond-precision timestamps.
@@ -1367,7 +1392,7 @@ class ZakatTracker:
         Returns:
         - str: The current version of the software.
         """
-        version = '0.3.3'
+        version = '0.3.4'
         git_hash, unstaged_count, commit_count_since_last_tag = get_git_status()
         if git_hash and (unstaged_count > 0 or commit_count_since_last_tag > 0):
             version += f".{commit_count_since_last_tag}dev{unstaged_count}+{git_hash}"
@@ -4108,6 +4133,117 @@ class ZakatTracker:
 
         return result
 
+    def backup(self, folder_path: str, output_directory: str = "compressed", debug: bool = False) -> tuple[str | None, str | None]:
+        """
+        Compresses a folder to a .tar.lzma file named with 'zakatdb', version, datetime, and SHA1 hash.
+
+        The filename format is: zakatdb_v<version>_<YYYYMMDD_HHMMSS>_<sha1hash>.tar.lzma
+
+        Parameters:
+        - folder_path (str): The path to the folder to be compressed.
+        - output_directory (str, optional): The directory to save the compressed file.
+                                        Defaults to "compressed".
+        - debug (bool, optional): Whether to print debug information. Default is False.
+
+        Returns:
+        - tuple[str | None, str | None]: A tuple containing the path to the created backup file and its SHA1 hash.
+                                          Returns (None, None) on failure.
+        """
+        try:
+            os.makedirs(output_directory, exist_ok=True)
+            now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            # Create a temporary tar archive in memory to calculate the hash
+            tar_buffer = io.BytesIO()
+            with tarfile.open(fileobj=tar_buffer, mode="w") as tar:
+                tar.add(folder_path, arcname=os.path.basename(folder_path))
+            tar_buffer.seek(0)
+            folder_hash = hashlib.sha1(tar_buffer.read()).hexdigest()
+            output_filename = f"zakatdb_v{self.Version()}_{now}_{folder_hash}.tar.lzma"
+            output_path = os.path.join(output_directory, output_filename)
+
+            # Compress the folder to the final .tar.lzma file
+            with lzma.open(output_path, "wb") as lzma_file:
+                tar_buffer.seek(0)  # Reset the buffer
+                with tarfile.open(fileobj=lzma_file, mode="w") as tar:
+                    tar.add(folder_path, arcname=os.path.basename(folder_path))
+
+            if debug:
+                print(f"Folder '{folder_path}' has been compressed to '{output_path}'")
+            return output_path, folder_hash
+        except Exception as e:
+            print(f"Error during compression: {e}")
+            return None, None
+
+    def restore(self, tar_lzma_path: str, output_folder_path: str = "uncompressed", debug: bool = False) -> bool:
+        """
+        Uncompresses a .tar.lzma file and checks if its SHA1 hash matches the hash embedded in the filename.
+
+        The function extracts the expected SHA1 hash from the filename and verifies the integrity
+        of the uncompressed data against this hash.
+
+        Filename format: zakatdb_v<version>_<YYYYMMDD_HHMMSS>_<sha1hash>.tar.lzma
+
+        Parameters:
+        - tar_lzma_path (str): The path to the .tar.lzma file.
+        - output_folder_path (str, optional): The directory to extract the contents to.
+                                            Defaults to "uncompressed".
+        - debug (bool, optional): Whether to print debug information. Default is False.
+        
+        Returns:
+        - bool: True if the restoration was successful and the hash matches, False otherwise.
+        """
+        try:
+            output_folder_path = pathlib.Path(output_folder_path).resolve()
+            os.makedirs(output_folder_path, exist_ok=True)
+            filename = os.path.basename(tar_lzma_path)
+            match = re.match(r"zakatdb_v([^_]+)_(\d{8}_\d{6})_([a-f0-9]{40})\.tar\.lzma", filename)
+            if not match:
+                if debug:
+                    print(f"Error: Invalid filename format: '{filename}'")
+                return False
+
+            expected_hash_from_filename = match.group(3)
+
+            with lzma.open(tar_lzma_path, "rb") as lzma_file:
+                tar_buffer = io.BytesIO(lzma_file.read())  # Read the entire decompressed tar into memory
+                with tarfile.open(fileobj=tar_buffer, mode="r") as tar:
+                    tar.extractall(output_folder_path)
+                    tar_buffer.seek(0)  # Reset buffer to calculate hash
+                    extracted_hash = hashlib.sha1(tar_buffer.read()).hexdigest()
+
+            if extracted_hash == expected_hash_from_filename:
+                if debug:
+                    print(f"'{filename}' has been successfully uncompressed to '{output_folder_path}' and hash verified from filename.")
+                return True
+                now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+                old_path = os.path.dirname(self.path())
+                tmp_path = os.path.join(os.path.dirname(old_path), "tmp_restore", now)
+                new_path = os.path.join(output_folder_path, get_first_directory_inside(output_folder_path))
+                try:
+                    print('[xxx]', old_path)
+                    print('[xxx]', tmp_path)
+                    print('[xxx]', new_path)
+                    shutil.move(old_path, tmp_path)
+                    shutil.move(new_path, old_path)
+                    assert self.load()
+                    shutil.rmtree(tmp_path)
+                    return True
+                except Exception as e:
+                    print(f"Error applying the restored files: {e}")
+                    shutil.move(tmp_path, old_path)
+                    return False
+            else:
+                if debug:
+                    print(f"Warning: Hash mismatch after uncompressing '{filename}'. Expected from filename: {expected_hash_from_filename}, Got: {extracted_hash}")
+                # Optionally remove the extracted folder if the hash doesn't match
+                # shutil.rmtree(output_folder_path, ignore_errors=True)
+                return False
+
+        except Exception as e:
+            print(f"Error during uncompression or hash check: {e}")
+            return False
+
     def _test_core(self, restore: bool = False, debug: bool = False):
 
         random.seed(1234567890)
@@ -4489,6 +4625,50 @@ class ZakatTracker:
             except:
                 failed = True
             assert failed
+
+        compressed_dir = "test_compressed"
+        extracted_dir = "test_extracted"
+
+        old_vault = dataclasses.replace(self.__vault)
+        old_vault_deep = copy.deepcopy(self.__vault)
+        old_vault_dict = dataclasses.asdict(self.__vault)
+
+        # Test backup
+        backup_path, original_hash = self.backup(os.path.dirname(self.path()), compressed_dir, debug=debug)
+        assert backup_path is not None, "Backup should create a file."
+        assert original_hash is not None, "Backup should return a hash."
+        assert os.path.exists(backup_path), f"Backup file not found at {backup_path}"
+        assert backup_path.startswith(os.path.join(compressed_dir, f"zakatdb_v{self.Version()}")), "Backup filename should start with zakatdb_v<version>"
+        assert original_hash in backup_path, "Backup filename should contain the hash."
+
+        # Test restore
+        restore_successful = self.restore(backup_path, extracted_dir, debug=debug)
+        assert restore_successful, "Restore should be successful when hash matches."
+        assert os.path.exists(os.path.join(extracted_dir, "zakat_test_db", f"db.{self.ext()}")), f"Restored db.{self.ext()} not found."
+
+        assert old_vault == self.__vault
+        assert old_vault_deep == self.__vault
+        assert old_vault_dict == dataclasses.asdict(self.__vault)
+
+        # Test restore with incorrect filename format
+        invalid_backup_path = os.path.join(compressed_dir, "invalid_name.tar.lzma")
+        with open(invalid_backup_path, "w") as f:
+            f.write("")  # Create an empty file
+        restore_failed_format = self.restore(invalid_backup_path, "temp_extract", debug=debug)
+        assert not restore_failed_format, "Restore should fail with incorrect filename format."
+        if os.path.exists("temp_extract"):
+            shutil.rmtree("temp_extract")
+
+        assert old_vault == self.__vault
+        assert old_vault_deep == self.__vault
+        assert old_vault_dict == dataclasses.asdict(self.__vault)
+
+        # Clean up test files and directories
+        if not debug:
+            if os.path.exists(compressed_dir):
+                shutil.rmtree(compressed_dir)
+            if os.path.exists(extracted_dir):
+                shutil.rmtree(extracted_dir)
 
     def test(self, debug: bool = False) -> bool:
         if debug:
@@ -5349,7 +5529,6 @@ class ZakatTracker:
                 assert self.free(lock)
 
             assert self.save(path + f'.{self.ext()}')
-
             assert self.save(f'1000-transactions-test.{self.ext()}')
             return True
         except Exception as e:
