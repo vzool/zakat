@@ -4138,6 +4138,7 @@ class ZakatTracker:
         Compresses a folder to a .tar.lzma file named with 'zakatdb', version, datetime, and SHA1 hash.
 
         The filename format is: zakatdb_v<version>_<YYYYMMDD_HHMMSS>_<sha1hash>.tar.lzma
+        [WARNING] Generated file name holds rules which is required on `restore`, so do not rename the files later-on.
 
         Parameters:
         - folder_path (str): The path to the folder to be compressed.
@@ -4183,6 +4184,7 @@ class ZakatTracker:
         of the uncompressed data against this hash.
 
         Filename format: zakatdb_v<version>_<YYYYMMDD_HHMMSS>_<sha1hash>.tar.lzma
+        [WARNING] Generated file name by `backup` holds rules which is required on `restore`, so do not rename the files later-on.
 
         Parameters:
         - tar_lzma_path (str): The path to the .tar.lzma file.
@@ -4215,15 +4217,16 @@ class ZakatTracker:
             if extracted_hash == expected_hash_from_filename:
                 if debug:
                     print(f"'{filename}' has been successfully uncompressed to '{output_folder_path}' and hash verified from filename.")
-                return True
+                #return True
                 now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                 old_path = os.path.dirname(self.path())
                 tmp_path = os.path.join(os.path.dirname(old_path), "tmp_restore", now)
                 new_path = os.path.join(output_folder_path, get_first_directory_inside(output_folder_path))
+                if debug:
+                    print('[xxx] - old_path:', old_path)
+                    print('[xxx] - tmp_path:', tmp_path)
+                    print('[xxx] - new_path:', new_path)
                 try:
-                    print('[xxx]', old_path)
-                    print('[xxx]', tmp_path)
-                    print('[xxx]', new_path)
                     shutil.move(old_path, tmp_path)
                     shutil.move(new_path, old_path)
                     assert self.load()
@@ -4644,7 +4647,7 @@ class ZakatTracker:
         # Test restore
         restore_successful = self.restore(backup_path, extracted_dir, debug=debug)
         assert restore_successful, "Restore should be successful when hash matches."
-        assert os.path.exists(os.path.join(extracted_dir, "zakat_test_db", f"db.{self.ext()}")), f"Restored db.{self.ext()} not found."
+        # assert os.path.exists(os.path.join(extracted_dir, "zakat_test_db", f"db.{self.ext()}")), f"Restored db.{self.ext()} not found."
 
         assert old_vault == self.__vault
         assert old_vault_deep == self.__vault
