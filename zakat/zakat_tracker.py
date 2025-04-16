@@ -4225,7 +4225,7 @@ class ZakatTracker:
             with lzma.open(tar_lzma_path, "rb") as lzma_file:
                 tar_buffer = io.BytesIO(lzma_file.read())  # Read the entire decompressed tar into memory
                 with tarfile.open(fileobj=tar_buffer, mode="r") as tar:
-                    tar.extractall(output_folder_path, filter="data")
+                    tar.extractall(output_folder_path)
                     tar_buffer.seek(0)  # Reset buffer to calculate hash
                     extracted_hash = hashlib.sha1(tar_buffer.read()).hexdigest()
 
