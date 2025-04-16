@@ -4214,6 +4214,8 @@ class ZakatTracker:
                     tar_buffer.seek(0)  # Reset buffer to calculate hash
                     extracted_hash = hashlib.sha1(tar_buffer.read()).hexdigest()
 
+            new_path = os.path.join(output_folder_path, get_first_directory_inside(output_folder_path))
+            assert os.path.exists(os.path.join(new_path, f"db.{self.ext()}")), f"Restored db.{self.ext()} not found."
             if extracted_hash == expected_hash_from_filename:
                 if debug:
                     print(f"'{filename}' has been successfully uncompressed to '{output_folder_path}' and hash verified from filename.")
@@ -4221,7 +4223,6 @@ class ZakatTracker:
                 now = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
                 old_path = os.path.dirname(self.path())
                 tmp_path = os.path.join(os.path.dirname(old_path), "tmp_restore", now)
-                new_path = os.path.join(output_folder_path, get_first_directory_inside(output_folder_path))
                 if debug:
                     print('[xxx] - old_path:', old_path)
                     print('[xxx] - tmp_path:', tmp_path)
@@ -4647,7 +4648,6 @@ class ZakatTracker:
         # Test restore
         restore_successful = self.restore(backup_path, extracted_dir, debug=debug)
         assert restore_successful, "Restore should be successful when hash matches."
-        # assert os.path.exists(os.path.join(extracted_dir, "zakat_test_db", f"db.{self.ext()}")), f"Restored db.{self.ext()} not found."
 
         assert old_vault == self.__vault
         assert old_vault_deep == self.__vault

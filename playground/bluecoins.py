@@ -189,6 +189,15 @@ def process_bluecoins_data(db_file):
             for record in records:
                 id1, account1, desc1, value1, date1, rate1 = record
                 assert id1 not in rows
+                # get labels if exists
+                labels = cursor.execute(f"""
+                    SELECT labelName
+                    FROM LABELSTABLE
+                    WHERE transactionIDLabels = {id1};
+                """).fetchall()
+                if labels:
+                    print('labels', labels)
+                    desc1 += " - " + " - ".join(item[0] for item in labels)
                 rows[id1] = (
                     account1,
                     desc1,
