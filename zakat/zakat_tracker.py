@@ -3870,7 +3870,10 @@ class ZakatTracker:
                 # If records are found at the same time with different accounts in the same amount
                 # (one positive and the other negative), this indicates it is a transfer.
                 if len_rows > 2 or len_rows == 1:
+                    i = 0
                     for row in rows:
+                        row.date += i
+                        i += 1
                         hashed = process(row)
                         assert hashed not in cache
                         cache.append(hashed)
