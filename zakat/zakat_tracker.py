@@ -1405,7 +1405,7 @@ class ZakatTracker:
         Returns:
         - str: The current version of the software.
         """
-        version = '0.3.4'
+        version = '0.3.5'
         git_hash, unstaged_count, commit_count_since_last_tag = get_git_status()
         if git_hash and (unstaged_count > 0 or commit_count_since_last_tag > 0):
             version += f".{commit_count_since_last_tag}dev{unstaged_count}+{git_hash}"
@@ -3920,11 +3920,7 @@ class ZakatTracker:
                 )
             except Exception as e:
                 for row in rows:
-                    _tuple = tuple()
-                    for field in row:
-                        _tuple += (field,)
-                    _tuple += (e,)
-                    bad[i] = _tuple
+                    row.error = str(e)
                 break
         if not self.memory_mode():
             with open(self.import_csv_cache_path(), 'w', encoding='utf-8') as stream:
