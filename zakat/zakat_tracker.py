@@ -3712,13 +3712,14 @@ class ZakatTracker:
             "reference",
         ]
 
-    def import_csv(self, path: str = 'file.csv', scale_decimal_places: int = 0, debug: bool = False) -> ImportReport:
+    def import_csv(self, path: str = 'file.csv', scale_decimal_places: int = 0, delimiter: str = ',', debug: bool = False) -> ImportReport:
         """
         The function reads the CSV file, checks for duplicate transactions and tries it's best to creates the transactions history accordingly in the system.
 
         Parameters:
         - path (str, optional): The path to the CSV file. Default is 'file.csv'.
         - scale_decimal_places (int, optional): The number of decimal places to scale the value. Default is 0.
+        - delimiter (str, optional): The delimiter character to use in the CSV file. Defaults to ','.
         - debug (bool, optional): A flag indicating whether to print debug information.
 
         Returns:
@@ -3760,7 +3761,7 @@ class ZakatTracker:
         data: dict[int, list[CSVRecord]] = {}
         with open(path, newline='', encoding='utf-8') as f:
             i = 0
-            for row in csv.reader(f, delimiter=','):
+            for row in csv.reader(f, delimiter=delimiter):
                 if debug:
                     print(f"csv_row({i})", row, type(row))
                 if row == self.get_transaction_csv_headers():
@@ -4069,7 +4070,10 @@ class ZakatTracker:
         return start_date + datetime.timedelta(days=random_number_of_days)
 
     @staticmethod
-    def generate_random_csv_file(path: str = 'data.csv', count: int = 1_000, with_rate: bool = False,
+    def generate_random_csv_file(path: str = 'data.csv',
+                                 count: int = 1_000,
+                                 with_rate: bool = False,
+                                 delimiter: str = ',',
                                  debug: bool = False) -> int:
         """
         Generate a random CSV file with specified parameters.
@@ -4083,6 +4087,7 @@ class ZakatTracker:
         - path (str, optional): The path where the CSV file will be saved. Default is 'data.csv'.
         - count (int, optional): The number of rows to generate in the CSV file. Default is 1000.
         - with_rate (bool, optional): If True, a random rate between 1.2% and 12% is added. Default is False.
+        - delimiter (str, optional): The delimiter character to use in the CSV file. Defaults to ','.
         - debug (bool, optional): A flag indicating whether to print debug information.
 
         Returns:
@@ -4092,7 +4097,7 @@ class ZakatTracker:
             print('generate_random_csv_file', f'debug={debug}')
         i = 0
         with open(path, 'w', newline='', encoding='utf-8') as csvfile:
-            writer = csv.writer(csvfile)
+            writer = csv.writer(csvfile, delimiter=delimiter)
             writer.writerow(ZakatTracker.get_transaction_csv_headers())
             for i in range(count):
                 account = f'acc-{random.randint(1, count)}'
@@ -5425,7 +5430,12 @@ class ZakatTracker:
                 csv_path = path + '.csv'
                 if os.path.exists(csv_path):
                     os.remove(csv_path)
-                c = self.generate_random_csv_file(csv_path, csv_count, with_rate, debug)
+                c = self.generate_random_csv_file(
+                    path=csv_path,
+                    count=csv_count,
+                    with_rate=with_rate,
+                    debug=debug,
+                )
                 if debug:
                     print('generate_random_csv_file', c)
                 assert c == csv_count
