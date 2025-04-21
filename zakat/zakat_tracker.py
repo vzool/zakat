@@ -4691,11 +4691,83 @@ class ZakatTracker:
             if os.path.exists(extracted_dir):
                 shutil.rmtree(extracted_dir)
 
+    def _test_timeline(self, debug: bool = False):
+        self.reset()
+        debug=False
+        account_pocket_id = self.create_account('pocket')
+        account_bank_id = self.create_account('bank')
+        start_date = datetime.datetime(2025, 1, 1)
+        end_date = datetime.datetime(2025, 12, 31)
+        delta = datetime.timedelta(days=1)
+
+        current_date = start_date
+        i = 1
+        lock = self.lock()
+        balance = {
+            account_pocket_id: 0,
+            account_bank_id: 0,
+        }
+        while current_date <= end_date:
+            if debug:
+                print(current_date)
+            t = Time.time(current_date)
+            y = i
+            for j in range(1, 4):
+                if debug:
+                    print(j, i)
+                self.track(
+                    i,
+                    f"{i}++",
+                    account=account_pocket_id,
+                    created_time_ns=Timestamp(t+j),
+                    debug=debug,
+                )
+                balance[account_pocket_id] += i
+                i += 1
+            self.subtract(
+                y,
+                f"{i}--",
+                account=account_pocket_id,
+                created_time_ns=Timestamp(t+4),
+                debug=debug,
+            )
+            balance[account_pocket_id] -= y
+            self.transfer(
+                i,
+                from_account=account_pocket_id,
+                to_account=account_bank_id,
+                desc=f"={i}=",
+                created_time_ns=Timestamp(t+5),
+                debug=debug,
+            )
+            balance[account_pocket_id] -= i
+            balance[account_bank_id] += i
+            assert self.balance(account_pocket_id) == self.scale(balance[account_pocket_id])
+            assert self.balance(account_pocket_id, cached=False) == self.scale(balance[account_pocket_id])
+            assert self.balance(account_bank_id) == self.scale(balance[account_bank_id])
+            assert self.balance(account_bank_id, cached=False) == self.scale(balance[account_bank_id])
+            current_date += delta
+        assert lock
+        self.free(lock)
+        timeline = self.timeline(debug=debug)
+
+        current_date = start_date
+        while current_date <= end_date:
+            date_key = current_date.strftime("%Y-%m-%d")
+            assert date_key in timeline.daily
+            assert len(timeline.daily[date_key].rows) == 7
+            current_date += delta
+        assert len(timeline.weekly) == 365
+        assert len(timeline.monthly) == 12
+        assert len(timeline.yearly) == 1
+        self.reset()
+
     def test(self, debug: bool = False) -> bool:
         if debug:
             print('test', f'debug={debug}')
         try:
 
+            self._test_timeline(debug)
             self._test_core(True, debug)
             self._test_core(False, debug)
 
