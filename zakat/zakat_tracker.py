@@ -77,8 +77,32 @@ import lzma
 import tarfile
 import io
 import re
+import warnings
+import functools
 from typing import Optional
 from pprint import PrettyPrinter as pp
+
+
+def experimental(func):
+    """
+    Marks a function as experimental.
+
+    This decorator will issue a FutureWarning when the decorated
+    function is called, indicating that the function's API
+    may change or be removed without notice.
+
+    Parameters:
+    - func: The function to decorate.
+
+    Returns:
+    - The decorated function.
+    """
+    @functools.wraps(func)  # Preserves original function's metadata
+    def wrapper(*args, **kwargs):
+        warnings.warn(f"[WARNING] {func.__name__} is an experimental feature and may change or be removed without notice.",
+                      category=FutureWarning)
+        return func(*args, **kwargs)
+    return wrapper
 
 
 # fix WindowsOS encoding issue
@@ -3712,6 +3736,7 @@ class ZakatTracker:
             "reference",
         ]
 
+    @experimental
     def import_csv(self, path: str = 'file.csv', scale_decimal_places: int = 0, delimiter: str = ',', debug: bool = False) -> ImportReport:
         """
         The function reads the CSV file, checks for duplicate transactions and tries it's best to creates the transactions history accordingly in the system.
