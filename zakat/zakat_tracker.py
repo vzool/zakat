@@ -3682,6 +3682,7 @@ class ZakatTracker:
             print(f'Error loading file: {e}')
             return False
 
+    @experimental
     def import_csv_cache_path(self):
         """
         Generates the cache file path for imported CSV data.
@@ -3712,6 +3713,7 @@ class ZakatTracker:
         return self.base_path(filename)
 
     @staticmethod
+    @experimental
     def get_transaction_csv_headers() -> list[str]:
         """
         Returns a list of strings representing the headers for a transaction CSV file.
