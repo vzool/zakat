@@ -782,7 +782,7 @@ The main data storage file system on disk is [`JSON`](https://json.org/) format,
 
 - Multiple Accounts: Manage Zakat for different assets or accounts separately for greater financial clarity.
 
-- Import/Export: Seamlessly import transaction data from CSV files and export calculated Zakat reports in JSON format for further analysis or record-keeping.
+- Import/Export: Seamlessly import transaction data from CSV files [**experimental**] and export calculated Zakat reports in JSON format for further analysis or record-keeping.
 
 - Data Persistence: Securely save and load your Zakat tracker data for continued use across sessions.
 
