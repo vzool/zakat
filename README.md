@@ -111,7 +111,7 @@ zakat_report = ledger.check(silver_gram_price=2.5)
 # discount from the same accounts if Zakat applicable individually or collectively
 ledger.zakat(zakat_report) # --> True
 # or Collect all Zakat and discount from selected accounts
-parts = ledger.build_payment_parts(zakat_report.summary.total_zakat_due)
+parts = ledger.build_payment_parts(zakat_report.summary.total_zakatable_amount)
 # modify `parts` to distribute your Zakat on selected accounts
 ledger.zakat(zakat_report, parts) # --> False
 ```

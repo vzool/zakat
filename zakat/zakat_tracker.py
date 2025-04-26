@@ -886,6 +886,7 @@ class Transaction(StrictDataclass):
     """Represents a single transaction record."""
     account: str
     account_id: AccountID
+    log_ref: Timestamp
     desc: str
     file: dict[Timestamp, str]
     value: int
@@ -2671,6 +2672,7 @@ class ZakatTracker:
                 logs[log_ref].append(Transaction(
                     account=self.name(account_id),
                     account_id=account_id,
+                    log_ref=log_ref,
                     desc=log.desc,
                     file=log.file,
                     value=log.value,
