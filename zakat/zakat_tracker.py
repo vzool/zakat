@@ -4247,13 +4247,13 @@ class ZakatTracker:
             output_folder_path = pathlib.Path(output_folder_path).resolve()
             os.makedirs(output_folder_path, exist_ok=True)
             filename = os.path.basename(tar_lzma_path)
-            match = re.match(r"zakatdb_v([^_]+)_(\d{8}_\d{6})_([a-f0-9]{40})\.tar\.lzma", filename)
-            if not match:
+            re_match = re.match(r"zakatdb_v([^_]+)_(\d{8}_\d{6})_([a-f0-9]{40})\.tar\.lzma", filename)
+            if not re_match:
                 if debug:
                     print(f"Error: Invalid filename format: '{filename}'")
                 return False
 
-            expected_hash_from_filename = match.group(3)
+            expected_hash_from_filename = re_match.group(3)
 
             with lzma.open(tar_lzma_path, "rb") as lzma_file:
                 tar_buffer = io.BytesIO(lzma_file.read())  # Read the entire decompressed tar into memory
