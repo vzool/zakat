@@ -58,6 +58,7 @@ from zakat.zakat_tracker import (
     StrictDataclass,
     ImmutableWithSelectiveFreeze,
     Backup,
+    Collection,
 )
 
 from zakat.file_server import (
@@ -122,4 +123,5 @@ __all__ = [
     "StrictDataclass",
     "ImmutableWithSelectiveFreeze",
     "Backup",
+    "Collection",
 ]

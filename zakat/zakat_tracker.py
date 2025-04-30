@@ -1334,6 +1334,141 @@ class Time:
             #assert date.microsecond == 906030
 
 
+class Collection:
+    @staticmethod
+    def paginate(items: list | dict, page_size: int, page_number: int, debug: bool = False) -> tuple[list[tuple], int, int]:
+        """
+        Paginate a list or dictionary of items into pages.
+
+        This function divides the input `items` into smaller, equally sized pages.
+        It handles both lists and dictionaries as input, and ensures the requested
+        page number is within a valid range.  For lists, it adds the item number
+        to each item in the result
+
+        Parameters:
+        - items (list | dict): The list or dictionary of items to paginate.
+            If a dictionary is provided, the keys are used to determine the order of items.
+        - page_size (int): The maximum number of items to include in each page.
+            Must be a positive integer.
+        - page_number (int): The desired page number (1-based index). 
+            The function will adjust this value to be within the valid range of pages.
+        - debug (bool, optional): If True, the function will print debug information.
+            Default is False.
+
+        Returns:
+        - tuple[list[tuple], int, int]: A tuple containing three elements:
+            -  A list of items for the requested page. If the input `items`
+                is a list, each item in the output list is a tuple where the
+                first element is the item number (1-based index within the
+                original list), and the subsequent elements are the original
+                item's data. If `items` is a dictionary, the output list
+                contains the keys of the dictionary for the selected page.
+            -  The total number of pages (int).
+            -  The total number of items (int) in the original `items`.
+        """
+        total_items = len(items)
+        total_pages = (total_items + page_size - 1) // page_size  # Calculate total pages
+        page_number = max(1, min(page_number, total_pages))  # Clamp page number to valid range
+
+        start_index = (page_number - 1) * page_size
+        end_index = start_index + page_size
+        page_items = []
+        if type(items) is dict:
+            page_items = list(items)[start_index:end_index]
+        else:
+            for i, item in enumerate(items[start_index:end_index]):
+                item_number = start_index + i + 1  # Calculate item number
+                if debug:
+                    print(item_number, item)
+                if type(item) is not tuple:
+                    item = (item,)
+                page_items.append((item_number,) + item)  # Include item number with item
+
+        return page_items, total_pages, total_items
+
+    @staticmethod
+    def test_paginate(debug: bool = False):
+        """
+        Test the paginate function with various inputs.
+
+        Parameters:
+        - debug (bool, optional): If True, the function will print debug information. Default is False.
+        """
+        if debug:
+            print("Running tests for Collection.paginate()")
+
+        # Test case 1: List of integers
+        items1 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        page_size1 = 3
+        page_number1 = 2
+        expected_output1 = ([(4, 4,),(5, 5,), (6, 6,)], 4, 10)
+        result1 = Collection.paginate(items1, page_size1, page_number1, debug=debug)
+        if debug:
+            print('items:', items1)
+            print('result:', result1)
+            print('expected:', expected_output1)
+        assert result1 == expected_output1, f"Test Case 1 Failed: {result1} != {expected_output1}"
+        if debug:
+            print("Test Case 1 Passed")
+
+        # Test case 2: List of strings
+        items2 = ["a", "b", "c", "d", "e"]
+        page_size2 = 2
+        page_number2 = 3
+        expected_output2 = ([(5, 'e',)], 3, 5)
+        result2 = Collection.paginate(items2, page_size2, page_number2)
+        if debug:
+            print('items:', items2)
+            print('result:', result2)
+            print('expected:', expected_output2)
+        assert result2 == expected_output2, f"Test Case 2 Failed: {result2} != {expected_output2}"
+        if debug:
+            print("Test Case 2 Passed")
+
+        # Test case 3: Dictionary
+        items3 = {"a": 1, "b": 2, "c": 3, "d": 4}
+        page_size3 = 2
+        page_number3 = 1
+        expected_output3 = (["a", "b"], 2, 4)
+        result3 = Collection.paginate(items3, page_size3, page_number3)
+        if debug:
+            print('items:', items3)
+            print('result:', result3)
+            print('expected:', expected_output3)
+        assert result3 == expected_output3, f"Test Case 3 Failed: {result3} != {expected_output3}"
+        if debug:
+            print("Test Case 3 Passed")
+
+        # Test case 4: Empty list
+        items4 = []
+        page_size4 = 2
+        page_number4 = 1
+        expected_output4 = ([], 0, 0)
+        result4 = Collection.paginate(items4, page_size4, page_number4)
+        if debug:
+            print('items:', items4)
+            print('result:', result4)
+            print('expected:', expected_output4)
+        assert result4 == expected_output4, f"Test Case 4 Failed: {result4} != {expected_output4}"
+        if debug:
+            print("Test Case 4 Passed")
+
+        # Test case 5: page_number out of range
+        items5 = [1, 2, 3, 4, 5]
+        page_size5 = 2
+        page_number5 = 100
+        expected_output5 = ([(5, 5,)], 3, 5)
+        result5 = Collection.paginate(items5, page_size5, page_number5)
+        if debug:
+            print('items:', items5)
+            print('result:', result5)
+            print('expected:', expected_output5)
+        assert result5 == expected_output5, f"Test Case 5 Failed: {result5} != {expected_output5}"
+        if debug:
+            print("Test Case 5 Passed")
+            print("All test cases passed!")
+
+
 def is_number(s):
     """Checks if a string is a number (including negative numbers, decimals, and scientific notation)."""
     try:
@@ -4320,6 +4455,7 @@ class ZakatTracker:
             reverse=True,
         ) == [('9', 9), ('6', 6), ('3', 3), ('0', 0)]
 
+        Collection.test_paginate(debug)
         Timestamp.test()
         AccountID.test(debug)
         Time.test(debug)
