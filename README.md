@@ -24,8 +24,9 @@
     <a href="https://pypi.org/project/zakat/">
         <img src="https://img.shields.io/pypi/v/zakat"/>
     </a>
+    <img alt="CodeRabbit Pull Request Reviews" src="https://img.shields.io/coderabbit/prs/github/vzool/zakat?utm_source=oss&utm_medium=github&utm_campaign=vzool%2Fzakat&labelColor=171717&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews"/>
     <a href="https://github.com/vzool/zakat/blob/main/README.ar.md">
-        <img src="https://img.shields.io/badge/lang-ar-green.svg" alt="ar" data-canonical-src="https://img.shields.io/badge/lang-en-green.svg" style="max-width: 100%;">
+        <img src="https://img.shields.io/badge/lang-ar-green.svg" alt="ar" data-canonical-src="https://img.shields.io/badge/lang-en-green.svg" style="max-width: 100%;"/>
     </a>
 </p>
 
