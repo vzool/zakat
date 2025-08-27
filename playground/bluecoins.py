@@ -1,5 +1,28 @@
-import sqlite3, csv
-from datetime import timedelta
+"""A module for processing and exporting Bluecoins database data to a CSV file.
+
+This module provides functionalities to connect to a Bluecoins database (.fydb),
+query transaction data, handle and resolve data conflicts like duplicates and
+transactions with identical timestamps, and export the cleaned data into a
+structured CSV file. It includes a utility function for precise datetime
+manipulation, which is used to resolve timestamp conflicts by incrementing
+a datetime by milliseconds.
+
+Functions:
+    - add_millisecond_and_format(datetime_str: str, extra_ms: int = 1) -> str:
+        Adds a specified number of milliseconds to a datetime string and
+        returns a formatted string.
+    - test_add_millisecond_and_format():
+        A test suite for the add_millisecond_and_format function.
+    - get_transaction_csv_headers() -> list[str]:
+        Returns the headers for the output CSV file.
+    - process_bluecoins_data(db_file):
+        Main function to process the database and export data.
+
+The module can be run as a standalone script from the command line,
+accepting the path to the Bluecoins database file as an argument.
+"""
+import sqlite3
+import csv
 import argparse
 import os
 from pprint import PrettyPrinter as pp
