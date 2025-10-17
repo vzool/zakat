@@ -537,7 +537,7 @@ class Account(StrictDataclass):
     count: int = dataclasses.field(default_factory=factory_value(0))
     log: dict[Timestamp, Log] = dataclasses.field(default_factory=dict)
     hide: bool = dataclasses.field(default_factory=factory_value(False))
-    zakatable: bool = dataclasses.field(default_factory=factory_value(True))
+    zakatable: bool = dataclasses.field(default_factory=factory_value(False))
 
 
 @dataclasses.dataclass
@@ -4714,7 +4714,7 @@ class ZakatTracker:
             assert self.hide(x, True)
             assert self.hide(x)
 
-            assert self.zakatable(x)
+            assert not self.zakatable(x)
             assert self.zakatable(x, False) is False
             assert self.zakatable(x) is False
             assert self.zakatable(x, True)
@@ -5565,6 +5565,11 @@ class ZakatTracker:
                         created_time_ns=case[2],
                     )
                     assert self.snapshot()
+
+                    # activate zakat for the account
+                    assert not self.zakatable(case[1])
+                    assert self.zakatable(case[1], True)
+                    assert self.zakatable(case[1])
 
                     # assert self.nolock()
                     # history_size = len(self.__vault.history)
