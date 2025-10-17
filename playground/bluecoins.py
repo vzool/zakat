@@ -31,6 +31,7 @@ from datetime import datetime, timedelta
 
 
 debug = False
+verbose = False
 
 
 def add_millisecond_and_format(datetime_str: str, extra_ms: int = 1) -> str:
@@ -105,6 +106,7 @@ def get_transaction_csv_headers() -> list[str]:
         "reference",
     ]
 
+
 def is_valid_sqlite_db(db_path: str) -> bool:
     """
     Checks if a given file path is a valid SQLite database file.
@@ -117,14 +119,15 @@ def is_valid_sqlite_db(db_path: str) -> bool:
     """
     # 1. Check if the file exists first for an early exit
     if not os.path.exists(db_path):
-        print(f"error: {db_path} doesn't exist")
+        if verbose:
+            print(f"error: {db_path} doesn't exist")
         return False
 
     # 2. Attempt to connect to the database
     conn = None
     try:
         # Tries to connect to the file.
-        # check_same_thread=False is often used to avoid thr.eading issues
+        # check_same_thread=False is often used to avoid threading issues
         # in simple scripts, but for just checking validity, it's not strictly
         # necessary. The main point is the connection attempt.
         conn = sqlite3.connect(db_path)
@@ -149,6 +152,76 @@ def is_valid_sqlite_db(db_path: str) -> bool:
         # 3. Ensure the connection is closed
         if conn:
             conn.close()
+
+
+def test_is_valid_sqlite_db():
+    """
+    Sets up temporary files, runs all validation tests using assert,
+    and cleans up the created files.
+    """
+    valid_db_path = 'temp_test_valid.db'
+    invalid_file_path = 'temp_test_invalid.txt'
+
+    if debug:
+        print("--- Starting Test Execution ---")
+
+    # 1. SETUP: Create temporary files
+    # Create a known valid database file
+    try:
+        conn = sqlite3.connect(valid_db_path)
+        conn.execute("CREATE TABLE IF NOT EXISTS test (id INTEGER)")
+        conn.close()
+    except Exception as e:
+        print(f"Setup Error: Failed to create valid DB file. Exiting. {e}")
+        return
+
+    # Create a known invalid file (a simple text file)
+    try:
+        with open(invalid_file_path, 'w') as f:
+            f.write('This is not a database.')
+    except Exception as e:
+        print(f"Setup Error: Failed to create invalid text file. Exiting. {e}")
+        return
+
+    # 2. ASSERT TESTS
+    try:
+        if debug:
+            print("Running Assertions...")
+
+        # Test Case 1: Non-existent file
+        # Expect False for a file that does not exist
+        assert is_valid_sqlite_db('non_existent.db') == False, "Test 1 Failed: Non-existent file."
+
+        # Test Case 2: Known valid database file
+        # Expect True for the correctly created SQLite file
+        assert is_valid_sqlite_db(valid_db_path) == True, "Test 2 Failed: Valid SQLite DB."
+
+        # Test Case 3: Invalid text file (exists but is not a DB)
+        # Expect False for the simple text file
+        assert is_valid_sqlite_db(invalid_file_path) == False, "Test 3 Failed: Invalid text file."
+
+        if debug:
+            print("✅ All assertions passed successfully!")
+
+    except AssertionError as e:
+        print(f"❌ Test Failed: {e}")
+    except Exception as e:
+        print(f"An unexpected error occurred during testing: {e}")
+
+    # 3. CLEANUP
+    finally:
+        if debug:
+            print("Starting cleanup...")
+        if os.path.exists(valid_db_path):
+            os.remove(valid_db_path)
+        if os.path.exists(invalid_file_path):
+            os.remove(invalid_file_path)
+        if debug:
+            print("Cleanup complete.")
+
+    if debug:
+        print("--- Test Execution Finished ---")
+
 
 def process_bluecoins_data(db_file):
     """
@@ -361,7 +434,7 @@ def process_bluecoins_data(db_file):
         print(f"Filtered to {filtered} records, found {duplicated} duplicated.")
         print(f'Imported {filtered} to {csv_file}')
         print('OK')
-        exit(0)
+        sys.exit(0)
 
     except sqlite3.Error as e:
         print(f"An error occurred: {e}")
@@ -372,11 +445,14 @@ def process_bluecoins_data(db_file):
 if __name__ == "__main__":
     # Run the tests
     test_add_millisecond_and_format()
+    test_is_valid_sqlite_db()
+    # Continue the rest
+    verbose = True
     parser = argparse.ArgumentParser(description="Process Bluecoins database and export data to CSV.")
     parser.add_argument("db_file", help="Path to the Bluecoins database file (.fydb)")
     args = parser.parse_args()
 
     if not is_valid_sqlite_db(args.db_file):
-        print(f"error: {args.db_file} is invaild sqlite3 database")
+        print(f"error: {args.db_file} is invalid sqlite3 database")
         sys.exit(1)
     process_bluecoins_data(args.db_file)
