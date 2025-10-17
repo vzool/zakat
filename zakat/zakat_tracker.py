@@ -3106,11 +3106,11 @@ class ZakatTracker:
         ```bash
         >>> tracker = ZakatTracker()
         >>> ref = tracker.track(51, 'desc', 'account1')
-        >>> tracker.zakatable('account1')  # Set the zakatable status of 'account1' to True
-        True
+        >>> tracker.zakatable('account1')  # Get the zakatable status of 'account1' which is False by default
+        False
         >>> tracker.zakatable('account1', True)  # Set the zakatable status of 'account1' to True
         True
-        >>> tracker.zakatable('account1')  # Get the zakatable status of 'account1' by default
+        >>> tracker.zakatable('account1')  # Get the zakatable status of 'account1'
         True
         >>> tracker.zakatable('account1', False)
         False
