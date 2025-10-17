@@ -25,6 +25,7 @@ import sqlite3
 import csv
 import argparse
 import os
+import sys
 from pprint import PrettyPrinter as pp
 from datetime import datetime, timedelta
 
@@ -79,6 +80,7 @@ def test_add_millisecond_and_format():
     if debug:
         print("All tests passed!")
 
+
 def get_transaction_csv_headers() -> list[str]:
     """
     Returns a list of strings representing the headers for a transaction CSV file.
@@ -103,6 +105,50 @@ def get_transaction_csv_headers() -> list[str]:
         "reference",
     ]
 
+def is_valid_sqlite_db(db_path: str) -> bool:
+    """
+    Checks if a given file path is a valid SQLite database file.
+
+    Args:
+        db_path: The file path (string) to check.
+
+    Returns:
+        True if the file is a valid SQLite database, False otherwise.
+    """
+    # 1. Check if the file exists first for an early exit
+    if not os.path.exists(db_path):
+        print(f"error: {db_path} doesn't exist")
+        return False
+
+    # 2. Attempt to connect to the database
+    conn = None
+    try:
+        # Tries to connect to the file.
+        # check_same_thread=False is often used to avoid thr.eading issues
+        # in simple scripts, but for just checking validity, it's not strictly
+        # necessary. The main point is the connection attempt.
+        conn = sqlite3.connect(db_path)
+
+        # Optional: Perform a very simple, non-modifying operation
+        # like reading the schema version to force an actual read operation.
+        # This makes the check more robust than just opening the file.
+        conn.execute("PRAGMA schema_version;")
+
+        # If we reach here, the connection was successful, and we could
+        # execute a basic command, suggesting it's a valid SQLite DB.
+        return True
+
+    except sqlite3.DatabaseError:
+        # Catches specific errors indicating the file is not a valid SQLite format
+        # (e.g., "file is not a database")
+        return False
+    except Exception:
+        # Catch any other unexpected errors (like permission denied, etc.)
+        return False
+    finally:
+        # 3. Ensure the connection is closed
+        if conn:
+            conn.close()
 
 def process_bluecoins_data(db_file):
     """
@@ -186,6 +232,9 @@ def process_bluecoins_data(db_file):
         print("=" * cols)
 
         print(f"Found: {total} transactions shown across {days} days within {dates_range}.")
+        user_input = input("Type 'Y' to continue or anything for exit: ")
+        if user_input.capitalize() != 'Y':
+            sys.exit(0)
         print("Processing...")
 
         data = {}
@@ -327,4 +376,7 @@ if __name__ == "__main__":
     parser.add_argument("db_file", help="Path to the Bluecoins database file (.fydb)")
     args = parser.parse_args()
 
+    if not is_valid_sqlite_db(args.db_file):
+        print(f"error: {args.db_file} is invaild sqlite3 database")
+        sys.exit(1)
     process_bluecoins_data(args.db_file)
