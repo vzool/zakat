@@ -13,6 +13,10 @@ Functions:
         returns a formatted string.
     - test_add_millisecond_and_format():
         A test suite for the add_millisecond_and_format function.
+    - is_valid_sqlite_db(db_path: str) -> bool:
+        Validates whether a file is a valid SQLite database.
+    - test_is_valid_sqlite_db():
+        A test suite for the is_valid_sqlite_db function.
     - get_transaction_csv_headers() -> list[str]:
         Returns the headers for the output CSV file.
     - process_bluecoins_data(db_file):
