@@ -244,26 +244,31 @@ def process_bluecoins_data(db_file):
 
         # Execute a query
         total = cursor.execute("""
-            SELECT COUNT(*) FROM TRANSACTIONSTABLE;
+            SELECT COUNT(*)
+            FROM TRANSACTIONSTABLE
+            WHERE reminderTransaction IS NULL;
         """).fetchone()
         if total:
             total = total[0]
 
         dates_range = cursor.execute("""
             SELECT MIN(date), MAX(date)
-            FROM TRANSACTIONSTABLE;
+            FROM TRANSACTIONSTABLE
+            WHERE reminderTransaction IS NULL;
         """).fetchone()
         
         dates = cursor.execute("""
             SELECT date, COUNT(*)
             FROM TRANSACTIONSTABLE
+            WHERE reminderTransaction IS NULL
             GROUP BY date
             ORDER BY date ASC;
         """).fetchall()
         
         days = cursor.execute("""
             SELECT COUNT(DISTINCT strftime('%Y-%m-%d', date))
-            FROM TRANSACTIONSTABLE;
+            FROM TRANSACTIONSTABLE
+            WHERE reminderTransaction IS NULL;
         """).fetchone()
         if days:
             days = days[0]
@@ -287,6 +292,7 @@ def process_bluecoins_data(db_file):
                     max(conversionRateNew) AS max_rate,
                     min(conversionRateNew) AS min_rate
             FROM TRANSACTIONSTABLE
+            WHERE reminderTransaction IS NULL
             GROUP BY transactionCurrency
             ORDER BY count DESC;
         """).fetchall()
@@ -333,6 +339,7 @@ def process_bluecoins_data(db_file):
                 WHERE   t.amount != 0
                         AND t.date = '{date}'
                         AND t.transactionCurrency IN ({selected_currencies})
+                        AND t.reminderTransaction IS NULL
                 ORDER BY t.transactionsTableID ASC;
             """).fetchall()
             # transform
@@ -370,8 +377,10 @@ def process_bluecoins_data(db_file):
                             print('bad============================================')
                             print(i, index[i], rows[index[i]])
                             print(i-1, index[i - 1], rows[index[i - 1]])
-                        same_account_transfer.append(index[i])
-                        same_account_transfer.append(index[i - 1])
+                        if index[i] not in same_account_transfer:
+                            same_account_transfer.append(index[i])
+                        if index[i - 1] not in same_account_transfer:
+                            same_account_transfer.append(index[i - 1])
             # remove "same account transfer" records
             if same_account_transfer:
                 if debug:
@@ -440,12 +449,13 @@ def process_bluecoins_data(db_file):
         print(f"Filtered to {filtered} records, found {duplicated} duplicated.")
         print(f'Imported {filtered} to {csv_file}')
         print('OK')
-        sys.exit(0)
+        return 0
 
     except sqlite3.Error as e:
         print(f"An error occurred: {e}")
     except FileNotFoundError:
         print(f"Error: Database file '{db_file}' not found.")
+    return 1
 
 
 if __name__ == "__main__":
@@ -465,8 +475,7 @@ if __name__ == "__main__":
         sys.exit(1) # Exit the script with a non-zero status code (convention for failure)
 
     # Run the tests
-    if args.self_test:
-        debug = True
+    debug = args.self_test or args.verbose
     test_add_microseconds_and_format()
     test_is_valid_sqlite_db()
     if args.self_test:
