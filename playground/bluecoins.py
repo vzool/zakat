@@ -459,7 +459,24 @@ def process_bluecoins_data(db_file):
 
 
 if __name__ == "__main__":
-    verbose = True
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Process Bluecoins database and export data to CSV.")
+    parser.add_argument("--self-test", action="store_true", help="Run module self-tests and exit")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
+    parser.add_argument("db_file", nargs="?", help="Path to the Bluecoins database file (.fydb)")
+    parser.add_argument("-y", "--yes", action="store_true", help="Proceed without confirmation prompt")
+    args = parser.parse_args()
+
+    # sys.argv is the list of command-line arguments.
+    # sys.argv[0] is the script name itself, so we check if the list has only one item.
+    if len(sys.argv) == 1:
+        print("🚨 No arguments provided.")
+        parser.print_help(sys.stderr) # Print help message to standard error stream (optional but common practice)
+        sys.exit(1) # Exit the script with a non-zero status code (convention for failure)
+
+    # Run the tests
+    verbose = args.verbose
+    debug = args.self_test or verbose
     parser = argparse.ArgumentParser(description="Process Bluecoins database and export data to CSV.")
     parser.add_argument("--self-test", action="store_true", help="Run module self-tests and exit")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
