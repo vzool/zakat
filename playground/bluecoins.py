@@ -36,6 +36,7 @@ from datetime import datetime, timedelta
 
 debug = False
 verbose = False
+yes = False
 
 
 def add_microseconds_and_format(datetime_str: str, extra_us: int = 1) -> str:
@@ -53,7 +54,7 @@ def add_microseconds_and_format(datetime_str: str, extra_us: int = 1) -> str:
     """
     try:
         if "." not in datetime_str:
-            datetime_str += ".000000" #added microseconds if not present
+            datetime_str += ".000000" # adds microseconds if not present
         dt = datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S.%f")
         incremented_dt = dt + timedelta(microseconds=extra_us)
         return incremented_dt.strftime("%Y-%m-%d %H:%M:%S.%f")
@@ -194,15 +195,15 @@ def test_is_valid_sqlite_db():
 
         # Test Case 1: Non-existent file
         # Expect False for a file that does not exist
-        assert is_valid_sqlite_db('non_existent.db') == False, "Test 1 Failed: Non-existent file."
+        assert not is_valid_sqlite_db('non_existent.db'), "Test 1 Failed: Non-existent file."
 
         # Test Case 2: Known valid database file
         # Expect True for the correctly created SQLite file
-        assert is_valid_sqlite_db(valid_db_path) == True, "Test 2 Failed: Valid SQLite DB."
+        assert is_valid_sqlite_db(valid_db_path), "Test 2 Failed: Valid SQLite DB."
 
         # Test Case 3: Invalid text file (exists but is not a DB)
         # Expect False for the simple text file
-        assert is_valid_sqlite_db(invalid_file_path) == False, "Test 3 Failed: Invalid text file."
+        assert not is_valid_sqlite_db(invalid_file_path), "Test 3 Failed: Invalid text file."
 
         if debug:
             print("✅ All assertions passed successfully!")
@@ -309,9 +310,10 @@ def process_bluecoins_data(db_file):
         print("=" * cols)
 
         print(f"Found: {total} transactions shown across {days} days within {dates_range}.")
-        user_input = input("Type 'Y' to continue or anything for exit: ")
-        if user_input.capitalize() != 'Y':
-            sys.exit(0)
+        if not yes:
+            user_input = input("Type 'Y' to continue or anything for exit: ")
+            if user_input.strip().upper() != 'Y':
+                sys.exit(0)
         print("Processing...")
 
         data = {}
@@ -339,7 +341,7 @@ def process_bluecoins_data(db_file):
                 id1, account1, desc1, value1, date1, rate1 = record
                 assert id1 not in rows
                 # get labels if exists
-                labels = cursor.execute(f"""
+                labels = cursor.execute("""
                     SELECT labelName
                     FROM LABELSTABLE
                     WHERE transactionIDLabels = ?;
@@ -447,16 +449,31 @@ def process_bluecoins_data(db_file):
 
 
 if __name__ == "__main__":
-    # Run the tests
-    test_add_microseconds_and_format()
-    test_is_valid_sqlite_db()
-    # Continue the rest
     verbose = True
     parser = argparse.ArgumentParser(description="Process Bluecoins database and export data to CSV.")
-    parser.add_argument("db_file", help="Path to the Bluecoins database file (.fydb)")
+    parser.add_argument("--self-test", action="store_true", help="Run module self-tests and exit")
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
+    parser.add_argument("db_file", nargs="?", help="Path to the Bluecoins database file (.fydb)")
+    parser.add_argument("-y", "--yes", action="store_true", help="Proceed without confirmation prompt")
     args = parser.parse_args()
 
+    # sys.argv is the list of command-line arguments.
+    # sys.argv[0] is the script name itself, so we check if the list has only one item.
+    if len(sys.argv) == 1:
+        print("🚨 No arguments provided.")
+        parser.print_help(sys.stderr) # Print help message to standard error stream (optional but common practice)
+        sys.exit(1) # Exit the script with a non-zero status code (convention for failure)
+
+    # Run the tests
+    if args.self_test:
+        debug = True
+    test_add_microseconds_and_format()
+    test_is_valid_sqlite_db()
+    if args.self_test:
+        sys.exit(0)
     if not is_valid_sqlite_db(args.db_file):
         print(f"error: {args.db_file} is invalid sqlite3 database")
         sys.exit(1)
-    process_bluecoins_data(args.db_file)
+    yes = args.yes
+    code = process_bluecoins_data(args.db_file)
+    sys.exit(code if isinstance(code, int) else 0)
