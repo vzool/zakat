@@ -132,10 +132,7 @@ def is_valid_sqlite_db(db_path: str) -> bool:
     # 2. Attempt to connect to the database
     conn = None
     try:
-        # Tries to connect to the file.
-        # check_same_thread=False is often used to avoid threading issues
-        # in simple scripts, but for just checking validity, it's not strictly
-        # necessary. The main point is the connection attempt.
+        # Attempt to connect to the file to verify it's a valid SQLite database.
         conn = sqlite3.connect(db_path)
 
         # Optional: Perform a very simple, non-modifying operation
