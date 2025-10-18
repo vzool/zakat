@@ -459,7 +459,6 @@ def process_bluecoins_data(db_file):
 
 
 if __name__ == "__main__":
-    verbose = True
     parser = argparse.ArgumentParser(description="Process Bluecoins database and export data to CSV.")
     parser.add_argument("--self-test", action="store_true", help="Run module self-tests and exit")
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose output")
@@ -475,7 +474,8 @@ if __name__ == "__main__":
         sys.exit(1) # Exit the script with a non-zero status code (convention for failure)
 
     # Run the tests
-    debug = args.self_test or args.verbose
+    verbose = args.verbose
+    debug = args.self_test or verbose
     test_add_microseconds_and_format()
     test_is_valid_sqlite_db()
     if args.self_test:
