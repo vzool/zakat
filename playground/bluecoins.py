@@ -30,6 +30,7 @@ import csv
 import argparse
 import os
 import sys
+import math
 from pprint import PrettyPrinter as pp
 from datetime import datetime, timedelta
 
@@ -315,7 +316,10 @@ def process_bluecoins_data(db_file):
         print(f"Selected Currencies: {selected_currencies}")
         print("=" * cols)
 
-        print(f"Found: {total} transactions shown across {days} days within {dates_range}.")
+        tx_avg = math.floor(total / days)
+        print(f"Found: {total} transactions shown across {days} days (~ {tx_avg} transactions/day),")
+        print(f"within {dates_range}.")
+        print("-" * cols)
         if not yes:
             user_input = input("Type 'Y' to continue or anything for exit: ")
             if user_input.strip().upper() != 'Y':
@@ -468,7 +472,7 @@ if __name__ == "__main__":
 
     # sys.argv is the list of command-line arguments.
     # sys.argv[0] is the script name itself, so we check if the list has only one item.
-    if len(sys.argv) == 1:
+    if len(sys.argv) <= 1:
         print("🚨 No arguments provided.")
         parser.print_help(sys.stderr) # Print help message to standard error stream (optional but common practice)
         sys.exit(1) # Exit the script with a non-zero status code (convention for failure)
