@@ -378,9 +378,13 @@ def process_bluecoins_data(db_file):
                             print('bad============================================')
                             print(i, index[i], rows[index[i]])
                             print(i-1, index[i - 1], rows[index[i - 1]])
-                        if index[i] not in same_account_transfer:
+                        if index[i] in same_account_transfer:
+                            duplicated += 1
+                        else:
                             same_account_transfer.append(index[i])
-                        if index[i - 1] not in same_account_transfer:
+                        if index[i - 1] in same_account_transfer:
+                            duplicated += 1
+                        else:
                             same_account_transfer.append(index[i - 1])
             # remove "same account transfer" records
             if same_account_transfer:
