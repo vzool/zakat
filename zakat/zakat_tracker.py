@@ -1565,7 +1565,7 @@ class ZakatTracker:
         Returns:
         - str: The current version of the software.
         """
-        version = '0.3.5'
+        version = '0.3.6'
         git_hash, unstaged_count, commit_count_since_last_tag = get_git_status()
         if git_hash and (unstaged_count > 0 or commit_count_since_last_tag > 0):
             version += f".{commit_count_since_last_tag}dev{unstaged_count}+{git_hash}"
