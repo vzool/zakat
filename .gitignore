@@ -17,3 +17,4 @@ uploads
 *.txt
 docs/api
 test_*
+*.fydb
